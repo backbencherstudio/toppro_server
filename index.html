@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Test Stripe Payment</title>
+  <script src="https://js.stripe.com/v3/"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f0f2f5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .payment-box {
+      background: #fff;
+      padding: 2rem 2.5rem;
+      border-radius: 10px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+      width: 100%;
+      max-width: 400px;
+    }
+
+    h2 {
+      margin-bottom: 1.5rem;
+      font-size: 1.4rem;
+      text-align: center;
+      color: #333;
+    }
+
+    #card-element {
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      background-color: #fff;
+      margin-bottom: 1rem;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      background-color: #6366f1;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #4f46e5;
+    }
+
+    #error-message {
+      color: red;
+      margin-top: 1rem;
+      min-height: 20px;
+      text-align: center;
+    }
+
+    .success {
+      color: green;
+      text-align: center;
+      margin-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="payment-box">
+    <h2>Test Stripe Payment</h2>
+    <form id="payment-form">
+      <div id="card-element"></div>
+      <button type="submit">Pay $100</button>
+      <div id="error-message"></div>
+      <div id="success-message" class="success"></div>
+    </form>
+  </div>
+
+  <script>
+    const stripe = Stripe('pk_test_51RDjzqQLn2109uZQDwGQjxLb14jO1DHbcqYWHLOd3U7Ws27Le263zUXWjfa3UiWra63I7YDv8iWivSMWzgWYKqgK00nfGl1ysg');
+    const elements = stripe.elements();
+    const card = elements.create('card');
+    card.mount('#card-element');
+    const clientSecret = 'pi_3ROFU4QLn2109uZQ1QcSGdl6_secret_6DF2o6XpIV20XPkDW9OLCLpz8';
+    const form = document.getElementById('payment-form');
+  
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      document.getElementById('error-message').textContent = '';
+      document.getElementById('success-message').textContent = '';
+  
+      try {
+        // 🔄 Step 1: Call your backend to create a PaymentIntent
+        const response = await fetch('http://localhost:4000/api/example/pay', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            amount: 100,
+            currency: 'usd',
+            customer_id: 'cus_SInOBgWD5BkNgy'
+          })
+        });
+  
+        const data = await response.json();
+  
+        if (!data.client_secret) {
+          throw new Error(data.message || 'Failed to get client_secret');
+        }
+  
+        // ⚡ Step 2: Confirm the payment on the frontend
+        const result = await stripe.confirmCardPayment(data.client_secret, {
+          payment_method: {
+            card: card
+          }
+        });
+  
+        if (result.error) {
+          document.getElementById('error-message').textContent = result.error.message;
+        } else if (result.paymentIntent.status === 'succeeded') {
+          document.getElementById('success-message').textContent = '✅ Payment successful!';
+        }
+      } catch (err) {
+        document.getElementById('error-message').textContent = err.message;
+      }
+    });
+  </script>
+  
+</body>
+</html>

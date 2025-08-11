@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>User-to-User Stripe Payment</title>
+  <script src="https://js.stripe.com/v3/"></script>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: auto; }
+    input, #card-element, button {
+      display: block;
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      box-sizing: border-box;
+    }
+    button { background-color: black; color: white; border: none; cursor: pointer; }
+    #error-message { color: red; margin-top: 10px; }
+  </style>
+</head>
+<body>
+
+  <h2>Send Payment</h2>
+  <form id="payment-form">
+    <input id="sender-email" placeholder="Your Email" type="email" required />
+    <input id="receiver-email" placeholder="Receiver Email" type="email" required />
+    <input id="amount" placeholder="Amount (USD)" type="number" required />
+    <input id="address" placeholder="Billing Address" required />
+    <input id="city" placeholder="City" required />
+    <input id="state" placeholder="State" required />
+    <input id="zip" placeholder="Postal / Zip Code" required />
+    <div id="card-element"></div>
+    <button type="submit">Send Payment</button>
+    <div id="error-message"></div>
+  </form>
+
+  <script>
+    const stripe = Stripe('YOUR_STRIPE_PUBLISHABLE_KEY');
+    const elements = stripe.elements();
+    const card = elements.create('card');
+    card.mount('#card-element');
+
+    const form = document.getElementById('payment-form');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const amount = parseInt(document.getElementById('amount').value) * 100;
+      const senderEmail = document.getElementById('sender-email').value;
+      const receiverEmail = document.getElementById('receiver-email').value;
+
+      const { paymentMethod, error } = await stripe.createPaymentMethod({
+        type: 'card',
+        card: card,
+        billing_details: {
+          email: senderEmail,
+          address: {
+            line1: document.getElementById('address').value,
+            city: document.getElementById('city').value,
+            state: document.getElementById('state').value,
+            postal_code: document.getElementById('zip').value,
+            country: 'US',
+          }
+        }
+      });
+
+      if (error) {
+        document.getElementById('error-message').textContent = error.message;
+      } else {
+        fetch('/pay', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            paymentMethodId: paymentMethod.id,
+            amount,
+            senderEmail,
+            receiverEmail
+          })
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            alert('Payment successful!');
+          } else {
+            document.getElementById('error-message').textContent = data.message || 'Payment failed.';
+          }
+        });
+      }
+    });
+  </script>
+
+</body>
+</html>
