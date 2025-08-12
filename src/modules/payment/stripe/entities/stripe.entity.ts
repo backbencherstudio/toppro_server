@@ -26,6 +26,7 @@ export class StripePaymentEntity {
     this.provider = tx.provider ?? 'stripe';
     this.referenceNumber = tx.reference_number;
     this.senderId = tx.user_id ?? '';
+     //@ts-ignore
     this.receiverId = tx.receiver_id ?? '';
     this.createdAt = tx.created_at;
     this.updatedAt = tx.updated_at;
