@@ -33,7 +33,7 @@ export class UserService {
         password: hashedPassword,
         first_name: dto.firstName ?? null,
         last_name: dto.lastName ?? null,
-        balance: dto.balance, // default starting balance
+        // balance: dto.balance, // default starting balance
       },
     });
 
@@ -77,7 +77,8 @@ export class UserService {
         id: true,
         username: true,
         email: true,
-        balance: true,
+
+        // balance: true, 
         first_name: true,
         last_name: true,
       },

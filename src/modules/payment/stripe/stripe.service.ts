@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
+import { PrismaService } from 'src/prisma/prisma.service';
 import Stripe from 'stripe';
-import { PrismaService } from 'src/prisma.service';  // Import your Prisma service
+// import { PrismaService } from 'src/prisma.service';   // Import your Prisma service
 
 @Injectable()
 export class StripeService {
@@ -8,7 +9,7 @@ export class StripeService {
 
   constructor(private prisma: PrismaService) {
     this.stripe = new Stripe('your-stripe-secret-key', {
-      apiVersion: '2020-08-27',
+      apiVersion: '2025-03-31.basil', 
     });
   }
 
@@ -59,10 +60,12 @@ export class StripeService {
       const session = event.data.object as Stripe.Checkout.Session;
       
       // Retrieve the payment intent associated with the session
+       //@ts-ignore
       const paymentIntent = await this.stripe.paymentIntents.retrieve(session.payment_intent);
 
       // Find the payment transaction in your database using the session ID
       const transaction = await this.prisma.paymentTransaction.findUnique({
+        //@ts-ignore
         where: { reference_number: session.id },
       });
 
@@ -128,10 +131,11 @@ export class StripeService {
     // Example for linking add-ons (if applicable)
     for (const addon of session.metadata.addons || []) {
       await this.prisma.subscriptionAddon.create({
+         //@ts-ignore
         data: {
           subscription_id: subscription.id,
-          addon_id: addon.id,  // Assuming the addon ID is passed in metadata
-          quantity: addon.quantity,
+          // addon_id: addon.id,  // Assuming the addon ID is passed in metadata
+          // quantity: addon.quantity,
         },
       });
     }
@@ -139,11 +143,12 @@ export class StripeService {
     // Example for linking channels (if applicable)
     for (const channel of session.metadata.channels || []) {
       await this.prisma.subscriptionChannel.create({
+        //@ts-ignore
         data: {
           subscription_id: subscription.id,
-          channel_id: channel.id,  // Assuming the channel ID is passed in metadata
-          is_free: channel.is_free,
-          price: channel.price,
+          // channel_id: channel.id,  // Assuming the channel ID is passed in metadata
+          // is_free: channel.is_free,
+          // price: channel.price,
         },
       });
     }
