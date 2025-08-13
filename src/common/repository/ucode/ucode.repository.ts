@@ -1,9 +1,9 @@
-import { PrismaClient } from '@prisma/client';
-import { DateHelper } from '../../../common/helper/date.helper';
-import { v4 as uuid } from 'uuid';
-import { UserRepository } from '../user/user.repository';
+import * as crypto from 'crypto';
 import { randomInt } from 'crypto';
-import crypto from 'crypto';
+import { v4 as uuid } from 'uuid';
+import { PrismaClient } from '@prisma/client';
+import { DateHelper } from '../../helper/date.helper';
+import { UserRepository } from '../user/user.repository';
 
 const prisma = new PrismaClient();
 
@@ -103,6 +103,7 @@ export class UcodeRepository {
               ],
             },
           });
+          // console.log("data",data);
           if (data) {
             // delete this token
             // await prisma.ucode.delete({
@@ -133,13 +134,14 @@ export class UcodeRepository {
    * delete ucode token
    * @returns
    */
-  static async deleteToken({ email, token }) {
-    await prisma.ucode.deleteMany({
+  static async deleteToken({ email, token, userId }: { email: string; token: string, userId: string }) {
+    return await prisma.ucode.deleteMany({
       where: {
-        AND: [{ email: email }, { token: token }],
+        AND: [{ email: email }, { token: token }, { user_id: userId }],
       },
     });
   }
+  
 
   static async createVerificationToken(params: {
     userId: string;

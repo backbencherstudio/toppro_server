@@ -13,6 +13,7 @@ export class UserService {
 
   async create(createUserDto: CreateUserDto) {
     try {
+      //@ts-ignore
       const user = await UserRepository.createUser(createUserDto);
 
       if (user.success) {

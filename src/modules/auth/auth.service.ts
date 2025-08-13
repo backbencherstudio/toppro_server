@@ -1,6 +1,10 @@
 // external imports
 import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { InjectRedis } from '@nestjs-modules/ioredis';
+import Redis from 'ioredis';
 import { JwtService } from '@nestjs/jwt';
+import * as bcrypt from 'bcrypt';
+
 //internal imports
 import { PrismaService } from '../../prisma/prisma.service';
 import { UserRepository } from '../../common/repository/user/user.repository';
@@ -11,6 +15,7 @@ import appConfig from '../../config/app.config';
 import { SojebStorage } from '../../common/lib/Disk/SojebStorage';
 import { DateHelper } from '../../common/helper/date.helper';
 import { StripePayment } from 'src/common/lib/Payment/stripe/StripePayment';
+
 
 @Injectable()
 export class AuthService {
@@ -209,20 +214,144 @@ export class AuthService {
     }
   }
 
-  async login({ email, userId }) {
+  async login({ email, password, token }) {
     try {
-      const payload = { email: email, sub: userId };
-      const token = this.jwtService.sign(payload);
-      const user = await UserRepository.getUserDetails(userId);
+      // Step 1: Fetch user from the database using the email
+      const user = await this.prisma.user.findUnique({
+        where: { email },
+      });
+
+      if (!user) {
+        return { success: false, message: 'User not found' };
+      }
+
+      // Step 2: If token is provided, validate it
+      if (token) {
+        // Validate the token (assuming the token is stored in the Ucode repository)
+        const tokenRecord = await UcodeRepository.validateToken({
+          email: email,
+          token: token,
+        });
+
+        if (!tokenRecord) {
+          return { success: false, message: 'Invalid token' };
+        }
+
+        // If the token is valid, update email_verified_at
+        await this.prisma.user.update({
+          where: { email },
+          data: { email_verified_at: new Date() }, // Mark the email as verified
+        });
+      }
+
+      // Step 3: Check if the email is verified
+      if (!user.email_verified_at) {
+        return { success: false, message: 'Please verify your email' };
+      }
+
+      // Step 4: Validate password
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+
+      if (!isPasswordValid) {
+        return { success: false, message: 'Invalid password' };
+      }
+
+      // delete token code
+      await UcodeRepository.deleteToken({
+        email: email,
+        token: token,
+        userId: user.id,
+      });
+
+      // Step 5: Generate JWT tokens (access and refresh tokens)
+      const payload = { email: user.email, sub: user.id };
+      const accessToken = this.jwtService.sign(payload, { expiresIn: '1h' });
+      const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
+
+      // store refresh token in redis
+      // await this.redis.set(
+      //   `refresh_token:${user.id}`,
+      //   refreshToken,
+      //   'EX',
+      //   60 * 60 * 24 * 7,
+      // ); // 7 days expiry
 
       return {
         success: true,
         message: 'Logged in successfully',
         authorization: {
-          token: token,
           type: 'bearer',
+          access_token: accessToken,
+          refresh_token: refreshToken,
         },
         type: user.type,
+      };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  }
+
+    // refresh token
+  async refreshToken(user_id: string, refreshToken: string) {
+    try {
+      // const storedToken = await this.redis.get(`refresh_token:${user_id}`);
+
+      // if (!storedToken || storedToken != refreshToken) {
+      //   return {
+      //     success: false,
+      //     message: 'Refresh token is required',
+      //   };
+      // }
+
+      if (!user_id) {
+        return {
+          success: false,
+          message: 'User not found',
+        };
+      }
+
+      const userDetails = await UserRepository.getUserDetails(user_id);
+      if (!userDetails) {
+        return {
+          success: false,
+          message: 'User not found',
+        };
+      }
+
+      const payload = { email: userDetails.email, sub: userDetails.id };
+      const accessToken = this.jwtService.sign(payload, { expiresIn: '1h' });
+
+      return {
+        success: true,
+        authorization: {
+          type: 'bearer',
+          access_token: accessToken,
+        },
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message,
+      };
+    }
+  }
+
+  // revoke refresh token
+  async revokeRefreshToken(user_id: string) {
+    try {
+      // const storedToken = await this.redis.get(`refresh_token:${user_id}`);
+      // if (!storedToken) {
+      //   return {
+      //     success: false,
+      //     message: 'Refresh token not found',
+      //   };
+      // }
+
+      // await this.redis.del(`refresh_token:${user_id}`);
+
+      return {
+        success: true,
+        message: 'Refresh token revoked successfully',
       };
     } catch (error) {
       return {
@@ -237,6 +366,8 @@ export class AuthService {
     first_name,
     last_name,
     email,
+    phone_number,
+    address,
     password,
     type,
   }: {
@@ -244,6 +375,8 @@ export class AuthService {
     first_name: string;
     last_name: string;
     email: string;
+    phone_number: string;
+    address: string;
     password: string;
     type?: string;
   }) {
@@ -265,6 +398,8 @@ export class AuthService {
         name: name,
         first_name: first_name,
         last_name: last_name,
+        address: address,
+        phone_number: phone_number,
         email: email,
         password: password,
         type: type,
@@ -402,6 +537,7 @@ export class AuthService {
           await UcodeRepository.deleteToken({
             email: email,
             token: token,
+            userId: user.id,
           });
 
           return {
@@ -619,6 +755,7 @@ export class AuthService {
           await UcodeRepository.deleteToken({
             email: new_email,
             token: token,
+            userId: user.id,
           });
 
           return {
@@ -641,6 +778,86 @@ export class AuthService {
       return {
         success: false,
         message: error.message,
+      };
+    }
+  }
+
+    // change email without token
+  async changeEmailWithoutToken({
+    user_id,
+    old_email,
+    password,
+    new_email,
+  }: {
+    user_id: string;
+    old_email: string;
+    password: string;
+    new_email: string;
+  }) {
+    try {
+      // Step 1: Fetch the user by user_id
+      const user = await UserRepository.getUserDetails(user_id);
+
+      if (!user) {
+        return {
+          success: false,
+          message: 'User not found',
+        };
+      }
+
+      // Step 2: Verify that the provided old email matches the one in the database
+      if (user.email !== old_email) {
+        return {
+          success: false,
+          message: 'Current email does not match',
+        };
+      }
+
+      // Step 3: Validate the provided password
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+
+      if (!isPasswordValid) {
+        return {
+          success: false,
+          message: 'Incorrect password',
+        };
+      }
+
+      // Step 4: Check if the new email is already in use by another user
+      const existingUser = await UserRepository.exist({
+        field: 'email',
+        value: new_email,
+      });
+
+      if (existingUser) {
+        return {
+          success: false,
+          message: 'Email is already in use',
+        };
+      }
+
+      // Step 5: Update the email in the database
+      const updatedUser = await UserRepository.updateUser(user_id, {
+        email: new_email,
+      });
+      // console.log("updatedUser",updatedUser);
+
+      if (!updatedUser) {
+        return {
+          success: false,
+          message: 'Failed to update email',
+        };
+      }
+
+      // Step 6: Return success response
+      return {
+        success: true,
+        message: 'Email updated successfully',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message || 'An error occurred while updating the email',
       };
     }
   }

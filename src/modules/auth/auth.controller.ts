@@ -7,13 +7,14 @@ import {
   Patch,
   Post,
   Req,
+  Res,
   UploadedFile,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Request } from 'express';
-import { diskStorage } from 'multer';
+import { Request, Response } from 'express';
+import { memoryStorage } from 'multer';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AuthService } from './auth.service';
 import { LocalAuthGuard } from './guards/local-auth.guard';
@@ -29,6 +30,7 @@ import { AuthGuard } from '@nestjs/passport';
 export class AuthController {
   constructor(private authService: AuthService) {}
 
+  // get user details
   @ApiOperation({ summary: 'Get user details' })
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
@@ -48,13 +50,16 @@ export class AuthController {
     }
   }
 
+  // register a user
   @ApiOperation({ summary: 'Register a user' })
   @Post('register')
   async create(@Body() data: CreateUserDto) {
     try {
       const name = data.name;
-      const first_name = data.first_name;
-      const last_name = data.last_name;
+      const first_name = data.first_name || null;
+      const last_name = data.last_name || null;
+      const address = data.address;
+      const phone_number = data.phone_number || null; // Optional field
       const email = data.email;
       const password = data.password;
       const type = data.type;
@@ -62,18 +67,18 @@ export class AuthController {
       if (!name) {
         throw new HttpException('Name not provided', HttpStatus.UNAUTHORIZED);
       }
-      if (!first_name) {
-        throw new HttpException(
-          'First name not provided',
-          HttpStatus.UNAUTHORIZED,
-        );
-      }
-      if (!last_name) {
-        throw new HttpException(
-          'Last name not provided',
-          HttpStatus.UNAUTHORIZED,
-        );
-      }
+      // if (!first_name) {
+      //   throw new HttpException(
+      //     'First name not provided',
+      //     HttpStatus.UNAUTHORIZED,
+      //   );
+      // }
+      // if (!last_name) {
+      //   throw new HttpException(
+      //     'Last name not provided',
+      //     HttpStatus.UNAUTHORIZED,
+      //   );
+      // }
       if (!email) {
         throw new HttpException('Email not provided', HttpStatus.UNAUTHORIZED);
       }
@@ -84,14 +89,16 @@ export class AuthController {
         );
       }
 
+      
       const response = await this.authService.register({
         name: name,
-        first_name: first_name,
-        last_name: last_name,
+        first_name: first_name || null,
+        last_name: last_name || null,
         email: email,
+        phone_number: phone_number, 
+        address: address,
         password: password,
         type: type,
-        
       });
 
       return response;
@@ -107,17 +114,72 @@ export class AuthController {
   @ApiOperation({ summary: 'Login user' })
   @UseGuards(LocalAuthGuard)
   @Post('login')
-  async login(@Req() req: Request) {
+  async login(@Body() body: { email: string, password: string, token?: string }, @Req() req: Request, @Res() res: Response) {
     try {
-      const user_id = req.user.id;
-
-      const user_email = req.user.email;
+      // console.log(req.user);
+      const { email, password, token } = body;  // Retrieve token and password from the request body
+      // const user_id = req.user.id;  // req.user contains the authenticated user's info
+      
 
       const response = await this.authService.login({
-        userId: user_id,
-        email: user_email,
+        email,
+        password,
+        token,
+        // user_id: user_id, 
       });
 
+       // If login failed (i.e., email not verified), return the response
+       if (!response.success) {
+        return res.status(401).json(response); // Return the error message to the user
+      }
+      // store to secure cookies
+      res.cookie('refresh_token', response.authorization.refresh_token, {
+        httpOnly: true,
+        secure: true,
+        maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+      });
+
+      res.json(response);
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message,
+      };
+    }
+  }
+
+  @ApiOperation({ summary: 'Refresh token' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Post('refresh-token')
+  async refreshToken(
+    @Req() req: Request,
+    @Body() body: { refresh_token: string },
+  ) {
+    try {
+      const user_id = req.user.userId;
+
+      const response = await this.authService.refreshToken(
+        user_id,
+        body.refresh_token,
+      );
+
+      return response;
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message,
+      };
+    }
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Post('logout')
+  async logout(@Req() req: Request) {
+    try {
+      const userId = req.user.userId;
+      const response = await this.authService.revokeRefreshToken(userId); 
       return response;
     } catch (error) {
       return {
@@ -149,17 +211,18 @@ export class AuthController {
   @Patch('update')
   @UseInterceptors(
     FileInterceptor('image', {
-      storage: diskStorage({
-        destination:
-          appConfig().storageUrl.rootUrl + appConfig().storageUrl.avatar,
-        filename: (req, file, cb) => {
-          const randomName = Array(32)
-            .fill(null)
-            .map(() => Math.round(Math.random() * 16).toString(16))
-            .join('');
-          return cb(null, `${randomName}${file.originalname}`);
-        },
-      }),
+      // storage: diskStorage({
+      //   destination:
+      //     appConfig().storageUrl.rootUrl + appConfig().storageUrl.avatar,
+      //   filename: (req, file, cb) => {
+      //     const randomName = Array(32)
+      //       .fill(null)
+      //       .map(() => Math.round(Math.random() * 16).toString(16))
+      //       .join('');
+      //     return cb(null, `${randomName}${file.originalname}`);
+      //   },
+      // }),
+      storage: memoryStorage(),
     }),
   )
   async updateUser(
@@ -341,11 +404,12 @@ export class AuthController {
     } catch (error) {
       return {
         success: false,
-        message: 'Something went wrong',
+        message: 'Something went wrong',                  
       };
     }
   }
 
+  // change email address with token
   @ApiOperation({ summary: 'Change email address' })
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
@@ -377,6 +441,41 @@ export class AuthController {
       };
     }
   }
+
+// change email address without token
+@ApiOperation({ summary: 'Change email address without token' })
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
+@Post('changeEmail')
+async changeEmailWithoutToken( 
+  @Req() req: Request,
+  @Body() data: { old_email: string; password: string; new_email: string },
+) {
+  try {
+    const user_id = req.user.userId; // Extract user ID from JWT token
+    const { old_email, password, new_email } = data;
+
+    if (!old_email || !password || !new_email) {
+      throw new HttpException('Missing required fields', HttpStatus.BAD_REQUEST);
+    }
+
+    return await this.authService.changeEmailWithoutToken({  
+      user_id,
+      old_email,
+      password,
+      new_email,
+    });
+  } catch (error) {
+    return {
+      success: false,
+      message: error.message || 'Something went wrong',
+    };
+  }
+}
+
+
+
+
   // -------end change email address------
 
   // --------- 2FA ---------

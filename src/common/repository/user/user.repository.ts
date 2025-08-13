@@ -5,7 +5,6 @@ import { PrismaClient } from '@prisma/client';
 import appConfig from '../../../config/app.config';
 import { ArrayHelper } from '../../helper/array.helper';
 import { Role } from '../../guard/role/role.enum';
-import { DateHelper } from '../../helper/date.helper';
 
 const prisma = new PrismaClient();
 
@@ -195,6 +194,7 @@ export class UserRepository {
     first_name,
     last_name,
     email,
+    address,
     password,
     phone_number,
     role_id = null,
@@ -204,6 +204,7 @@ export class UserRepository {
     first_name?: string;
     last_name?: string;
     email: string;
+    address: string;
     password: string;
     phone_number?: string;
     role_id?: string;
@@ -249,9 +250,9 @@ export class UserRepository {
       if (type && ArrayHelper.inArray(type, Object.values(Role))) {
         data['type'] = type;
 
-        if (type == Role.VENDOR) {
-          data['approved_at'] = DateHelper.now();
-        }
+        // if (type == Role.VENDOR) {
+        //   data['approved_at'] = DateHelper.now();
+        // }
       }
 
       const user = await prisma.user.create({
@@ -297,12 +298,16 @@ export class UserRepository {
     user_id: string,
     {
       name,
+      first_name,
+      last_name,
       email,
       password,
       role_id = null,
       type = 'user',
     }: {
       name?: string;
+      first_name?: string;
+      last_name?: string;
       email?: string;
       password?: string;
       role_id?: string;
@@ -314,7 +319,13 @@ export class UserRepository {
       if (name) {
         data['name'] = name;
       }
-      if (email) {
+      if (first_name) {
+        data['first_name'] = first_name;
+      }
+      if (last_name) {
+        data['last_name'] = last_name;
+      }
+      if (email) {  
         // Check if email already exist
         const userEmailExist = await UserRepository.exist({
           field: 'email',
@@ -395,6 +406,8 @@ export class UserRepository {
     }
   }
 
+  
+
   /**
    * delete user
    * @param param0
@@ -455,6 +468,87 @@ export class UserRepository {
       throw error;
     }
   }
+
+
+  /**
+ * change email without token
+ * @param param0
+ * @returns
+ */
+static async changeEmailWithoutToken({
+  user_id,
+  old_email,
+  password,
+  new_email,
+}: {
+  user_id: string;
+  old_email: string;
+  password: string;
+  new_email: string;
+}) {
+  try {
+    // Step 1: Fetch the user by ID to check if the user exists
+    const user = await prisma.user.findUnique({
+      where: { id: user_id },
+    });
+
+    if (!user) {
+      return {
+        success: false,
+        message: 'User not found',
+      };
+    }
+
+    // Step 2: Verify the current email provided matches the one stored in the database
+    if (user.email !== old_email) {
+      return {
+        success: false,
+        message: 'Current email does not match',
+      };
+    }
+
+    // Step 3: Validate the password
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+
+    if (!isPasswordValid) {
+      return {
+        success: false,
+        message: 'Incorrect password',
+      };
+    }
+
+    // Step 4: Check if the new email is already in use
+    const existingUser = await prisma.user.findUnique({
+      where: { email: new_email },
+    });
+
+    if (existingUser) {
+      return {
+        success: false,
+        message: 'Email is already in use',
+      };
+    }
+
+    // Step 5: Proceed with updating the email
+    const updatedUser = await prisma.user.update({
+      where: { id: user_id },
+      data: { email: new_email },
+    });
+
+    // Step 6: Return success message
+    return {
+      success: true,
+      message: 'Email updated successfully',
+      data: updatedUser, // Return updated user data
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: error.message || 'An error occurred while updating the email',
+    };
+  }
+}
+
 
   // change email
   static async changeEmail({
