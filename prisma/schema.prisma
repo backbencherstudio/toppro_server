@@ -11,7 +11,6 @@ datasource db {
 model Account {
   id         String    @id @default(cuid())
   expires_at DateTime?
-
   user_id String
   user    User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
