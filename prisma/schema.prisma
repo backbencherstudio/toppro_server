@@ -899,3 +899,49 @@ model PostPerformance {
 //   tenant    Organization? @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
 //   @@map("notes")
 // }
+
+model Customer {
+  id             String   @id @default(uuid())
+  name           String   @db.VarChar(255)
+  contact        String   @db.VarChar(255)
+  email          String   @unique @db.VarChar(255)
+  password       String   @db.VarChar(255)
+  taxNumber      String?  @unique @db.VarChar(255)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @default(now()) @updatedAt
+
+  billingName    String?
+  billingPhone   String?
+  billingAddress String?
+  billingCity    String?
+  billingState   String?
+  billingCountry String?
+  billingZip     String?
+
+  shippingName   String?
+  shippingPhone  String?
+  shippingAddress String?
+  shippingCity   String?
+  shippingState  String?
+  shippingCountry String?
+  shippingZip    String?
+}
+
+model Vendor {
+  id             String   @id @default(uuid())
+  name           String   @db.VarChar(255)
+  contact        String   @db.VarChar(255)
+  email          String   @unique @db.VarChar(255)
+  password       String   @db.VarChar(255)
+  taxNumber      String?  @unique @db.VarChar(255)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @default(now()) @updatedAt
+
+  billingName    String?
+  billingPhone   String?
+  billingAddress String?
+  billingCity    String?
+  billingState   String?
+  billingCountry String?
+  billingZip     String?
+}
