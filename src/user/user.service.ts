@@ -31,11 +31,10 @@ export class UserService {
       data: {
         username: dto.username,
         email: dto.email,
-        // @ts-ignore
-        owner_id: dto.owner_id, 
+        owner_id: dto.owner_id,
         password: hashedPassword,
-        first_name: dto.firstName ?? null,
-        last_name: dto.lastName ?? null,
+        first_name: dto.first_name ?? null,
+        last_name: dto.last_name ?? null,
       },
     });
 
@@ -50,7 +49,7 @@ export class UserService {
     return {
       success: true,
       message: '✅ User created successfully!',
-      user: safeUser,  // Returning only the necessary fields
+      user: safeUser, // Returning only the necessary fields
     };
   }
 
@@ -64,31 +63,34 @@ export class UserService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const passwordValid = await bcrypt.compare(loginDto.password, user.password);
+    const passwordValid = await bcrypt.compare(
+      loginDto.password,
+      user.password,
+    );
     if (!passwordValid) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
     // Exclude password before returning
-  const { password, ...safeUser } = user;
+    const { password, ...safeUser } = user;
 
-  // Return response with required fields
-  return {
-    success: true,
-    message: '✅ Login successful!',
-    user: {
-      id: safeUser.id,
-      email: safeUser.email,
-      first_name: safeUser.first_name,
-      last_name: safeUser.last_name,
-      type: safeUser.type,
-      owner_id: safeUser.owner_id,  // Add owner_id
-      phone_number: safeUser.phone_number,  // Add phone_number
-      created_at: safeUser.created_at,  // Add created_at
-      updated_at: safeUser.updated_at,  // Add updated_at
-      username: safeUser.username,  // Add username
-    }
-  };
+    // Return response with required fields
+    return {
+      success: true,
+      message: '✅ Login successful!',
+      user: {
+        id: safeUser.id,
+        email: safeUser.email,
+        first_name: safeUser.first_name,
+        last_name: safeUser.last_name,
+        type: safeUser.type,
+        owner_id: safeUser.owner_id, // Add owner_id
+        phone_number: safeUser.phone_number, // Add phone_number
+        created_at: safeUser.created_at, // Add created_at
+        updated_at: safeUser.updated_at, // Add updated_at
+        username: safeUser.username, // Add username
+      },
+    };
   }
 
   // Get all users (No password)
@@ -98,6 +100,11 @@ export class UserService {
         id: true,
         username: true,
         email: true,
+        type: true,
+        owner_id: true,
+        phone_number: true,
+        created_at: true,
+        updated_at: true,
         first_name: true,
         last_name: true,
       },
@@ -107,76 +114,73 @@ export class UserService {
 
   // Assign role to a user (helper method)
   async assignRoleToUser(userId: string, roleId: string) {
-    // Check if the role exists
+    // প্রথমে roleId valid কিনা check করি
     const role = await this.prisma.role.findUnique({
       where: { id: roleId },
     });
 
     if (!role) {
-      throw new Error('Role not found');
-    }
-
-    // Check if the user already has this role
-    const existingRoleAssignment = await this.prisma.role.findFirst({
-      where: {
-        user_id: userId,
-      },
-    });
-
-    if (existingRoleAssignment) {
       return {
         success: false,
-        message: 'Role is already assigned to this user.',
+        message: 'Role not found with this roleId',
       };
     }
 
-    // If role isn't assigned, assign it to the user
-    await this.prisma.role.create({
-      data: {
-        user_id: userId,
-      },
-    });
+    try {
+      // roleId already ache, just user_id update korte hobe
+      const updatedRole = await this.prisma.role.update({
+        where: { id: roleId },
+        data: { user_id: userId },
+      });
 
-    return {
-      success: true,
-      message: 'Role assigned to user successfully!',
-    };
-  }
-
-
-
-
-  // Update user and assign a role if provided
-  async updateUser(userId: string, updateUserDto: CreateUserDto) {
-    // Update user details
-    const updatedUser = await this.prisma.user.update({
-      where: { id: userId },
-      data: {
-        email: updateUserDto.email,
-        username: updateUserDto.username,
-        first_name: updateUserDto.firstName,
-        last_name: updateUserDto.lastName,
-        password: updateUserDto.password,
-      },
-    });
-
-    // If roleId is provided, assign it to the user
-    if (updateUserDto.roleId) {
-      await this.assignRoleToUser(userId, updateUserDto.roleId);
+      return {
+        success: true,
+        message: 'User assigned to role successfully!',
+        data: updatedRole,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: 'Failed to assign role to user',
+        error: error.message,
+      };
     }
-
-    return updatedUser;
   }
 
-   // Get a single user by userId
-// Get a user by their ID and include their roles and the associated permissions
+async updateUser(userId: string, updateUserDto: CreateUserDto) {
+  const user = await this.prisma.user.findUnique({
+    where: { id: userId },
+  });
+
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  // Update user information
+  const updatedUser = await this.prisma.user.update({
+    where: { id: userId },
+    data: {
+      ...updateUserDto, // Spread the updated user details 
+    },
+  });
+
+  return {
+    success: true,
+    message: 'User updated successfully!',
+    user: updatedUser,
+  };
+}
+
+
+  // Get a single user by userId
+  // Get a user by their ID and include their roles and the associated permissions
   async getUserById(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: {
         roles: {
           include: {
-            permissions: true,  // Include permissions related to the role
+            permissions: true, // Include permissions related to the role
           },
         },
       },
@@ -190,10 +194,10 @@ export class UserService {
     const { password, ...safeUser } = user;
 
     // Format the roles and permissions
-    const rolesWithPermissions = user.roles.map(role => ({
+    const rolesWithPermissions = user.roles.map((role) => ({
       roleId: role.id,
       roleName: role.title,
-      permissions: role.permissions.map(permission => permission.title),  // Only include permission titles
+      permissions: role.permissions.map((permission) => permission.title), // Only include permission titles
     }));
 
     return {
@@ -210,9 +214,52 @@ export class UserService {
         created_at: safeUser.created_at,
         updated_at: safeUser.updated_at,
         username: safeUser.username,
-        roles: rolesWithPermissions,  // Include roles and permissions in the response
+        roles: rolesWithPermissions, // Include roles and permissions in the response
       },
     };
   }
 
+  async deleteUser(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    // Delete the user
+    await this.prisma.user.delete({
+      where: { id: userId },
+    });
+
+    return {
+      success: true,
+      message: 'User deleted successfully!',
+    };
+  }
+
+  async enableDisableUser(userId: string, status: boolean) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    // Update the user status (enabled/disabled)
+    const updatedUser = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        status: status ? 1 : 0, // 1 for active, 0 for inactive
+      },
+    });
+
+    return {
+      success: true,
+      message: `User ${status ? 'enabled' : 'disabled'} successfully!`,
+      user: updatedUser,
+    };
+  }
 }

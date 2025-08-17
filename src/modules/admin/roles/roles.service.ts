@@ -2,12 +2,13 @@ import { Injectable } from '@nestjs/common';
 import { Permissions } from 'src/ability/permissions.enum'; // Permissions enum
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateRoleDto } from './dto/create-role.dto'; // CreateRoleDto for input validation
+import { UpdateRoleDto } from 'src/modules/admin/roles/dto/update-role.dto';
 
 @Injectable()
 export class RolesService {
   constructor(private readonly prisma: PrismaService) {}
 
-// Function to create a role and assign permissions to it
+  // Function to create a role and assign permissions to it
   async createRoleWithPermissions(createRoleDto: CreateRoleDto) {
     // Step 1: Create the role
     const role = await this.prisma.role.create({
@@ -69,7 +70,57 @@ export class RolesService {
       success: true,
       message: 'Role created and permissions assigned successfully!',
       role: role,
-      permissions: permissionData,  // Include permission id and title in the response
+      permissions: permissionData, // Include permission id and title in the response
+    };
+  }
+
+
+  // Function to update a role
+  async updateRole(roleId: string, updateRoleDto: UpdateRoleDto) {
+    // Step 1: Find the role by id
+    const role = await this.prisma.role.findUnique({
+      where: { id: roleId },
+    });
+
+    if (!role) {
+      throw new Error('Role not found');
+    }
+
+    // Step 2: Update the role data
+    const updatedRole = await this.prisma.role.update({
+      where: { id: roleId },
+      data: {
+        title: updateRoleDto.title || role.title,  // Keep existing title if not provided
+        description: updateRoleDto.description || role.description,  // Keep existing description if not provided
+      },
+    });
+
+    // Step 3: Handle permissions if provided
+    if (updateRoleDto.permissions) {
+      const validPermissions = this.getValidPermissions(updateRoleDto.permissions);
+
+      // Fetch existing permission data
+      const permissionData = await this.prisma.permission.findMany({
+        where: {
+          title: { in: validPermissions },
+        },
+      });
+
+      // Connect the valid permissions to the role
+      await this.prisma.role.update({
+        where: { id: updatedRole.id },
+        data: {
+          permissions: {
+            connect: permissionData.map((perm) => ({ id: perm.id })),
+          },
+        },
+      });
+    }
+
+    return {
+      success: true,
+      message: 'Role updated successfully!',
+      role: updatedRole,
     };
   }
 
@@ -79,7 +130,6 @@ export class RolesService {
       Object.values(Permissions).includes(permission as Permissions),
     );
   }
-
 
   // Get all roles with name and ID
   async getAllRoles() {
