@@ -26,6 +26,10 @@ import { CategoryModule } from './modules/admin/sevice-management/category/categ
 import { BlogCategoryModule } from './modules/admin/blog/blog_category/blog_category.module';
 import { WebsiteInfoModule } from './modules/admin/admin_settings/website-info/website-info.module';
 import { ChatModule } from './chat___/chat_module';
+import { Permission } from './modules/admin/permission/entities/permission.entity';
+import { PermissionModule } from './modules/admin/permission/permission.module';
+import { Role } from './modules/admin/roles/entities/role.entity';
+import { RolesModule } from './modules/admin/roles/roles.module';
 
 
 @Module({
@@ -56,6 +60,9 @@ import { ChatModule } from './chat___/chat_module';
     UserModule,
     BlogCategoryModule,
     WebsiteInfoModule,
+    PermissionModule,
+    RolesModule,
+    
   ],
   controllers: [AppController],
   providers: [AppService],

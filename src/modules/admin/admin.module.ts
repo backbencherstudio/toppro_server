@@ -6,6 +6,8 @@ import { PaymentTransactionModule } from './payment-transaction/payment-transact
 import { UserModule } from './user/user.module';
 import { NotificationModule } from './notification/notification.module';
 import { BlogModule } from './blog/blog.module';
+import { PermissionModule } from './permission/permission.module';
+import { RolesModule } from './roles/roles.module';
 
 
 @Module({
@@ -18,6 +20,8 @@ import { BlogModule } from './blog/blog.module';
     NotificationModule,
     BlogModule,
     WebsiteInfoModule,
+    PermissionModule,
+    RolesModule,
 
 
   ],

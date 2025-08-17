@@ -12,18 +12,17 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import { memoryStorage } from 'multer';
-import { FileInterceptor } from '@nestjs/platform-express';
 import { AuthService } from './auth.service';
-import { LocalAuthGuard } from './guards/local-auth.guard';
 import { CreateUserDto } from './dto/create-user.dto';
-import { VerifyEmailDto } from './dto/verify-email.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { VerifyEmailDto } from './dto/verify-email.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import appConfig from '../../config/app.config';
-import { AuthGuard } from '@nestjs/passport';
+import { LocalAuthGuard } from './guards/local-auth.guard';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -61,6 +60,7 @@ export class AuthController {
       const address = data.address;
       const phone_number = data.phone_number || null; // Optional field
       const email = data.email;
+      const owner_id = data.owner_id; // New field for owner ID
       const password = data.password;
       const type = data.type;
 
@@ -82,6 +82,9 @@ export class AuthController {
       if (!email) {
         throw new HttpException('Email not provided', HttpStatus.UNAUTHORIZED);
       }
+      if (!owner_id) {
+        throw new HttpException('owner_id not provided', HttpStatus.UNAUTHORIZED);
+      }
       if (!password) {
         throw new HttpException(
           'Password not provided',
@@ -95,6 +98,7 @@ export class AuthController {
         first_name: first_name || null,
         last_name: last_name || null,
         email: email,
+        owner_id: owner_id,
         phone_number: phone_number, 
         address: address,
         password: password,

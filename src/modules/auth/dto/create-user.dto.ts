@@ -4,6 +4,10 @@ import { IsNotEmpty, MinLength } from 'class-validator';
 export class CreateUserDto {
   @IsNotEmpty()
   @ApiProperty()
+  owner_id?: string;
+
+  @IsNotEmpty()
+  @ApiProperty()
   name?: string;
 
   @IsNotEmpty()

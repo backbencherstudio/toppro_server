@@ -11,8 +11,8 @@ datasource db {
 model Account {
   id         String    @id @default(cuid())
   expires_at DateTime?
-  user_id String
-  user    User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user_id    String
+  user       User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   type                String?
   provider            String?
@@ -46,6 +46,7 @@ model User {
   password   String? @db.VarChar(255)
   domain     String? @unique
   avatar     String?
+  owner_id   String? 
 
   phone_number  String?
   country       String?
@@ -103,44 +104,45 @@ model Ucode {
 }
 
 model Role {
-  id         String    @id @default(cuid())
-  created_at DateTime  @default(now())
-  updated_at DateTime  @default(now())
-  deleted_at DateTime?
+  id          String    @id @default(cuid())
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @default(now())
+  deleted_at  DateTime?
+  description String?
+  status      Int?      @default(1) @db.SmallInt
+  title       String?   @default("user")
+  name        String?   @default("user")
 
-  status Int?    @default(1) @db.SmallInt
-  title  String? @default("user")
-  name   String? @default("user")
-
-  user_id String?
-  user    User?   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user_id     String?
+  user        User?     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   permission_roles PermissionRole[]
   role_users       RoleUser[]
-  permissions      Permission[]     @relation("PermissionToRole")
+  permissions      Permission[] @relation("PermissionToRole") // Many-to-many relationship with Permission
 
   @@map("roles")
 }
 
 model Permission {
-  id         String    @id @default(cuid())
-  created_at DateTime  @default(now())
-  updated_at DateTime  @default(now())
-  deleted_at DateTime?
+  id          String    @id @default(cuid())
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @default(now())
+  deleted_at  DateTime?
 
-  status Int? @default(1) @db.SmallInt
-
-  title      String?
-  action     String?
-  subject    String?
-  conditions String?
-  fields     String?
+  status      Int?      @default(1) @db.SmallInt
+  title       String?   @unique
+  action      String?
+  subject     String?
+  conditions  String?
+  fields      String?
+  description String?
 
   permission_roles PermissionRole[]
-  roles            Role[]           @relation("PermissionToRole")
+  roles            Role[]           @relation("PermissionToRole") // Many-to-many relationship with Role
 
   @@map("permissions")
 }
+
 
 model PermissionRole {
   created_at DateTime @default(now())
