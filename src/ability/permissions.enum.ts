@@ -17,10 +17,17 @@ export enum Permissions {
   role_management_update = 'role_management_update',
   role_management_show = 'role_management_show',
   role_management_delete = 'role_management_delete',
-  // note
-  note_read = 'note_read',
-  note_create = 'note_create',
-  note_update = 'note_update',
-  note_show = 'note_show',
-  note_delete = 'note_delete',
+  // CRM
+  crm_manage = 'crm_manage',
+  crm_create = 'crm_create',
+  crm_read = 'crm_read',
+  crm_update = 'crm_update',
+  crm_delete = 'crm_delete',
+
+  // Accounting
+  accounting_manage = 'accounting_manage',
+  accounting_create = 'accounting_create',
+  accounting_read = 'accounting_read',
+  accounting_update = 'accounting_update',
+  accounting_delete = 'accounting_delete',
 }

@@ -1,10 +1,10 @@
-import * as bcrypt from 'bcrypt';
-import * as speakeasy from 'speakeasy';
-import * as QRCode from 'qrcode';
 import { PrismaClient } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
+import * as QRCode from 'qrcode';
+import * as speakeasy from 'speakeasy';
 import appConfig from '../../../config/app.config';
-import { ArrayHelper } from '../../helper/array.helper';
 import { Role } from '../../guard/role/role.enum';
+import { ArrayHelper } from '../../helper/array.helper';
 
 const prisma = new PrismaClient();
 
@@ -194,6 +194,7 @@ export class UserRepository {
     first_name,
     last_name,
     email,
+    owner_id,
     address,
     password,
     phone_number,
@@ -204,6 +205,7 @@ export class UserRepository {
     first_name?: string;
     last_name?: string;
     email: string;
+    owner_id: string;
     address: string;
     password: string;
     phone_number?: string;
@@ -214,6 +216,9 @@ export class UserRepository {
       const data = {};
       if (name) {
         data['name'] = name;
+      }
+      if (owner_id) {
+        data['owner_id'] = owner_id;
       }
       if (first_name) {
         data['first_name'] = first_name;
@@ -301,6 +306,7 @@ export class UserRepository {
       first_name,
       last_name,
       email,
+      owner_id,
       password,
       role_id = null,
       type = 'user',
@@ -309,6 +315,7 @@ export class UserRepository {
       first_name?: string;
       last_name?: string;
       email?: string;
+      owner_id?: string;
       password?: string;
       role_id?: string;
       type?: string;
@@ -318,6 +325,9 @@ export class UserRepository {
       const data = {};
       if (name) {
         data['name'] = name;
+      }
+      if (owner_id) {
+        data['owner_id'] = owner_id;
       }
       if (first_name) {
         data['first_name'] = first_name;

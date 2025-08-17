@@ -366,6 +366,7 @@ export class AuthService {
     first_name,
     last_name,
     email,
+    owner_id,
     phone_number,
     address,
     password,
@@ -375,6 +376,7 @@ export class AuthService {
     first_name: string;
     last_name: string;
     email: string;
+    owner_id: string;
     phone_number: string;
     address: string;
     password: string;
@@ -401,6 +403,7 @@ export class AuthService {
         address: address,
         phone_number: phone_number,
         email: email,
+        owner_id: owner_id,
         password: password,
         type: type,
       });
