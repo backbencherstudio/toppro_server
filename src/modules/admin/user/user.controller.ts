@@ -21,7 +21,7 @@ import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 @ApiBearerAuth()
 @ApiTags('User')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(Role.ADMIN)
+@Roles(Role.SUPERADMIN)
 @Controller('admin/user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
@@ -61,7 +61,7 @@ export class UserController {
   }
 
   // approve user
-  @Roles(Role.ADMIN)
+  @Roles(Role.SUPERADMIN)
   @ApiResponse({ description: 'Approve a user' })
   @Post(':id/approve')
   async approve(@Param('id') id: string) {
@@ -77,7 +77,7 @@ export class UserController {
   }
 
   // reject user
-  @Roles(Role.ADMIN)
+  @Roles(Role.SUPERADMIN)
   @ApiResponse({ description: 'Reject a user' })
   @Post(':id/reject')
   async reject(@Param('id') id: string) {

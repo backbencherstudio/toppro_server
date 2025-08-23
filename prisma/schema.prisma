@@ -46,7 +46,10 @@ model User {
   password   String? @db.VarChar(255)
   domain     String? @unique
   avatar     String?
-  owner_id   String? 
+
+  super_id     String?
+  owner_id     String?
+  workspace_id String?
 
   phone_number  String?
   country       String?
@@ -59,10 +62,9 @@ model User {
 
   // billing id. e.g. stripe customer id
   billing_id String?
-
-  type              String?   @default("user") // user, admin, superadmin
+  type              UserType  @default(USER) // SUPER ADMIN, OWNER, USER, CUSTOMER, VENDOR
+  
   email_verified_at DateTime?
-
   is_two_factor_enabled Int?    @default(0)
   two_factor_secret     String? // secret key for two factor authentication
 
@@ -83,8 +85,35 @@ model User {
   services                 Service[]
   subscriptions            Subscription[]
   email_history_recipients EmailHistoryRecipient[]
+  workspace                Workspace?              @relation(fields: [workspace_id], references: [id])
 
   @@map("users")
+}
+
+model Workspace {
+  id         String    @id @default(cuid())
+  created_at DateTime  @default(now())
+  updated_at DateTime  @default(now()) @updatedAt
+  deleted_at DateTime?
+
+  name        String
+  code        String  @unique
+  description String?
+  super_id    String?
+  owner_id    String
+
+  status Int?   @default(1) @db.SmallInt
+  User   User[]
+
+  @@map("workspaces")
+}
+
+enum UserType {
+  SUPERADMIN
+  OWNER
+  USER
+  CUSTOMER
+  VENDOR
 }
 
 model Ucode {
@@ -113,24 +142,24 @@ model Role {
   title       String?   @default("user")
   name        String?   @default("user")
 
-  user_id     String?
-  user        User?     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user_id String?
+  user    User?   @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   permission_roles PermissionRole[]
   role_users       RoleUser[]
-  permissions      Permission[] @relation("PermissionToRole") // Many-to-many relationship with Permission
+  permissions      Permission[]     @relation("PermissionToRole") // Many-to-many relationship with Permission
 
   @@map("roles")
 }
 
 model Permission {
-  id          String    @id @default(cuid())
-  created_at  DateTime  @default(now())
-  updated_at  DateTime  @default(now())
-  deleted_at  DateTime?
+  id         String    @id @default(cuid())
+  created_at DateTime  @default(now())
+  updated_at DateTime  @default(now())
+  deleted_at DateTime?
 
-  status      Int?      @default(1) @db.SmallInt
-  title       String?   @unique
+  status      Int?    @default(1) @db.SmallInt
+  title       String? @unique
   action      String?
   subject     String?
   conditions  String?
@@ -142,7 +171,6 @@ model Permission {
 
   @@map("permissions")
 }
-
 
 model PermissionRole {
   created_at DateTime @default(now())
@@ -903,14 +931,14 @@ model PostPerformance {
 // }
 
 model Customer {
-  id             String   @id @default(uuid())
-  name           String   @db.VarChar(255)
-  contact        String   @db.VarChar(255)
-  email          String   @unique @db.VarChar(255)
-  password       String   @db.VarChar(255)
-  taxNumber      String?  @unique @db.VarChar(255)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @default(now()) @updatedAt
+  id        String   @id @default(uuid())
+  name      String   @db.VarChar(255)
+  contact   String   @db.VarChar(255)
+  email     String   @unique @db.VarChar(255)
+  password  String   @db.VarChar(255)
+  taxNumber String?  @unique @db.VarChar(255)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 
   billingName    String?
   billingPhone   String?
@@ -920,24 +948,24 @@ model Customer {
   billingCountry String?
   billingZip     String?
 
-  shippingName   String?
-  shippingPhone  String?
+  shippingName    String?
+  shippingPhone   String?
   shippingAddress String?
-  shippingCity   String?
-  shippingState  String?
+  shippingCity    String?
+  shippingState   String?
   shippingCountry String?
-  shippingZip    String?
+  shippingZip     String?
 }
 
 model Vendor {
-  id             String   @id @default(uuid())
-  name           String   @db.VarChar(255)
-  contact        String   @db.VarChar(255)
-  email          String   @unique @db.VarChar(255)
-  password       String   @db.VarChar(255)
-  taxNumber      String?  @unique @db.VarChar(255)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @default(now()) @updatedAt
+  id        String   @id @default(uuid())
+  name      String   @db.VarChar(255)
+  contact   String   @db.VarChar(255)
+  email     String   @unique @db.VarChar(255)
+  password  String   @db.VarChar(255)
+  taxNumber String?  @unique @db.VarChar(255)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 
   billingName    String?
   billingPhone   String?

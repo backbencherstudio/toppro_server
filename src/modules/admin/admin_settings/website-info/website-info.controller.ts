@@ -23,7 +23,7 @@ import { Request } from 'express';
 // @ApiBearerAuth()
 @ApiTags('Website Info')
 // @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(Role.ADMIN)
+@Roles(Role.SUPERADMIN)
 @Controller('admin/website-info')
 export class WebsiteInfoController {
   constructor(private readonly websiteInfoService: WebsiteInfoService) {}

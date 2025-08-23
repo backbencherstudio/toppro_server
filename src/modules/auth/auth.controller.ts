@@ -49,70 +49,80 @@ export class AuthController {
     }
   }
 
-  // register a user
-  @ApiOperation({ summary: 'Register a user' })
-  @Post('register')
-  async create(@Body() data: CreateUserDto) {
-    try {
-      const name = data.name;
-      const first_name = data.first_name || null;
-      const last_name = data.last_name || null;
-      const address = data.address;
-      const phone_number = data.phone_number || null; // Optional field
-      const email = data.email;
-      const owner_id = data.owner_id; // New field for owner ID
-      const password = data.password;
-      const type = data.type;
+// register a user
+@ApiOperation({ summary: 'Register a user' })
+@Post('register')
+async create(@Body() data: CreateUserDto) {
+  try {
+    const { name, first_name, last_name, address, phone_number, email, password, type, owner_id, super_id, workspace_id } = data;
 
-      if (!name) {
-        throw new HttpException('Name not provided', HttpStatus.UNAUTHORIZED);
-      }
-      // if (!first_name) {
-      //   throw new HttpException(
-      //     'First name not provided',
-      //     HttpStatus.UNAUTHORIZED,
-      //   );
-      // }
-      // if (!last_name) {
-      //   throw new HttpException(
-      //     'Last name not provided',
-      //     HttpStatus.UNAUTHORIZED,
-      //   );
-      // }
-      if (!email) {
-        throw new HttpException('Email not provided', HttpStatus.UNAUTHORIZED);
-      }
-      if (!owner_id) {
-        throw new HttpException('owner_id not provided', HttpStatus.UNAUTHORIZED);
-      }
-      if (!password) {
-        throw new HttpException(
-          'Password not provided',
-          HttpStatus.UNAUTHORIZED,
-        );
-      }
+    // Validate input fields
+    if (!name) {
+      throw new HttpException('Name not provided', HttpStatus.UNAUTHORIZED);
+    }
+    if (!email) {
+      throw new HttpException('Email not provided', HttpStatus.UNAUTHORIZED);
+    }
+    if (!password) {
+      throw new HttpException('Password not provided', HttpStatus.UNAUTHORIZED);
+    }
 
-      
+    // If the user is of type 'OWNER', create a workspace
+    if (type === 'OWNER') {
+      // Automatically create a Workspace for the Owner
+      // @ts-ignore
+      const workspace = await this.authService.createWorkspace({ ownerName: name }); 
+
+      // Create the Owner user and associate the workspace_id
       const response = await this.authService.register({
-        name: name,
-        first_name: first_name || null,
-        last_name: last_name || null,
-        email: email,
-        owner_id: owner_id,
-        phone_number: phone_number, 
-        address: address,
-        password: password,
-        type: type,
+        name,
+        first_name,
+        last_name,
+        email,
+        phone_number,
+        address,
+        password,
+        type,
+        workspace_id: workspace.id, // Set the workspace_id
       });
 
       return response;
-    } catch (error) {
-      return {
-        success: false,
-        message: error.message,
-      };
     }
+
+    // If the user is of type 'USER', validate owner_id, super_id, workspace_id
+    if (type === 'USER' || type === 'CUSTOMER' || type === 'VENDOR' ) {
+      if (!owner_id || !super_id || !workspace_id) {
+        throw new HttpException('owner_id, super_id, and workspace_id are required for User type', HttpStatus.BAD_REQUEST);
+      }
+
+      // Create the user with the provided details
+      const response = await this.authService.register({
+        name,
+        first_name,
+        last_name,
+        email,
+        phone_number,
+        address,
+        password,
+        type,
+        owner_id,
+        super_id,
+        workspace_id,
+      });
+
+      return response;
+    }
+
+    throw new HttpException('Invalid user type', HttpStatus.BAD_REQUEST);
+
+  } catch (error) {
+    return {
+      success: false,
+      message: error.message,
+    };
   }
+}
+
 
   // login user
   @ApiOperation({ summary: 'Login user' })
