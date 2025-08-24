@@ -35,21 +35,19 @@ model User {
   deleted_at DateTime?
   status     Int?      @default(1) @db.SmallInt
 
-  approved_at  DateTime?
-  availability String?
-
   email      String? @unique
   username   String? @unique
   name       String? @db.VarChar(255)
   first_name String? @db.VarChar(255)
   last_name  String? @db.VarChar(255)
   password   String? @db.VarChar(255)
-  domain     String? @unique
   avatar     String?
 
   super_id     String?
   owner_id     String?
-  workspace_id String?
+  workspace_id String? // Relation to Workspace
+
+  workspace Workspace? @relation(fields: [workspace_id], references: [id])
 
   phone_number  String?
   country       String?
@@ -60,13 +58,12 @@ model User {
   gender        String?
   date_of_birth DateTime? @db.Date
 
-  // billing id. e.g. stripe customer id
   billing_id String?
-  type              UserType  @default(USER) // SUPER ADMIN, OWNER, USER, CUSTOMER, VENDOR
-  
-  email_verified_at DateTime?
-  is_two_factor_enabled Int?    @default(0)
-  two_factor_secret     String? // secret key for two factor authentication
+  type       UserType @default(USER) // SUPER ADMIN, OWNER, USER, CUSTOMER, VENDOR
+
+  email_verified_at     DateTime?
+  is_two_factor_enabled Int?      @default(0)
+  two_factor_secret     String?
 
   accounts                  Account[]
   creator_conversations     Conversation[] @relation("creator")
@@ -85,7 +82,6 @@ model User {
   services                 Service[]
   subscriptions            Subscription[]
   email_history_recipients EmailHistoryRecipient[]
-  workspace                Workspace?              @relation(fields: [workspace_id], references: [id])
 
   @@map("users")
 }

@@ -1,16 +1,17 @@
 import { Injectable } from '@nestjs/common';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
-import { PrismaService } from '../../../prisma/prisma.service';
-import { UserRepository } from '../../../common/repository/user/user.repository';
-import appConfig from '../../../config/app.config';
-import { SojebStorage } from '../../../common/lib/Disk/SojebStorage';
+import { UserType } from '@prisma/client';
 import { DateHelper } from '../../../common/helper/date.helper';
+import { UserRepository } from '../../../common/repository/user/user.repository';
+import { PrismaService } from '../../../prisma/prisma.service';
+import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from 'src/modules/auth/dto/update-user.dto';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UserService {
   constructor(private prisma: PrismaService) {}
 
+  // Create a new Owner
   async create(createUserDto: CreateUserDto) {
     try {
       //@ts-ignore
@@ -35,105 +36,40 @@ export class UserService {
     }
   }
 
-  async findAll({
-    q,
-    type,
-    approved,
-  }: {
-    q?: string;
-    type?: string;
-    approved?: string;
-  }) {
-    try {
-      const where_condition = {};
-      if (q) {
-        where_condition['OR'] = [
-          { name: { contains: q, mode: 'insensitive' } },
-          { email: { contains: q, mode: 'insensitive' } },
-        ];
-      }
-
-      if (type) {
-        where_condition['type'] = type;
-      }
-
-      if (approved) {
-        where_condition['approved_at'] =
-          approved == 'approved' ? { not: null } : { equals: null };
-      }
-
-      const users = await this.prisma.user.findMany({
-        where: {
-          ...where_condition,
-        },
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          phone_number: true,
-          address: true,
-          type: true,
-          approved_at: true,
-          created_at: true,
-          updated_at: true,
-        },
-      });
-
-      return {
-        success: true,
-        data: users,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        message: error.message,
-      };
-    }
+  // Get all owners
+  async findAll() {
+    return this.prisma.user.findMany({
+      where: { type: UserType.OWNER }, // or UserType.OWNER
+      select: {
+        id: true,
+        avatar: true,
+        name: true,
+        email: true,
+        roles: true,
+        type: true,
+        status: true,
+      },
+      orderBy: { created_at: 'desc' },
+    });
   }
 
+  // Get one user by id
   async findOne(id: string) {
     try {
       const user = await this.prisma.user.findUnique({
-        where: {
-          id: id,
-        },
+        where: { id },
         select: {
-          id: true,
+          avatar: true,
           name: true,
           email: true,
+          roles: true,
           type: true,
-          phone_number: true,
-          approved_at: true,
-          created_at: true,
-          updated_at: true,
-          avatar: true,
-          billing_id: true,
+          status: true,
         },
       });
-
-      // add avatar url to user
-      if (user.avatar) {
-        user['avatar_url'] = SojebStorage.url(
-          appConfig().storageUrl.avatar + user.avatar,
-        );
-      }
-
-      if (!user) {
-        return {
-          success: false,
-          message: 'User not found',
-        };
-      }
-
-      return {
-        success: true,
-        data: user,
-      };
+      return user;
     } catch (error) {
-      return {
-        success: false,
-        message: error.message,
-      };
+      throw new Error('Failed to fetch user: ' + error.message);
     }
   }
 
@@ -191,38 +127,90 @@ export class UserService {
     }
   }
 
-  async update(id: string, updateUserDto: UpdateUserDto) {
+  // Update user status (disable or enable) only
+  async updateStatus(id: string, status: number) {
     try {
-      const user = await UserRepository.updateUser(id, updateUserDto);
+      const user = await this.prisma.user.update({
+        where: { id },
+        data: {
+          status,
+          approved_at: status === 1 ? new Date() : null, // enable = set time, disable = clear
+        },
+        select: {
+          avatar: true,
+          name: true,
+          email: true,
+          type: true,
+          status: true,
+        },
+      });
 
-      if (user.success) {
-        return {
-          success: user.success,
-          message: user.message,
-        };
-      } else {
-        return {
-          success: user.success,
-          message: user.message,
-        };
+      return {
+        success: true,
+        message:
+          status === 1
+            ? 'User enabled successfully'
+            : 'User disabled successfully',
+        data: user,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: 'Failed to update status: ' + error.message,
+      };
+    }
+  }
+
+  async updateUser(id: string, data: UpdateUserDto) {
+    try {
+      const updateData: any = { ...data };
+
+      // Password hash if provided
+      if (data.password) {
+        const salt = await bcrypt.genSalt(10);
+        updateData.password = await bcrypt.hash(data.password, salt);
       }
+
+      const user = await this.prisma.user.update({
+        where: { id },
+        data: updateData,
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          first_name: true,
+          last_name: true,
+          address: true,
+          phone_number: true,
+        },
+      });
+
+      return {
+        success: true,
+        message: 'User updated successfully',
+        data: user,
+      };
     } catch (error) {
       return {
         success: false,
-        message: error.message,
+        message: 'Failed to update user: ' + error.message,
       };
     }
   }
 
-  async remove(id: string) {
-    try {
-      const user = await UserRepository.deleteUser(id);
-      return user;
-    } catch (error) {
-      return {
-        success: false,
-        message: error.message,
-      };
-    }
+async deleteOwner(id: string) {
+  try {
+    await this.prisma.user.delete({
+      where: { id },
+    });
+
+    return {
+      success: true,
+      message: 'User deleted successfully',
+    };
+  } catch (error) {
+    return { success: false, message: 'Failed to delete user: ' + error.message };
   }
+}
+
 }

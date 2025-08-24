@@ -1,4 +1,298 @@
-<p>Hello <%= name %>,</p>
-<p>Please click the link below to verify your email:</p>
-<a href="<%= verificationLink %>">Verify Email</a>
-<p>This link will expire in 24 hours.</p>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Email Verification</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+      color: #333;
+    }
+    
+    .email-container {
+      max-width: 600px;
+      margin: 40px auto;
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(20px);
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+      animation: slideIn 0.6s ease-out;
+    }
+    
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    .header {
+      background: linear-gradient(135deg, rgba(76, 175, 80, 0.9), rgba(56, 142, 60, 0.8));
+      padding: 40px 30px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="75" cy="75" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="50" cy="10" r="0.5" fill="rgba(255,255,255,0.05)"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+      opacity: 0.3;
+    }
+    
+    .header h1 {
+      font-size: 28px;
+      color: white;
+      font-weight: 600;
+      margin-bottom: 8px;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      position: relative;
+      z-index: 1;
+    }
+    
+    .header .subtitle {
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 16px;
+      position: relative;
+      z-index: 1;
+    }
+    
+    .content {
+      padding: 40px 30px;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      position: relative;
+    }
+    
+    .content::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #4CAF50, #2196F3, #4CAF50);
+      animation: shimmer 2s infinite;
+    }
+    
+    @keyframes shimmer {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+    
+    .greeting {
+      font-size: 20px;
+      color: #2c3e50;
+      margin-bottom: 20px;
+      font-weight: 500;
+    }
+    
+    .message {
+      font-size: 16px;
+      line-height: 1.6;
+      color: #555;
+      margin-bottom: 25px;
+    }
+    
+    .credentials-box {
+      background: rgba(33, 150, 243, 0.1);
+      border: 1px solid rgba(33, 150, 243, 0.2);
+      border-radius: 12px;
+      padding: 20px;
+      margin: 25px 0;
+      backdrop-filter: blur(5px);
+    }
+    
+    .credential-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 12px;
+      font-size: 14px;
+    }
+    
+    .credential-row:last-child {
+      margin-bottom: 0;
+    }
+    
+    .credential-label {
+      font-weight: 600;
+      color: #2196F3;
+      min-width: 80px;
+      margin-right: 10px;
+    }
+    
+    .credential-value {
+      color: #333;
+      background: rgba(255, 255, 255, 0.8);
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+    }
+    
+    .verify-button {
+      display: inline-block;
+      padding: 16px 40px;
+      background: linear-gradient(135deg, #4CAF50, #45a049);
+      color: white;
+      text-decoration: none;
+      font-size: 16px;
+      font-weight: 600;
+      border-radius: 50px;
+      margin: 30px 0 20px 0;
+      box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .verify-button::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      transition: left 0.5s;
+    }
+    
+    .verify-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+    }
+    
+    .verify-button:hover::before {
+      left: 100%;
+    }
+    
+    .expiry-notice {
+      background: rgba(255, 193, 7, 0.1);
+      border-left: 4px solid #FFC107;
+      padding: 15px;
+      border-radius: 8px;
+      font-size: 14px;
+      color: #856404;
+      margin-top: 20px;
+    }
+    
+    .footer {
+      background: rgba(255, 255, 255, 0.05);
+      padding: 30px;
+      text-align: center;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .footer p {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.8);
+      line-height: 1.5;
+    }
+    
+    .security-icon {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      background: #4CAF50;
+      border-radius: 50%;
+      margin-right: 8px;
+      position: relative;
+    }
+    
+    .security-icon::before {
+      content: '✓';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: white;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    
+    @media (max-width: 600px) {
+      .email-container {
+        margin: 20px 10px;
+        border-radius: 15px;
+      }
+      
+      .header, .content, .footer {
+        padding: 25px 20px;
+      }
+      
+      .header h1 {
+        font-size: 24px;
+      }
+      
+      .verify-button {
+        padding: 14px 30px;
+        font-size: 15px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="email-container">
+    <div class="header">
+      <h1><span class="security-icon"></span>Email Verification</h1>
+      <p class="subtitle">Secure account activation</p>
+    </div>
+
+    <div class="content">
+      <div class="greeting">
+        Hello <%= name %>,
+      </div>
+
+      <div class="message">
+        Thank you for registering as a <strong><%= type %></strong>. We're excited to have you on board! Please verify your email address to complete your registration and activate your account.
+      </div>
+
+      <div class="credentials-box">
+        <div class="credential-row">
+          <span class="credential-label">Email:</span>
+          <span class="credential-value"><%= email %></span>
+        </div>
+        <div class="credential-row">
+          <span class="credential-label">Password:</span>
+          <span class="credential-value"><%= password %></span>
+        </div>
+      </div>
+
+      <div style="text-align: center;">
+        <a href="<%= verificationLink %>" class="verify-button">
+          Verify My Email Address
+        </a>
+      </div>
+
+      <div class="expiry-notice">
+        <strong>⏰ Important:</strong> This verification link will expire in 24 hours for security reasons.
+      </div>
+    </div>
+
+    <div class="footer">
+      <p>If you did not create this account, please ignore this email and no further action is required.</p>
+      <p style="margin-top: 10px; opacity: 0.7;">This is an automated message. Please do not reply to this email.</p>
+    </div>
+  </div>
+</body>
+</html>

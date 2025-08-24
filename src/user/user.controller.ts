@@ -1,4 +1,12 @@
-import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Put,
+} from '@nestjs/common';
 import { CreateUserDto } from './dto/create_user-dto';
 import { LoginDto } from './dto/login_dto';
 import { UserService } from './user.service';
@@ -11,7 +19,7 @@ export class UserController {
   async register(@Body() createUserDto: CreateUserDto) {
     return this.userService.create(createUserDto);
   }
-  
+
   @Post('createUser')
   async createUser(@Body() createUserDto: CreateUserDto) {
     return this.userService.create(createUserDto);
@@ -22,32 +30,45 @@ export class UserController {
   async login(@Body() loginDto: LoginDto) {
     return this.userService.login(loginDto);
   }
-  
+
+  // Get all users
   @Get('all')
   async getUsers() {
-    return this.userService.getAll(); // no body needed
+    return this.userService.getAllUsers(); // no body needed
+  }
+
+  // Get all customers
+  @Get('customer/all')
+  async getCustomers() {
+    return this.userService.getAllCustomers(); // no body needed
+  }
+
+  // Get all vendors
+  @Get('vendor/all')
+  async getVendors() {
+    return this.userService.getAllVendor(); // no body needed
   }
 
   // Endpoint to assign a role to a user
-  @Put(':userId/assign-role')  // Using PUT method to update the role assignment
+  @Put(':userId/assign-role') // Using PUT method to update the role assignment
   async assignRoleToUser(
     @Param('userId') userId: string,
-    @Body() assignRoleDto: { roleId: string }
+    @Body() assignRoleDto: { roleId: string },
   ) {
     return this.userService.assignRoleToUser(userId, assignRoleDto.roleId);
   }
 
-    // Endpoint to get a single user by userId
+  // Endpoint to get a single user by userId
   @Get(':userId')
   async getUser(@Param('userId') userId: string) {
     return this.userService.getUserById(userId); // Get single user by ID
   }
 
-    // Endpoint to update a user's information
+  // Endpoint to update a user's information
   @Put(':userId')
   async updateUser(
     @Param('userId') userId: string,
-    @Body() updateUserDto: CreateUserDto
+    @Body() updateUserDto: CreateUserDto,
   ) {
     return this.userService.updateUser(userId, updateUserDto); // Update user
   }
@@ -62,10 +83,8 @@ export class UserController {
   @Put(':userId/enable-disable')
   async enableDisableUser(
     @Param('userId') userId: string,
-    @Body() { status }: { status: boolean }  // True = enable, False = disable
+    @Body() { status }: { status: boolean }, // True = enable, False = disable
   ) {
     return this.userService.enableDisableUser(userId, status); // Enable/Disable user
   }
-
-
 }

@@ -1,28 +1,29 @@
 import {
-  Controller,
-  Get,
-  Post,
   Body,
-  Patch,
-  Param,
+  Controller,
   Delete,
-  UseGuards,
-  Query,
+  Get,
+  Param,
+  Patch,
+  Post,
 } from '@nestjs/common';
-import { UserService } from './user.service';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
-import { ApiBearerAuth, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Role } from '../../../common/guard/role/role.enum';
 import { Roles } from '../../../common/guard/role/roles.decorator';
-import { RolesGuard } from '../../../common/guard/role/roles.guard';
-import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
+import { UserService } from './user.service';
 
 @ApiBearerAuth()
 @ApiTags('User')
-@UseGuards(JwtAuthGuard, RolesGuard)
+// @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(Role.SUPERADMIN)
-@Controller('admin/user')
+@Controller('admin')
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
@@ -40,23 +41,31 @@ export class UserController {
     }
   }
 
-  @ApiResponse({ description: 'Get all users' })
-  @Get()
-  async findAll(
-    @Query() query: { q?: string; type?: string; approved?: string },
-  ) {
+  @ApiResponse({ description: 'Get all owners' })
+  @Get('owner/all')
+  async findAllOwners() {
     try {
-      const q = query.q;
-      const type = query.type;
-      const approved = query.approved;
-
-      const users = await this.userService.findAll({ q, type, approved });
-      return users;
+      const owners = await this.userService.findAll();
+      return {
+        success: true,
+        data: owners,
+      };
     } catch (error) {
       return {
         success: false,
         message: error.message,
       };
+    }
+  }
+
+  @ApiResponse({ description: 'Get one user by id' })
+  @Get('owner/:id')
+  async findOne(@Param('id') id: string) {
+    try {
+      const user = await this.userService.findOne(id);
+      return { success: true, data: user };
+    } catch (error) {
+      return { success: false, message: error.message };
     }
   }
 
@@ -76,59 +85,42 @@ export class UserController {
     }
   }
 
-  // reject user
+  // enable/disable owner
   @Roles(Role.SUPERADMIN)
-  @ApiResponse({ description: 'Reject a user' })
-  @Post(':id/reject')
-  async reject(@Param('id') id: string) {
+  @ApiOperation({ summary: 'Enable/Disable a user' })
+  @Patch('owner/status/:id')
+  async changeStatus(@Param('id') id: string, @Body('status') status: number) {
     try {
-      const user = await this.userService.reject(id);
-      return user;
+      const result = await this.userService.updateStatus(id, status);
+      return result;
     } catch (error) {
-      return {
-        success: false,
-        message: error.message,
-      };
+      return { success: false, message: error.message };
     }
   }
 
-  @ApiResponse({ description: 'Get a user by id' })
-  @Get(':id')
-  async findOne(@Param('id') id: string) {
+  // Update Owner details
+  @Roles(Role.SUPERADMIN) // or adjust as needed
+  @ApiOperation({ summary: 'Update user details' })
+  @Patch('owner/update/:id')
+  async updateUser(@Param('id') id: string, @Body() body: UpdateUserDto) {
     try {
-      const user = await this.userService.findOne(id);
-      return user;
+      const result = await this.userService.updateUser(id, body);
+      return result;
     } catch (error) {
-      return {
-        success: false,
-        message: error.message,
-      };
+      return { success: false, message: error.message };
     }
   }
 
-  @Patch(':id')
-  async update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    try {
-      const user = await this.userService.update(id, updateUserDto);
-      return user;
-    } catch (error) {
-      return {
-        success: false,
-        message: error.message,
-      };
-    }
+@Roles(Role.SUPERADMIN) // only SuperAdmin can delete
+@ApiOperation({ summary: 'Delete a user' })
+@Delete('owner/delete/:id')
+async deleteUser(@Param('id') id: string) {
+  try {
+    const result = await this.userService.deleteOwner(id);
+    return result;
+  } catch (error) {
+    return { success: false, message: error.message };
   }
+}
 
-  @Delete(':id')
-  async remove(@Param('id') id: string) {
-    try {
-      const user = await this.userService.remove(id);
-      return user;
-    } catch (error) {
-      return {
-        success: false,
-        message: error.message,
-      };
-    }
-  }
 }

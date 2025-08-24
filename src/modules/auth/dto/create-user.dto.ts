@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, MinLength } from 'class-validator';
+import { IsNotEmpty, IsOptional, MinLength } from 'class-validator';
 
 export class CreateUserDto {
 
@@ -48,5 +48,14 @@ export class CreateUserDto {
     type: String,
     example: 'USER',
   })
+
   type?: string;
+
+  @IsOptional() // Optional for cases where status needs to be set manually
+  @ApiProperty()
+  status?: number;
+
+  @IsOptional() // New property for workspace name, only for the OWNER type
+  @ApiProperty()
+  workspace_name?: string;
 }
