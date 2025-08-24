@@ -93,28 +93,68 @@ export class UserService {
     };
   }
 
-  // Get all users (No password)
-  async getAll() {
-    return this.prisma.user.findMany({
-      select: {
-        id: true,
-        username: true,
-        email: true,
-        type: true,
-        owner_id: true,
-        phone_number: true,
-        created_at: true,
-        updated_at: true,
-        first_name: true,
-        last_name: true,
-      },
-      orderBy: { id: 'asc' },
-    });
-  }
+// If `type` is a string column in Prisma (e.g., String):
+async getAllUsers() {
+  return this.prisma.user.findMany({
+    where: { type: 'USER' }, // filter only Users
+    select: {
+      id: true,
+      username: true,
+      email: true,
+      type: true,
+      owner_id: true,
+      phone_number: true,
+      created_at: true,
+      updated_at: true,
+      first_name: true,
+      last_name: true,
+    },
+    orderBy: { id: 'asc' },
+  });
+}
+// Get all customers
+async getAllCustomers() {
+  return this.prisma.user.findMany({
+    where: { type: 'CUSTOMER' }, // filter only customers
+    select: {
+      id: true,
+      username: true,
+      email: true,
+      type: true,
+      owner_id: true,
+      phone_number: true,
+      created_at: true,
+      updated_at: true,
+      first_name: true,
+      last_name: true,
+    },
+    orderBy: { id: 'asc' },
+  });
+}
+
+// Get all vendors
+async getAllVendor() {
+  return this.prisma.user.findMany({
+    where: { type: 'VENDOR' }, // filter only Vendors
+    select: {
+      id: true,
+      username: true,
+      email: true,
+      type: true,
+      owner_id: true,
+      phone_number: true,
+      created_at: true,
+      updated_at: true,
+      first_name: true,
+      last_name: true,
+    },
+    orderBy: { id: 'asc' },
+  });
+}
+
 
   // Assign role to a user (helper method)
   async assignRoleToUser(userId: string, roleId: string) {
-    // প্রথমে roleId valid কিনা check করি
     const role = await this.prisma.role.findUnique({
       where: { id: roleId },
     });

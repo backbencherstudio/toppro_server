@@ -1,8 +1,8 @@
-import { Injectable } from '@nestjs/common';
-import appConfig from '../config/app.config';
-import { InjectQueue } from '@nestjs/bullmq';
-import { Queue } from 'bullmq';
 import { MailerService } from '@nestjs-modules/mailer';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Injectable } from '@nestjs/common';
+import { Queue } from 'bullmq';
+import appConfig from '../config/app.config';
 
 @Injectable()
 export class MailService {
@@ -60,6 +60,7 @@ export class MailService {
     name: string;
     token: string;
     type: string;
+    password?: string;
   }) {
     const verificationLink = `${appConfig().app.client_app_url}/verify-email?token=${params.token}&email=${params.email}&type=${params.type}`;
 
@@ -69,6 +70,9 @@ export class MailService {
       template: './verification-link',
       context: {
         name: params.name,
+        email: params.email,
+        type: params.type,
+        password: params.password,
         verificationLink,
       },
     });

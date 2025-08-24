@@ -14,7 +14,7 @@ export class NotificationService {
       const where_condition = {};
       const userDetails = await UserRepository.getUserDetails(user_id);
 
-      if (userDetails.type == Role.ADMIN) {
+      if (userDetails.type == Role.SUPERADMIN) {
         where_condition['OR'] = [
           { receiver_id: { equals: user_id } },
           { receiver_id: { equals: null } },

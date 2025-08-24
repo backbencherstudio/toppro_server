@@ -88,7 +88,7 @@ export class UserRepository {
           username: username,
           email: email,
           password: password,
-          type: 'su_admin',
+          type: 'SUPERADMIN',
         },
       });
       return user;
@@ -194,7 +194,6 @@ export class UserRepository {
     first_name,
     last_name,
     email,
-    owner_id,
     address,
     password,
     phone_number,
@@ -205,7 +204,6 @@ export class UserRepository {
     first_name?: string;
     last_name?: string;
     email: string;
-    owner_id: string;
     address: string;
     password: string;
     phone_number?: string;
@@ -216,9 +214,6 @@ export class UserRepository {
       const data = {};
       if (name) {
         data['name'] = name;
-      }
-      if (owner_id) {
-        data['owner_id'] = owner_id;
       }
       if (first_name) {
         data['first_name'] = first_name;
@@ -605,7 +600,7 @@ static async changeEmailWithoutToken({
   }
 
   // convert user type to admin/vendor
-  static async convertTo(user_id: string, type: string = 'vendor') {
+  static async convertTo(user_id: string, type: string = 'VENDOR') {
     try {
       const userDetails = await UserRepository.getUserDetails(user_id);
       if (!userDetails) {
@@ -614,7 +609,7 @@ static async changeEmailWithoutToken({
           message: 'User not found',
         };
       }
-      if (userDetails.type == 'vendor') {
+      if (userDetails.type == 'VENDOR') {
         return {
           success: false,
           message: 'User is already a vendor',
@@ -622,7 +617,7 @@ static async changeEmailWithoutToken({
       }
       await prisma.user.update({
         where: { id: user_id },
-        data: { type: type },
+        data: { type: "VENDOR" },
       });
 
       return {
