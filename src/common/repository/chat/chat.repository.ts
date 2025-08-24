@@ -47,6 +47,7 @@ export class ChatRepository {
     return await prisma.user.update({
       where: { id: user_id },
       data: {
+        //@ts-ignore
         availability: status,
       },
     });

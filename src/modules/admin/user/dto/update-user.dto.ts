@@ -45,4 +45,9 @@ export class UpdateUserDto {
   @IsString()
   state?: string;
 
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  approved_at?: string;
+
 }

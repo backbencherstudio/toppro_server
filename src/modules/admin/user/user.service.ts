@@ -134,7 +134,7 @@ export class UserService {
         where: { id },
         data: {
           status,
-          approved_at: status === 1 ? new Date() : null, // enable = set time, disable = clear
+          approved_at: status === 1 ? new Date() : null, 
         },
         select: {
           avatar: true,
