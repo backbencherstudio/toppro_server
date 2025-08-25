@@ -1,14 +1,26 @@
-import { IsString, IsOptional, IsArray } from 'class-validator';
+import { IsArray, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class CreateRoleDto {
   @IsString()
-  title: string;  // Role title (e.g., "admin", "user")
+  title: string;
 
   @IsString()
   @IsOptional()
-  description?: string;  // Optional description for the role
+  description?: string; 
+
+  @IsString()
+  @IsOptional()
+  @IsNotEmpty()
+  owner_id?: string;
+
+  @IsString()
+  @IsNotEmpty()
+  workspace_id?: string; 
+
 
   @IsArray()
   @IsOptional()
-  permissions?: string[];  // Optional permissions array to assign during role creation
+  permissions?: string[];
+
+
 }

@@ -39,6 +39,8 @@ export class AuthService {
           gender: true,
           date_of_birth: true,
           created_at: true,
+          owner_id: true,
+          workspace_id: true,
         },
       });
 
@@ -73,6 +75,22 @@ export class AuthService {
       };
     }
   }
+
+  // update user workspace_id
+  async updateUserWorkspace(userId: string, workspace_id: string) {
+  try {
+    // Update the user's workspace_id field in the database
+    const updatedUser = await this.prisma.user.update({
+      where: { id: userId },
+      data: { workspace_id },
+    });
+
+    return updatedUser;
+  } catch (error) {
+    throw new Error('Error updating user workspace: ' + error.message);
+  }
+}
+
 
   async updateUser(
     userId: string,
@@ -211,102 +229,103 @@ export class AuthService {
     }
   }
 
-async login({ email, password, token }) {
-  try {
-    // Step 1: Fetch user from the database using the email
-    const user = await this.prisma.user.findUnique({
-      where: { email },
-    });
-
-    if (!user) {
-      return { success: false, message: 'User not found' };
-    }
-
-    // Step 2: Check if the user is an OWNER and validate the token
-    if (user.type === 'OWNER' && token) {
-
-      // Step 3: Check if the email is verified for all users
-    if (!user.email_verified_at) {
-      return { success: false, message: 'Please verify your email' };
-    }
-      // Validate the token (assuming the token is stored in the Ucode repository)
-      const tokenRecord = await UcodeRepository.validateToken({
-        email: email,
-        token: token,
+  async login({ email, password, token }) {
+    try {
+      // Step 1: Fetch user from the database using the email
+      const user = await this.prisma.user.findUnique({
+        where: { email },
       });
 
-      if (!tokenRecord) {
-        return { success: false, message: 'Invalid token' };
+      if (!user) {
+        return { success: false, message: 'User not found' };
       }
 
-      // If the token is valid, update email_verified_at
-      await this.prisma.user.update({
-        where: { email },
-        data: { email_verified_at: new Date() }, // Mark the email as verified
-      });
+      // Step 2: Check if the user is an OWNER and validate the token
+      if (user.type === 'OWNER' && token) {
+        // Step 3: Check if the email is verified for all users
+        if (!user.email_verified_at) {
+          return { success: false, message: 'Please verify your email' };
+        }
+        // Validate the token (assuming the token is stored in the Ucode repository)
+        const tokenRecord = await UcodeRepository.validateToken({
+          email: email,
+          token: token,
+        });
+
+        if (!tokenRecord) {
+          return { success: false, message: 'Invalid token' };
+        }
+
+        // If the token is valid, update email_verified_at
+        await this.prisma.user.update({
+          where: { email },
+          data: { email_verified_at: new Date() }, // Mark the email as verified
+        });
+      }
+
+      // Step 4: If the user type is USER, check the status
+      if (user.type === 'USER' && user.status === 0) {
+        return {
+          success: false,
+          message: 'Admin has not approved your account',
+        };
+      }
+      if (user.type === 'OWNER' && user.status === 0) {
+        return {
+          success: false,
+          message: 'Admin has not approved your account',
+        };
+      }
+
+      // Step 5: Validate password
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+
+      if (!isPasswordValid) {
+        return { success: false, message: 'Invalid password' };
+      }
+
+      // Step 6: Generate JWT tokens (access and refresh tokens)
+      const payload = { email: user.email, sub: user.id };
+      const accessToken = this.jwtService.sign(payload, { expiresIn: '1h' });
+      const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
+
+      return {
+        success: true,
+        message: 'Logged in successfully',
+        authorization: {
+          type: 'bearer',
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        },
+        type: user.type,
+      };
+    } catch (error) {
+      return { success: false, message: error.message };
     }
-
-    
-
-    // Step 4: If the user type is USER, check the status
-    if (user.type === 'USER' && user.status === 0) {
-      return { success: false, message: 'Admin has not approved your account' };
-    }
-    if (user.type === 'OWNER' && user.status === 0) {
-      return { success: false, message: 'Admin has not approved your account' };
-    }
-
-    // Step 5: Validate password
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-
-    if (!isPasswordValid) {
-      return { success: false, message: 'Invalid password' };
-    }
-
-    // Step 6: Generate JWT tokens (access and refresh tokens)
-    const payload = { email: user.email, sub: user.id };
-    const accessToken = this.jwtService.sign(payload, { expiresIn: '1h' });
-    const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
-
-    return {
-      success: true,
-      message: 'Logged in successfully',
-      authorization: {
-        type: 'bearer',
-        access_token: accessToken,
-        refresh_token: refreshToken,
-      },
-      type: user.type,
-    };
-  } catch (error) {
-    return { success: false, message: error.message };
   }
-}
-
-
 
   // Method to create a Workspace for the Owner
   async createWorkspace({
     ownerName,
-    ownerId,
+    owner_id,
     super_id,
     workspace_name,
   }: {
     ownerName: string;
-    ownerId: string;
+    owner_id: string;
     super_id: string;
     workspace_name?: string;
   }): Promise<Workspace> {
     try {
       // Ensure ownerId and super_id are provided
-      if (!ownerId || !super_id) {
+      if (!owner_id || !super_id) {
         throw new Error('Owner ID and Super ID must be provided.');
       }
 
       // Log for debugging
       console.log('Creating workspace for owner:', {
         ownerName,
-        ownerId,
+        owner_id,
         super_id,
         workspace_name,
       });
@@ -316,9 +335,9 @@ async login({ email, password, token }) {
         data: {
           name: workspace_name, // Dynamic workspace name based on the owner's name
           description: `Workspace created for ${ownerName}`, // Dynamic description based on the owner's name
-          owner_id: ownerId, // Assign the Owner ID
-          super_id: super_id, // Assign the Super ID
-          code: this.generateWorkspaceCode(), // Generate a unique workspace code
+          owner_id: owner_id,
+          super_id: super_id,
+          code: this.generateWorkspaceCode(),
         },
       });
 
@@ -419,6 +438,7 @@ async login({ email, password, token }) {
     owner_id,
     super_id,
     workspace_id,
+    roleId,
   }: {
     name: string;
     first_name: string;
@@ -432,6 +452,7 @@ async login({ email, password, token }) {
     owner_id?: string;
     super_id?: string;
     workspace_id?: string;
+    roleId?: string;
   }): Promise<any> {
     try {
       // Check if email already exists
@@ -446,31 +467,35 @@ async login({ email, password, token }) {
       // Hash the password before saving
       const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create the User with appropriate fields based on the type
-    const user = await this.prisma.user.create({
-      data: {
-        name,
-        first_name,
-        last_name,
-        email,
-        phone_number,
-        address,
-        password: hashedPassword,
-        status,
-        type: UserType[type.toUpperCase() as keyof typeof UserType], // Use the enum here
-        // Conditionally include super_id and workspace_id for OWNER
-        ...(type === 'OWNER' && {
-          super_id: super_id,         // Include super_id for OWNER
-          workspace_id: workspace_id, // Include workspace_id for OWNER
-        }),
-        // Conditionally include owner_id, super_id, and workspace_id for USER
-        ...((type === 'USER' ||type === 'CUSTOMER'||type === 'VENDOR')  && {
-          owner_id: owner_id,         // Include owner_id for USER
-          super_id: super_id,         // Include super_id for USER
-          workspace_id: workspace_id, // Include workspace_id for USER
-        }),
-      },
-    });
+      // Create the User with appropriate fields based on the type
+      const user = await this.prisma.user.create({
+        data: {
+          name,
+          first_name,
+          last_name,
+          email,
+          phone_number,
+          address,
+          password: hashedPassword,
+          status,
+          type: UserType[type.toUpperCase() as keyof typeof UserType], // Use the enum here
+          // Conditionally include super_id and workspace_id for OWNER
+          ...(type === 'OWNER' && {
+            super_id: super_id, // Include super_id for OWNER
+            // workspace_id: workspace_id, // Include workspace_id for OWNER
+          }),
+          // Conditionally include owner_id, super_id, and workspace_id for USER
+          ...((type === 'USER' || type === 'CUSTOMER' || type === 'VENDOR') && {
+            owner_id: owner_id,
+            workspace_id: workspace_id,
+            roles: {
+            connect: {
+              id: roleId,
+            },
+          },
+          }),
+        },
+      });
 
       // If the user is of type 'OWNER', send a verification email
       if (type === 'OWNER') {
@@ -487,7 +512,6 @@ async login({ email, password, token }) {
           token: token.token,
           type: type,
           password: password,
-
         });
       }
 

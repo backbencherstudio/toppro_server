@@ -10,6 +10,16 @@ import { NotificationModule } from './notification/notification.module';
 import { VendorModule } from './vendor/vendor.module';
 
 @Module({
-  imports: [NotificationModule, ContactModule, FaqModule, CustomerModule, VendorModule, LeadModule, DealModule, CrmSetupModule, CrmReportModule ],
+  imports: [
+    NotificationModule,
+    ContactModule,
+    FaqModule,
+    CustomerModule,
+    VendorModule,
+    LeadModule,
+    DealModule,
+    CrmSetupModule,
+    CrmReportModule,
+  ],
 })
 export class ApplicationModule {}
