@@ -86,6 +86,11 @@ model User {
   email_history_recipients EmailHistoryRecipient[]
 
   @@map("users")
+  Pipeline Pipeline[]
+  LeadStage LeadStage[]
+  DealStage DealStage[]
+  Label Label[]
+  Source Source[]
 }
 
 model Workspace {
@@ -102,8 +107,14 @@ model Workspace {
 
   status Int?   @default(1) @db.SmallInt
   User   User[]
+  
 
   @@map("workspaces")
+  Pipeline Pipeline[]
+  LeadStage LeadStage[]
+  DealStage DealStage[]
+  Label Label[]
+  Source Source[]
 }
 
 enum UserType {
@@ -984,40 +995,67 @@ model Vendor {
 }
 
 model Pipeline {
-  id          String      @id @default(uuid()) // Using UUID for the pipeline ID
-  name      String   @unique
-  leadStages  LeadStage[]
-  dealStages  DealStage[]
-  labels      Label[]
-  sources     Source[]
+  id           String      @id @default(uuid())
+  name         String
+  workspace_id  String
+  owner_id      String
+  workspace    Workspace   @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  owner       User        @relation(fields: [owner_id], references: [id], onDelete: Cascade)
+  leadStages   LeadStage[]
+  dealStages   DealStage[]
+  labels       Label[]
+  sources      Source[]
+  @@unique([workspace_id, name])
 }
 
 model LeadStage {
-  id         String    @id @default(uuid()) // Using UUID for the lead stage ID
-  name       String
-  pipelineId String
-  pipeline   Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade) // onDelete Cascade
+  id          String    @id @default(uuid())
+  name        String
+  pipelineId  String
+  pipeline    Pipeline  @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  workspace_id String
+  owner_id     String
+  workspace    Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  owner       User      @relation(fields: [owner_id], references: [id], onDelete: Cascade)
+  @@unique([pipelineId, name])
 }
 
 model DealStage {
-  id         String    @id @default(uuid()) // Using UUID for the deal stage ID
-  name       String
-  pipelineId String
-  pipeline   Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade) // onDelete Cascade
+  id          String    @id @default(uuid())
+  name        String
+  pipelineId  String
+  pipeline    Pipeline  @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  workspace_id String
+  owner_id     String
+  workspace    Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  owner       User      @relation(fields: [owner_id], references: [id], onDelete: Cascade)
+
+  @@unique([pipelineId, name])
 }
 
 model Label {
-  id         String    @id @default(uuid()) // Using UUID for the label ID
-  name       String
-  color      String
-  pipelineId String
-  pipeline   Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade) // onDelete Cascade
+  id          String    @id @default(uuid())
+  name        String
+  color       String
+  pipelineId  String
+  pipeline    Pipeline  @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  workspace_id String
+  owner_id     String
+  workspace  Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  owner       User      @relation(fields: [owner_id], references: [id], onDelete: Cascade)
+
+  @@unique([pipelineId, name])
 }
 
 model Source {
-  id         String    @id @default(uuid()) // Using UUID for the source ID
+  id         String    @id @default(uuid())
   name       String
-  pipelineId String?   // Optional: link source to a pipeline
+  pipelineId String?   
   pipeline   Pipeline? @relation(fields: [pipelineId], references: [id], onDelete: Cascade) // onDelete Cascade
+  workspace_id String
+  owner_id     String
+  workspace   Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  owner       User      @relation(fields: [owner_id], references: [id], onDelete: Cascade)
+  @@unique([workspace_id, name])
 }
 
