@@ -13,7 +13,7 @@ export class CustomerController {
 
   @Post()
   @UseGuards(JwtAuthGuard,RolePermissionGuard)
-  @PermissionsGuard(Permissions.accounting_create)
+  @PermissionsGuard(Permissions.customer_create)
   create(@Body() createCustomerDto: CreateCustomerDto) {
     return this.customerService.create(createCustomerDto);
   }
