@@ -1028,7 +1028,6 @@ model Pipeline {
   leadStages LeadStage[]
   dealStages DealStage[]
   labels     Label[]
-  sources    Source[]
 
   // constraints & indexes
   @@unique([workspace_id, name])
@@ -1107,10 +1106,6 @@ model Source {
 
   name String
 
-  // optional link to a pipeline
-  pipelineId String?
-  pipeline   Pipeline? @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
-
   workspace_id String
   owner_id     String
   workspace    Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
@@ -1119,6 +1114,5 @@ model Source {
   // unique per workspace
   @@unique([workspace_id, name])
   @@index([workspace_id, owner_id])
-  @@index([pipelineId])
   @@map("sources")
 }

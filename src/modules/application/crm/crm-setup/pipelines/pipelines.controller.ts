@@ -24,28 +24,6 @@ export class PipelineController {
   ) {
     return this.pipelineService.findAll(workspace_id, owner_id);
   }
-
-  // // UPDATE: params contain id, workspace_id, owner_id; body: { name }
-  // @Put('workspaceid/:workspace_id/ownersid/:owner_id/pipeid/:id')
-  // update(
-  //   @Param('id') id: string,
-  //   @Param('workspace_id') workspace_id: string,
-  //   @Param('owner_id') owner_id: string,
-  //   @Body() dto: Pick<CreatePipelineDto, 'name'>,
-  // ) {
-  //   return this.pipelineService.update(id, workspace_id, owner_id, dto);
-  // }
-
-  // // DELETE
-  // @Delete('workspaceid/:workspace_id/ownerid/:owner_id/pipeid/:id')
-  // remove(
-  //   @Param('id') id: string,
-  //   @Param('workspace_id') workspace_id: string,
-  //   @Param('owner_id') owner_id: string,
-  // ) {
-  //   return this.pipelineService.remove(id, workspace_id, owner_id);
-  // }
-
    @Put(':id')
   update(
     @Param('id') id: string,
