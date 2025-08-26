@@ -982,3 +982,42 @@ model Vendor {
   billingCountry String?
   billingZip     String?
 }
+
+model Pipeline {
+  id          String      @id @default(uuid()) // Using UUID for the pipeline ID
+  name      String   @unique
+  leadStages  LeadStage[]
+  dealStages  DealStage[]
+  labels      Label[]
+  sources     Source[]
+}
+
+model LeadStage {
+  id         String    @id @default(uuid()) // Using UUID for the lead stage ID
+  name       String
+  pipelineId String
+  pipeline   Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade) // onDelete Cascade
+}
+
+model DealStage {
+  id         String    @id @default(uuid()) // Using UUID for the deal stage ID
+  name       String
+  pipelineId String
+  pipeline   Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade) // onDelete Cascade
+}
+
+model Label {
+  id         String    @id @default(uuid()) // Using UUID for the label ID
+  name       String
+  color      String
+  pipelineId String
+  pipeline   Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade) // onDelete Cascade
+}
+
+model Source {
+  id         String    @id @default(uuid()) // Using UUID for the source ID
+  name       String
+  pipelineId String?   // Optional: link source to a pipeline
+  pipeline   Pipeline? @relation(fields: [pipelineId], references: [id], onDelete: Cascade) // onDelete Cascade
+}
+
