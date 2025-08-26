@@ -1,4 +1,4 @@
-import { IsString, IsOptional } from 'class-validator';
+import { IsString, IsOptional, IsNotEmpty } from 'class-validator';
 
 export class CreateVendorDto {
   @IsString()
@@ -45,4 +45,13 @@ export class CreateVendorDto {
   @IsOptional()
   @IsString()
   billingZip?: string;
+
+  
+    @IsNotEmpty()
+    @IsString()
+    owner_id: string;
+  
+    @IsNotEmpty()
+    @IsString()
+    workspace_id: string;
 }

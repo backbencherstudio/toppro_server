@@ -981,8 +981,8 @@ model Customer {
   workspace_id String
 
   // relations
+  owner     User      @relation(fields: [owner_id], references: [id], onDelete: Cascade)
   workspace Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
-  user      User      @relation(fields: [id], references: [id], onDelete: Cascade)
 }
 
 model Vendor {
@@ -990,6 +990,7 @@ model Vendor {
   name      String   @db.VarChar(255)
   contact   String   @db.VarChar(255)
   email     String   @unique @db.VarChar(255)
+  password  String   @db.VarChar(255)
   taxNumber String?  @unique @db.VarChar(255)
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
@@ -1006,8 +1007,8 @@ model Vendor {
   owner_id     String
 
   // relations
+  owner     User      @relation(fields: [owner_id], references: [id], onDelete: Cascade)
   workspace Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
-  owner     User      @relation(fields: [id], references: [id], onDelete: Cascade)
 }
 
 model Pipeline {
