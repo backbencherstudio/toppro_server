@@ -1,34 +1,38 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
-import { LeadStagesService } from './lead_stages.service';
+import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
 import { CreateLeadStageDto } from './dto/create-lead_stage.dto';
 import { UpdateLeadStageDto } from './dto/update-lead_stage.dto';
+import { LeadStageService } from './lead_stages.service';
 
 @Controller('lead-stages')
-export class LeadStagesController {
-  constructor(private readonly leadStagesService: LeadStagesService) {}
+export class LeadStageController {
+  constructor(private readonly leadStageService: LeadStageService) { }
 
+  // CREATE (body)
   @Post()
-  create(@Body() createLeadStageDto: CreateLeadStageDto) {
-    return this.leadStagesService.create(createLeadStageDto);
+  create(@Body() dto: CreateLeadStageDto) {
+    return this.leadStageService.create(dto);
   }
 
-  @Get()
-  findAll() {
-    return this.leadStagesService.findAll();
+  // LIST (GET with pipelineName in path)
+  // /lead-stages/workspaceid/:workspace_id/ownerid/:owner_id/:pipelineName
+  @Get('workspaceid/:workspace_id/ownerid/:owner_id/:pipelineName')
+  findAll(
+    @Param('workspace_id') workspace_id: string,
+    @Param('owner_id') owner_id: string,
+    @Param('pipelineName') pipelineName: string,
+  ) {
+    return this.leadStageService.findAll(workspace_id, owner_id, pipelineName);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.leadStagesService.findOne(+id);
+  // UPDATE by id only
+  @Put(':id')
+  update(@Param('id') id: string, @Body() dto: UpdateLeadStageDto) {
+    return this.leadStageService.updateById(id, dto);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateLeadStageDto: UpdateLeadStageDto) {
-    return this.leadStagesService.update(+id, updateLeadStageDto);
-  }
-
+  // DELETE by id only
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.leadStagesService.remove(+id);
+    return this.leadStageService.removeById(id);
   }
 }
