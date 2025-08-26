@@ -93,65 +93,77 @@ export class UserService {
     };
   }
 
-// If `type` is a string column in Prisma (e.g., String):
-async getAllUsers() {
-  return this.prisma.user.findMany({
-    where: { type: 'USER' }, // filter only Users
-    select: {
-      id: true,
-      username: true,
-      email: true,
-      type: true,
-      owner_id: true,
-      phone_number: true,
-      created_at: true,
-      updated_at: true,
-      first_name: true,
-      last_name: true,
-    },
-    orderBy: { id: 'asc' },
-  });
-}
-// Get all customers
-async getAllCustomers() {
-  return this.prisma.user.findMany({
-    where: { type: 'CUSTOMER' }, // filter only customers
-    select: {
-      id: true,
-      username: true,
-      email: true,
-      type: true,
-      owner_id: true,
-      phone_number: true,
-      created_at: true,
-      updated_at: true,
-      first_name: true,
-      last_name: true,
-    },
-    orderBy: { id: 'asc' },
-  });
-}
+  // Get all users
+  async getAllUsers(ownerId: string, workspaceId: string) {
+    return this.prisma.user.findMany({
+      where: {
+        type: 'USER', // filter only Users
+        owner_id: ownerId, // Match ownerId
+        workspace_id: workspaceId, // Match workspaceId
+      },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        type: true,
+        owner_id: true,
+        phone_number: true,
+        created_at: true,
+        updated_at: true,
+        first_name: true,
+        last_name: true,
+      },
+      orderBy: { id: 'asc' },
+    });
+  }
 
-// Get all vendors
-async getAllVendor() {
-  return this.prisma.user.findMany({
-    where: { type: 'VENDOR' }, // filter only Vendors
-    select: {
-      id: true,
-      username: true,
-      email: true,
-      type: true,
-      owner_id: true,
-      phone_number: true,
-      created_at: true,
-      updated_at: true,
-      first_name: true,
-      last_name: true,
-    },
-    orderBy: { id: 'asc' },
-  });
-}
+  // Get all customers
+  async getAllCustomers(ownerId: string, workspaceId: string) {
+    return this.prisma.user.findMany({
+      where: {
+        type: 'CUSTOMER',
+        owner_id: ownerId,
+        workspace_id: workspaceId,
+      },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        type: true,
+        owner_id: true,
+        phone_number: true,
+        created_at: true,
+        updated_at: true,
+        first_name: true,
+        last_name: true,
+      },
+      orderBy: { id: 'asc' },
+    });
+  }
 
+  // Get all vendors
+  async getAllVendor(ownerId: string, workspaceId: string) {
+    return this.prisma.user.findMany({
+      where: {
+        type: 'VENDOR',
+        owner_id: ownerId,
+        workspace_id: workspaceId,
+      },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        type: true,
+        owner_id: true,
+        phone_number: true,
+        created_at: true,
+        updated_at: true,
+        first_name: true,
+        last_name: true,
+      },
+      orderBy: { id: 'asc' },
+    });
+  }
 
   // Assign role to a user (helper method)
   async assignRoleToUser(userId: string, roleId: string) {
@@ -187,30 +199,29 @@ async getAllVendor() {
     }
   }
 
-async updateUser(userId: string, updateUserDto: CreateUserDto) {
-  const user = await this.prisma.user.findUnique({
-    where: { id: userId },
-  });
+  async updateUser(userId: string, updateUserDto: CreateUserDto) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
 
-  if (!user) {
-    throw new Error('User not found');
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    // Update user information
+    const updatedUser = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...updateUserDto, // Spread the updated user details
+      },
+    });
+
+    return {
+      success: true,
+      message: 'User updated successfully!',
+      user: updatedUser,
+    };
   }
-
-  // Update user information
-  const updatedUser = await this.prisma.user.update({
-    where: { id: userId },
-    data: {
-      ...updateUserDto, // Spread the updated user details 
-    },
-  });
-
-  return {
-    success: true,
-    message: 'User updated successfully!',
-    user: updatedUser,
-  };
-}
-
 
   // Get a single user by userId
   // Get a user by their ID and include their roles and the associated permissions

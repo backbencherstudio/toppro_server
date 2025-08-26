@@ -27,5 +27,5 @@ export class CreateUserDto {
 
   @IsOptional()
   @IsString()
-  roleId?: string;  // Optional field for role ID
+  roleId?: string;
 }

@@ -1,7 +1,8 @@
 import { Body, Controller, Get, Param, Post, Put } from '@nestjs/common';
-import { CreateRoleDto } from './dto/create-role.dto';  // DTO for creating a role
-import { RolesService } from './roles.service';
 import { UpdateRoleDto } from 'src/modules/admin/roles/dto/update-role.dto';
+import { CreateRoleDto } from './dto/create-role.dto'; // DTO for creating a role
+import { RolesService } from './roles.service';
+
 
 @Controller('roles')
 export class RolesController {
@@ -13,10 +14,12 @@ export class RolesController {
     return this.rolesService.createRoleWithPermissions(createRoleDto);  // Create a role and assign permissions
   }
 
+  
+
     // Endpoint to get all roles (name and ID)
-  @Get('all')
-  async getAllRoles() {
-    return this.rolesService.getAllRoles();
+  @Get('all/:ownerId/:workspaceId')
+  async getAllRoles( @Param('ownerId') ownerId: string, @Param('workspaceId') workspaceId: string) {
+    return this.rolesService.getAllRoles( ownerId, workspaceId);
   }
 
 // Endpoint to get a single role by ID
