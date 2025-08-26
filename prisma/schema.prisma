@@ -107,14 +107,12 @@ model Workspace {
 
   status Int?   @default(1) @db.SmallInt
   User   User[]
-  
-
-  @@map("workspaces")
   Pipeline Pipeline[]
   LeadStage LeadStage[]
   DealStage DealStage[]
   Label Label[]
   Source Source[]
+  @@map("workspaces")
 }
 
 enum UserType {
@@ -995,67 +993,118 @@ model Vendor {
 }
 
 model Pipeline {
-  id           String      @id @default(uuid())
-  name         String
+  id            String     @id @default(uuid())
+  created_at    DateTime   @default(now())
+  updated_at    DateTime   @default(now()) @updatedAt
+
+  name          String
   workspace_id  String
   owner_id      String
-  workspace    Workspace   @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
-  owner       User        @relation(fields: [owner_id], references: [id], onDelete: Cascade)
-  leadStages   LeadStage[]
-  dealStages   DealStage[]
-  labels       Label[]
-  sources      Source[]
+
+  // relations
+  workspace     Workspace  @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  owner         User       @relation(fields: [owner_id], references: [id], onDelete: Cascade)
+
+  // children
+  leadStages    LeadStage[]
+  dealStages    DealStage[]
+  labels        Label[]
+  sources       Source[]
+
+  // constraints & indexes
   @@unique([workspace_id, name])
+  @@index([workspace_id, owner_id])
+
+  @@map("pipelines")
 }
 
 model LeadStage {
-  id          String    @id @default(uuid())
-  name        String
-  pipelineId  String
-  pipeline    Pipeline  @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
-  workspace_id String
-  owner_id     String
-  workspace    Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
-  owner       User      @relation(fields: [owner_id], references: [id], onDelete: Cascade)
+  id            String     @id @default(uuid())
+  created_at    DateTime   @default(now())
+  updated_at    DateTime   @default(now()) @updatedAt
+
+  name          String
+
+  pipelineId    String
+  pipeline      Pipeline   @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+
+  workspace_id  String
+  owner_id      String
+  workspace     Workspace  @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  owner         User       @relation(fields: [owner_id], references: [id], onDelete: Cascade)
+
   @@unique([pipelineId, name])
+  @@index([workspace_id, owner_id])
+  @@index([pipelineId])
+
+  @@map("lead_stages")
 }
 
 model DealStage {
-  id          String    @id @default(uuid())
-  name        String
-  pipelineId  String
-  pipeline    Pipeline  @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
-  workspace_id String
-  owner_id     String
-  workspace    Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
-  owner       User      @relation(fields: [owner_id], references: [id], onDelete: Cascade)
+  id            String     @id @default(uuid())
+  created_at    DateTime   @default(now())
+  updated_at    DateTime   @default(now()) @updatedAt
+
+  name          String
+
+  pipelineId    String
+  pipeline      Pipeline   @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+
+  workspace_id  String
+  owner_id      String
+  workspace     Workspace  @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  owner         User       @relation(fields: [owner_id], references: [id], onDelete: Cascade)
 
   @@unique([pipelineId, name])
+  @@index([workspace_id, owner_id])
+  @@index([pipelineId])
+
+  @@map("deal_stages")
 }
 
 model Label {
-  id          String    @id @default(uuid())
-  name        String
-  color       String
-  pipelineId  String
-  pipeline    Pipeline  @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
-  workspace_id String
-  owner_id     String
-  workspace  Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
-  owner       User      @relation(fields: [owner_id], references: [id], onDelete: Cascade)
+  id            String     @id @default(uuid())
+  created_at    DateTime   @default(now())
+  updated_at    DateTime   @default(now()) @updatedAt
+
+  name          String
+  color         String
+
+  pipelineId    String
+  pipeline      Pipeline   @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+
+  workspace_id  String
+  owner_id      String
+  workspace     Workspace  @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  owner         User       @relation(fields: [owner_id], references: [id], onDelete: Cascade)
 
   @@unique([pipelineId, name])
+  @@index([workspace_id, owner_id])
+  @@index([pipelineId])
+
+  @@map("labels")
 }
 
 model Source {
-  id         String    @id @default(uuid())
-  name       String
-  pipelineId String?   
-  pipeline   Pipeline? @relation(fields: [pipelineId], references: [id], onDelete: Cascade) // onDelete Cascade
-  workspace_id String
-  owner_id     String
-  workspace   Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
-  owner       User      @relation(fields: [owner_id], references: [id], onDelete: Cascade)
-  @@unique([workspace_id, name])
-}
+  id            String     @id @default(uuid())
+  created_at    DateTime   @default(now())
+  updated_at    DateTime   @default(now()) @updatedAt
 
+  name          String
+
+  // optional link to a pipeline
+  pipelineId    String?
+  pipeline      Pipeline?  @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+
+  workspace_id  String
+  owner_id      String
+  workspace     Workspace  @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  owner         User       @relation(fields: [owner_id], references: [id], onDelete: Cascade)
+
+  // unique per workspace
+  @@unique([workspace_id, name])
+  @@index([workspace_id, owner_id])
+  @@index([pipelineId])
+
+  @@map("sources")
+}
