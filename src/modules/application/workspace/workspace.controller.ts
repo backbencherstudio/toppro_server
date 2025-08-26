@@ -15,6 +15,7 @@ export class WorkspaceController {
   @Get("all/:superId/:ownerId")
   findAll() {
     return this.workspaceService.findAll();
+    
   }
 
   @Get(':id')
