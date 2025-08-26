@@ -21,7 +21,7 @@ export class CustomerController {
 
   @Get()
   findAll(
-    @Query('page') page: number = 1,   // Default to page 1
+    @Query('page') page: number = 1, 
     @Query('limit') limit: number = 10  // Default to limit 10
   ) {
     return this.customerService.findAll(page, limit);
