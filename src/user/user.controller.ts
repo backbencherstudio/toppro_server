@@ -31,22 +31,23 @@ export class UserController {
     return this.userService.login(loginDto);
   }
 
-  // Get all users
-  @Get('all')
-  async getUsers() {
-    return this.userService.getAllUsers(); // no body needed
-  }
+// Get all users by ownerId and workspaceId
+@Get('all/:ownerId/:workspaceId')
+async getUsers(@Param('ownerId') ownerId: string, @Param('workspaceId') workspaceId: string) {
+  return this.userService.getAllUsers(ownerId, workspaceId);
+}
+
 
   // Get all customers
-  @Get('customer/all')
-  async getCustomers() {
-    return this.userService.getAllCustomers(); // no body needed
+  @Get('customer/all/:ownerId/:workspaceId')
+  async getCustomers(@Param('ownerId') ownerId: string, @Param('workspaceId') workspaceId: string) {
+    return this.userService.getAllCustomers(ownerId, workspaceId); // no body needed
   }
 
   // Get all vendors
-  @Get('vendor/all')
-  async getVendors() {
-    return this.userService.getAllVendor(); // no body needed
+  @Get('vendor/all/:ownerId/:workspaceId')
+  async getVendors(@Param('ownerId') ownerId: string, @Param('workspaceId') workspaceId: string) {
+    return this.userService.getAllVendor(ownerId, workspaceId); // no body needed
   }
 
   // Endpoint to assign a role to a user

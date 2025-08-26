@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { Permissions } from 'src/ability/permissions.enum'; // Permissions enum
+import { UpdateRoleDto } from 'src/modules/admin/roles/dto/update-role.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateRoleDto } from './dto/create-role.dto'; // CreateRoleDto for input validation
-import { UpdateRoleDto } from 'src/modules/admin/roles/dto/update-role.dto';
 
 @Injectable()
 export class RolesService {
@@ -15,6 +15,8 @@ export class RolesService {
       data: {
         title: createRoleDto.title,
         description: createRoleDto.description,
+        owner_id: createRoleDto.owner_id,
+        workspace_id: createRoleDto.workspace_id,
       },
     });
 
@@ -69,8 +71,8 @@ export class RolesService {
     return {
       success: true,
       message: 'Role created and permissions assigned successfully!',
-      role: role,
-      permissions: permissionData, // Include permission id and title in the response
+      // role: role,
+      // permissions: permissionData,
     };
   }
 
@@ -132,19 +134,36 @@ export class RolesService {
   }
 
   // Get all roles with name and ID
-  async getAllRoles() {
-    const roles = await this.prisma.role.findMany({
-      select: {
-        id: true,
-        title: true, // This will return the role name (title)
-      },
-    });
+async getAllRoles(ownerId: string, workspaceId: string) {
+  // Fetch all roles with associated permissions
+  const roles = await this.prisma.role.findMany({
+    where: {
+      owner_id: ownerId,
+      workspace_id: workspaceId,
+    },
+    select: {
+      id: true,
+      title: true, // Role title
+      permissions: { // Associated permissions for each role
+        select: {
+          id: true, // Permission ID
+          title: true, // Permission name or any other fields you need
+        }
+      }
+    },
+  });
+  // Return roles and permissions
+  return {
+    success: true,
+    roles: roles.map(role => ({
+      id: role.id,
+      title: role.title,
+      permissions: role.permissions, // Include permissions related to each role
+    })),
+  };
+}
 
-    return {
-      success: true,
-      roles: roles, // All roles with name and ID
-    };
-  }
+
 
   // Get a single role by ID
   async getRoleById(roleId: string) {

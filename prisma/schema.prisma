@@ -78,6 +78,7 @@ model User {
   user_settings            UserSetting[]
   ucodes                   Ucode[]
   roles                    Role[]
+  permissions              Permission[]
   role_users               RoleUser[]
   payment_transactions     PaymentTransaction[]
   services                 Service[]
@@ -139,12 +140,15 @@ model Role {
   title       String?   @default("user")
   name        String?   @default("user")
 
-  user_id String?
-  user    User?   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user_id      String?
+  owner_id     String?
+  workspace_id String?
+
+  user User? @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   permission_roles PermissionRole[]
   role_users       RoleUser[]
-  permissions      Permission[]     @relation("PermissionToRole") // Many-to-many relationship with Permission
+  permissions      Permission[]     @relation("PermissionToRole")
 
   @@map("roles")
 }
@@ -162,6 +166,12 @@ model Permission {
   conditions  String?
   fields      String?
   description String?
+
+  owner_id     String?
+  workspace_id String?
+  user_id      String?
+
+  user User? @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   permission_roles PermissionRole[]
   roles            Role[]           @relation("PermissionToRole") // Many-to-many relationship with Role
