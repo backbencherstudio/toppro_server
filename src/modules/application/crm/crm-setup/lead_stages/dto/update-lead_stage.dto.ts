@@ -1,4 +1,10 @@
-import { PartialType } from '@nestjs/swagger';
-import { CreateLeadStageDto } from './create-lead_stage.dto';
+import { IsOptional, IsString } from 'class-validator';
 
-export class UpdateLeadStageDto extends PartialType(CreateLeadStageDto) {}
+export class UpdateLeadStageDto {
+  @IsOptional() @IsString()
+  name?: string;
+
+  // Optional: move to another pipeline (within same workspace/owner)
+  @IsOptional() @IsString()
+  pipelineName?: string;
+}
