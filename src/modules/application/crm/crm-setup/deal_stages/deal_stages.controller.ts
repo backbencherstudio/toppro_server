@@ -42,18 +42,18 @@ import { CreateDealStageDto } from './dto/create-deal_stage.dto';
 import { UpdateDealStageDto } from './dto/update-deal_stage.dto';
 import { DealStageService } from './deal_stages.service';
 
-@Controller()
+@Controller('deal-stages')
 export class DealStageController {
   constructor(private readonly dealStageService: DealStageService) {}
 
   // CREATE (body)
-  @Post('deal-stages')
+  @Post()
   create(@Body() dto: CreateDealStageDto) {
     return this.dealStageService.create(dto);
   }
 
   // LIST (params)
-  @Get('workspaces/:workspace_id/owners/:owner_id/pipelines/:pipelineId/deal-stages')
+  @Get('workspaceid/:workspace_id/ownerid/:owner_id/pipeid/:pipelineId')
   findAll(
     @Param('workspace_id') workspace_id: string,
     @Param('owner_id') owner_id: string,
@@ -63,7 +63,7 @@ export class DealStageController {
   }
 
   // UPDATE (params + body)
-  @Put('workspaces/:workspace_id/owners/:owner_id/deal-stages/:id')
+  @Put('workspaceid/:workspace_id/ownerid/:owner_id/dealid/:id')
   update(
     @Param('id') id: string,
     @Param('workspace_id') workspace_id: string,
