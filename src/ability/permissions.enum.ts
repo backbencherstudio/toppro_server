@@ -24,6 +24,13 @@ export enum Permissions {
   crm_update = 'crm_update',
   crm_delete = 'crm_delete',
 
+  // Customer
+  customer_manage = 'customer_manage',
+  customer_create = 'customer_create',
+  customer_read = 'customer_read',
+  customer_update = 'customer_update',
+  customer_delete = 'customer_delete',
+
   // Accounting
   accounting_manage = 'accounting_manage',
   accounting_create = 'accounting_create',

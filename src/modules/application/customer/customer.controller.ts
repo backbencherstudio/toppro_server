@@ -1,4 +1,8 @@
-import { Controller, Post, Get, Param, Body, Put, Delete, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query, UseGuards } from '@nestjs/common';
+import { Permissions } from 'src/ability/permissions.enum';
+import { PermissionsGuard } from 'src/common/guard/permission/permissions.decorator';
+import { RolePermissionGuard } from 'src/common/guard/permission/role-permission.guard';
+import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 import { CustomerService } from './customer.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
@@ -8,6 +12,8 @@ export class CustomerController {
   constructor(private readonly customerService: CustomerService) { }
 
   @Post()
+  @UseGuards(JwtAuthGuard,RolePermissionGuard)
+  @PermissionsGuard(Permissions.accounting_create)
   create(@Body() createCustomerDto: CreateCustomerDto) {
     return this.customerService.create(createCustomerDto);
   }

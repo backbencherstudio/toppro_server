@@ -5,7 +5,7 @@ import {
   Get,
   Param,
   Post,
-  Put,
+  Put
 } from '@nestjs/common';
 import { CreateUserDto } from './dto/create_user-dto';
 import { LoginDto } from './dto/login_dto';
@@ -61,6 +61,7 @@ async getUsers(@Param('ownerId') ownerId: string, @Param('workspaceId') workspac
 
   // Endpoint to get a single user by userId
   @Get(':userId')
+  // @UseGuards(JwtAuthGuard)
   async getUser(@Param('userId') userId: string) {
     return this.userService.getUserById(userId); // Get single user by ID
   }
