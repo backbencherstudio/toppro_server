@@ -33,7 +33,7 @@ export class WorkspaceController {
     return this.workspaceService.remove(id);
   }
 
-  // workspace.controller.ts
+  // count workspaces
 @Get('count/:superId/:ownerId')
 async getWorkspaceCount(
   @Param('superId') superId: string,
