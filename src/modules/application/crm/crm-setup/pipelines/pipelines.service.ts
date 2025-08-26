@@ -42,9 +42,8 @@
 //   }
 // }
 
-
 // pipeline.service.ts
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreatePipelineDto } from './dto/create-pipeline.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 
@@ -52,16 +51,14 @@ import { PrismaService } from 'src/prisma/prisma.service';
 export class PipelineService {
   constructor(private readonly prisma: PrismaService) {}
 
-  // CREATE (body theke workspaceId, ownerId)
+  // CREATE: body theke workspace_id, owner_id
   async create(dto: CreatePipelineDto) {
-    // same name already exists in this workspace?
+    // unique name per workspace
     const dup = await this.prisma.pipeline.findFirst({
       where: { workspace_id: dto.workspace_id, name: dto.name },
       select: { id: true },
     });
-    if (dup) {
-      throw new BadRequestException('Pipeline name already exists in this workspace');
-    }
+    if (dup) throw new BadRequestException('Pipeline name already exists in this workspace');
 
     const pipeline = await this.prisma.pipeline.create({
       data: {
@@ -74,7 +71,7 @@ export class PipelineService {
     return { message: 'Pipeline created successfully', pipeline };
   }
 
-  // FIND ALL (params theke workspaceId, ownerId)
+  // LIST: params -> workspace_id, owner_id
   async findAll(workspace_id: string, owner_id: string) {
     const pipelines = await this.prisma.pipeline.findMany({
       where: { workspace_id, owner_id },
@@ -82,39 +79,34 @@ export class PipelineService {
     return { message: 'Pipelines retrieved successfully', pipelines };
   }
 
-  // UPDATE (params: id, workspaceId, ownerId) + body: { name }
-  async update(id: string, workspaceId: string, ownerId: string, dto: Pick<CreatePipelineDto, 'name'>) {
-    // scope check
+  // UPDATE: params -> id, workspace_id, owner_id | body -> { name }
+  async update(id: string, workspace_id: string, owner_id: string, dto: { name: string }) {
     const existing = await this.prisma.pipeline.findFirst({
-      where: { id, workspace_id: workspaceId, owner_id: ownerId },
-      select: { id: true, name: true, workspace_id: true },
+      where: { id, workspace_id, owner_id },
+      select: { id: true, name: true },
     });
     if (!existing) throw new NotFoundException('Pipeline not found for this scope');
 
-    // uniqueness (same workspace)
     if (dto.name && dto.name !== existing.name) {
       const dup = await this.prisma.pipeline.findFirst({
-        where: { workspace_id: workspaceId, name: dto.name },
+        where: { workspace_id, name: dto.name },
         select: { id: true },
       });
-      if (dup) {
-        throw new BadRequestException('Another pipeline with this name already exists in this workspace');
-      }
+      if (dup) throw new BadRequestException('Another pipeline with this name already exists in this workspace');
     }
 
     const updatedPipeline = await this.prisma.pipeline.update({
-      where: { id }, // safe now because scope verified
+      where: { id },
       data: { name: dto.name },
     });
 
     return { message: 'Pipeline updated successfully', updatedPipeline };
   }
 
-  // DELETE (params: id, workspaceId, ownerId)
-  async remove(id: string, workspaceId: string, ownerId: string) {
-    // deleteMany to enforce scope at DB level
+  // DELETE: params -> id, workspace_id, owner_id
+  async remove(id: string, workspace_id: string, owner_id: string) {
     const res = await this.prisma.pipeline.deleteMany({
-      where: { id, workspace_id: workspaceId, owner_id: ownerId },
+      where: { id, workspace_id, owner_id },
     });
     if (res.count === 0) throw new NotFoundException('Pipeline not found for this scope');
 
