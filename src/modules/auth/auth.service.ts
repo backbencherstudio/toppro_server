@@ -78,19 +78,18 @@ export class AuthService {
 
   // update user workspace_id
   async updateUserWorkspace(userId: string, workspace_id: string) {
-  try {
-    // Update the user's workspace_id field in the database
-    const updatedUser = await this.prisma.user.update({
-      where: { id: userId },
-      data: { workspace_id },
-    });
+    try {
+      // Update the user's workspace_id field in the database
+      const updatedUser = await this.prisma.user.update({
+        where: { id: userId },
+        data: { workspace_id },
+      });
 
-    return updatedUser;
-  } catch (error) {
-    throw new Error('Error updating user workspace: ' + error.message);
+      return updatedUser;
+    } catch (error) {
+      throw new Error('Error updating user workspace: ' + error.message);
+    }
   }
-}
-
 
   async updateUser(
     userId: string,
@@ -478,21 +477,22 @@ export class AuthService {
           address,
           password: hashedPassword,
           status,
-          type: UserType[type.toUpperCase() as keyof typeof UserType], // Use the enum here
-          // Conditionally include super_id and workspace_id for OWNER
+          type: UserType[type.toUpperCase() as keyof typeof UserType],
+
           ...(type === 'OWNER' && {
-            super_id: super_id, // Include super_id for OWNER
-            // workspace_id: workspace_id, // Include workspace_id for OWNER
+            super_id: super_id,
+            // workspace_id: workspace_id, // later assign
           }),
-          // Conditionally include owner_id, super_id, and workspace_id for USER
-          ...((type === 'USER' || type === 'CUSTOMER' || type === 'VENDOR') && {
+
+          ...(type === 'USER' && {
             owner_id: owner_id,
+            // super_id: super_id,
             workspace_id: workspace_id,
-            roles: {
-            connect: {
-              id: roleId,
-            },
-          },
+            ...(roleId && {
+              roles: {
+                connect: { id: roleId },
+              },
+            }),
           }),
         },
       });
