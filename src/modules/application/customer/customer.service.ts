@@ -16,11 +16,15 @@ export class CustomerService {
 
 
   // Get all customers with pagination and selected fields
-  async findAll(page: number = 1, limit: number = 10) {
-    const skip = (page - 1) * limit; // Calculate how many records to skip based on the page
+  async findAll(page: number = 1, limit: number = 10, ownerId: string, workspaceId: string) {
+    const skip = (page - 1) * limit; 
 
     const [customers, total] = await Promise.all([
       this.prisma.customer.findMany({
+        where: {
+          owner_id: ownerId,
+          workspace_id: workspaceId,
+        },
         skip,
         take: limit,
         select: {

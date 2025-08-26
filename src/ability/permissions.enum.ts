@@ -30,6 +30,15 @@ export enum Permissions {
   customer_read = 'customer_read',
   customer_update = 'customer_update',
   customer_delete = 'customer_delete',
+  customer_view = 'customer_view',
+
+  // vendor
+  vendor_manage = 'vendor_manage',
+  vendor_create = 'vendor_create',
+  vendor_read = 'vendor_read',
+  vendor_update = 'vendor_update',
+  vendor_delete = 'vendor_delete',
+  vendor_view = 'vendor_view',
 
   // Accounting
   accounting_manage = 'accounting_manage',

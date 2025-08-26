@@ -1,4 +1,14 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Put,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { Permissions } from 'src/ability/permissions.enum';
 import { PermissionsGuard } from 'src/common/guard/permission/permissions.decorator';
 import { RolePermissionGuard } from 'src/common/guard/permission/role-permission.guard';
@@ -9,35 +19,52 @@ import { UpdateCustomerDto } from './dto/update-customer.dto';
 
 @Controller('customers')
 export class CustomerController {
-  constructor(private readonly customerService: CustomerService) { }
+  constructor(private readonly customerService: CustomerService) {}
 
   @Post()
-  @UseGuards(JwtAuthGuard,RolePermissionGuard)
+  @UseGuards(JwtAuthGuard, RolePermissionGuard)
   @PermissionsGuard(Permissions.customer_create)
+  @PermissionsGuard(Permissions.customer_manage)
   create(@Body() createCustomerDto: CreateCustomerDto) {
     return this.customerService.create(createCustomerDto);
   }
 
-
-  @Get()
+  @Get('all/:ownerId/:workspaceId')
+  @UseGuards(JwtAuthGuard, RolePermissionGuard)
+  @PermissionsGuard(Permissions.customer_view)
+  @PermissionsGuard(Permissions.customer_manage)
   findAll(
-    @Query('page') page: number = 1, 
-    @Query('limit') limit: number = 10  // Default to limit 10
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10, // Default to limit 10
+    @Param('ownerId') ownerId: string,
+    @Param('workspaceId') workspaceId: string,
   ) {
-    return this.customerService.findAll(page, limit);
+    return this.customerService.findAll(page, limit, ownerId, workspaceId);
   }
 
   @Get(':id')
+  @UseGuards(JwtAuthGuard, RolePermissionGuard)
+  @PermissionsGuard(Permissions.customer_view)
+  @PermissionsGuard(Permissions.customer_manage)
   findOne(@Param('id') id: string) {
     return this.customerService.findOne(id);
   }
 
   @Put(':id')
-  update(@Param('id') id: string, @Body() updateCustomerDto: UpdateCustomerDto) {
+  @UseGuards(JwtAuthGuard, RolePermissionGuard)
+  @PermissionsGuard(Permissions.customer_update)
+  @PermissionsGuard(Permissions.customer_manage)
+  update(
+    @Param('id') id: string,
+    @Body() updateCustomerDto: UpdateCustomerDto,
+  ) {
     return this.customerService.update(id, updateCustomerDto);
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard, RolePermissionGuard)
+  @PermissionsGuard(Permissions.customer_delete)
+  @PermissionsGuard(Permissions.customer_manage)
   remove(@Param('id') id: string) {
     return this.customerService.remove(id);
   }
