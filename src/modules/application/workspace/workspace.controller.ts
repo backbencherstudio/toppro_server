@@ -13,9 +13,9 @@ export class WorkspaceController {
   }
 
   @Get("all/:superId/:ownerId")
-  findAll() {
-    return this.workspaceService.findAll();
-    
+  findAll(@Param('superId') superId: string, @Param('ownerId') ownerId: string) {
+    return this.workspaceService.findAll( superId, ownerId);
+
   }
 
   @Get(':id')
@@ -32,4 +32,14 @@ export class WorkspaceController {
   remove(@Param('id') id: string) {
     return this.workspaceService.remove(id);
   }
+
+  // count workspaces
+@Get('count/:superId/:ownerId')
+async getWorkspaceCount(
+  @Param('superId') superId: string,
+  @Param('ownerId') ownerId: string,
+) {
+  return this.workspaceService.countWorkspaces(superId, ownerId);
+}
+
 }

@@ -18,8 +18,15 @@ export class WorkspaceService {
     };
   }
 
-  async findAll() {
-    const workspaces = await this.prisma.workspace.findMany();
+  async findAll( superId: string, ownerId: string) {
+    const workspaces = await this.prisma.workspace.findMany(
+      {
+        where: {
+          super_id: superId,
+          owner_id: ownerId,
+        },
+      }
+    );
     return { success: true, workspaces };
   }
 
@@ -44,4 +51,21 @@ export class WorkspaceService {
     });
     return { success: true, message: 'Workspace deleted' };
   }
+
+  // workspace.service.ts
+async countWorkspaces(superId: string, ownerId: string) {
+  const count = await this.prisma.workspace.count({
+    where: {
+      super_id: superId,
+      owner_id: ownerId,
+    },
+  });
+
+  return {
+    success: true,
+    message: `Total workspaces for owner ${ownerId}: ${count}`,
+    count,
+  };
+}
+
 }
