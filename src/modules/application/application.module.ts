@@ -11,7 +11,8 @@ import { PipelinesModule } from './crm/crm-setup/pipelines/pipelines.module';
 import { LeadStagesModule } from './crm/crm-setup/lead_stages/lead_stages.module';
 import { DealStageModule } from './crm/crm-setup/deal_stages/deal_stages.module';
 import { WorkspaceModule } from './workspace/workspace.module';
+import { SourcesModule } from './crm/crm-setup/sources/sources.module';
 @Module({
-  imports: [NotificationModule, ContactModule, FaqModule, CustomerModule, VendorModule, LeadModule, DealModule, CrmReportModule, PipelinesModule, LeadStagesModule, DealStageModule, WorkspaceModule],
+  imports: [NotificationModule, ContactModule, FaqModule, CustomerModule, VendorModule, LeadModule, DealModule, CrmReportModule, PipelinesModule, LeadStagesModule, DealStageModule, WorkspaceModule, SourcesModule],
 })
 export class ApplicationModule { }
