@@ -64,6 +64,7 @@ export class AuthController {
         email,
         password,
         type,
+        status,
         owner_id,
         super_id,
         workspace_id,
@@ -85,10 +86,7 @@ export class AuthController {
         );
       }
 
-      let status = 1; // Default status for 'OWNER', 'CUSTOMER', 'VENDOR'
-      if (type === 'USER') {
-        status = 0; // Default status for 'USER' is 0
-      }
+
 
       // If the user is of type 'OWNER', create a workspace
       if (type === 'OWNER') {
@@ -104,10 +102,11 @@ export class AuthController {
           password,
           type,
           workspace_id,
-          status: 0,
+          status: 0, // 👈 OWNER is active by default
+          roleId,
         });
 
-        console.log('Created Owner User:', ownerResponse);
+        // console.log('Created Owner User:', ownerResponse);
 
         if (!ownerResponse || !ownerResponse.data || !ownerResponse.data.id) {
           throw new HttpException(
@@ -119,12 +118,12 @@ export class AuthController {
         // After OWNER creation, create the workspace using owner_id and super_id
         const workspace = await this.authService.createWorkspace({
           ownerName: name,
-          owner_id: ownerResponse.data.id, // Use the owner ID returned after creating the user
-          super_id: super_id, // Pass the super_id
-          workspace_name: workspace_name || `${name}'s Workspace`, // Use provided workspace_name or default
+          owner_id: ownerResponse.data.id,
+          super_id: super_id,
+          workspace_name: workspace_name || `${name}'s Workspace`,
         });
 
-        console.log('Created Workspace:', workspace);
+        // console.log('Created Workspace:', workspace);
 
         // Update the OWNER with workspace_id
         const updatedOwner = await this.authService.updateUserWorkspace(
@@ -132,7 +131,7 @@ export class AuthController {
           workspace.id,
         );
 
-        console.log('Updated Owner with Workspace ID:', updatedOwner);
+        // console.log('Updated Owner with Workspace ID:', updatedOwner);
 
         return {
           success: true,
@@ -160,7 +159,7 @@ export class AuthController {
           address,
           password,
           type,
-          status: 0, // 👈 Always 0 for USER
+          status:status? status : 0, // Always 0 for USER
           owner_id,
           super_id,
           workspace_id,
@@ -170,34 +169,6 @@ export class AuthController {
         return response;
       }
 
-      // CUSTOMER or VENDOR case
-      if (['CUSTOMER', 'VENDOR'].includes(type)) {
-        if (!owner_id || !workspace_id) {
-          throw new HttpException(
-            'owner_id, and workspace_id are required for CUSTOMER or VENDOR type',
-            HttpStatus.BAD_REQUEST,
-          );
-        }
-
-        // Register CUSTOMER or VENDOR with status = 1 (active by default)
-        const response = await this.authService.register({
-          name,
-          first_name,
-          last_name,
-          email,
-          phone_number,
-          address,
-          password,
-          type,
-          status: 1,
-          owner_id,
-          super_id,
-          workspace_id,
-          roleId,
-        });
-
-        return response;
-      }
 
       throw new HttpException('Invalid user type', HttpStatus.BAD_REQUEST);
     } catch (error) {
