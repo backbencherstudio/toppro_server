@@ -206,11 +206,11 @@ export class AuthController {
         return res.status(401).json(response); // Return the error message to the user
       }
       // store to secure cookies
-      res.cookie('refresh_token', response.authorization.refresh_token, {
-        httpOnly: true,
-        secure: true,
-        maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-      });
+      // res.cookie('refresh_token', response.authorization.refresh_token, {
+      //   httpOnly: true,
+      //   secure: true,
+      //   maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+      // });
 
       res.json(response);
     } catch (error) {
