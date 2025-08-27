@@ -91,6 +91,12 @@ model User {
   Source                   Source[]
   Customer                 Customer[]
   Vendor                   Vendor[]
+  invoices                 Invoice[]
+  itemCategory             ItemCategory[]
+  invoiceCategory          InvoiceCategory[]
+  billCategory             BillCategory[]
+  tax                      Tax[]
+  Unit                     Unit[]
 
   @@map("users")
 }
@@ -107,15 +113,20 @@ model Workspace {
   super_id    String?
   owner_id    String
 
-  status    Int?        @default(1) @db.SmallInt
-  User      User[]
-  Pipeline  Pipeline[]
-  LeadStage LeadStage[]
-  DealStage DealStage[]
-  Label     Label[]
-  Source    Source[]
-  Customer  Customer[]
-  Vendor    Vendor[]
+  status          Int?              @default(1) @db.SmallInt
+  User            User[]
+  Pipeline        Pipeline[]
+  LeadStage       LeadStage[]
+  DealStage       DealStage[]
+  Label           Label[]
+  Source          Source[]
+  Customer        Customer[]
+  Vendor          Vendor[]
+  ItemCategory    ItemCategory[]
+  InvoiceCategory InvoiceCategory[]
+  BillCategory    BillCategory[]
+  Tax             Tax[]
+  Unit            Unit[]
 
   @@map("workspaces")
 }
@@ -220,6 +231,151 @@ model RoleUser {
   @@id([role_id, user_id])
   @@map("role_users")
 }
+
+model Invoice {
+  id         String    @id @default(cuid())
+  created_at DateTime  @default(now())
+  updated_at DateTime  @default(now())
+  deleted_at DateTime?
+  issued_at  DateTime?
+  due_at     DateTime?
+
+  status Int? @default(1) @db.SmallInt
+
+  user_id     String?
+  customer_id String?
+  user        User?     @relation(fields: [user_id], references: [id])
+  customer    Customer? @relation(fields: [customer_id], references: [id])
+
+  amount   Float?
+  currency String?
+
+  items Items[]
+
+  @@map("invoices")
+}
+
+model Items {
+  id         String    @id @default(cuid())
+  created_at DateTime  @default(now())
+  updated_at DateTime  @default(now())
+  deleted_at DateTime?
+
+  invoice_id String?
+  invoice    Invoice? @relation(fields: [invoice_id], references: [id], onDelete: Cascade)
+
+  name            String?
+  sku             String?
+  tax_id          String?
+  itemCategory_id String?
+  description     String?
+  sale_price      Float?  @default(0)
+  purchase_price  Float?  @default(0)
+  unit_id         String?
+  quantity        Int?    @default(1)
+  image           String?
+
+  unit         Unit?         @relation(fields: [unit_id], references: [id])
+  tax          Tax?          @relation(fields: [tax_id], references: [id])
+  itemCategory ItemCategory? @relation(fields: [itemCategory_id], references: [id])
+  vendor_id    String?
+  vendor       Vendor?       @relation(fields: [vendor_id], references: [id])
+
+  unit_price  Float? @default(0)
+  total_price Float? @default(0)
+
+  @@map("items")
+}
+
+// ###############################################################################################################################
+//############################# Caterogy Setup ##Start## #########################################################################
+// ###############################################################################################################################
+
+model ItemCategory {
+  id    String  @id @default(cuid())
+  name  String
+  color String?
+
+  workspace_id String
+  workspace    Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+
+  owner_id String
+  user_id  String
+  user     User   @relation(fields: [user_id], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+  Items     Items[]
+}
+
+model InvoiceCategory {
+  id      String  @id @default(cuid())
+  name    String
+  account String?
+  color   String?
+
+  workspace_id String
+  workspace    Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+
+  owner_id String
+  user_id  String
+  user     User   @relation(fields: [user_id], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+}
+
+model BillCategory {
+  id      String  @id @default(cuid())
+  name    String
+  account String?
+  color   String?
+
+  workspace_id String
+  workspace    Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+
+  owner_id String
+  user_id  String
+  user     User   @relation(fields: [user_id], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+}
+
+model Tax {
+  id   String @id @default(cuid())
+  name String
+  rate Float  @default(0.0)
+
+  workspace_id String
+  workspace    Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+
+  owner_id String
+  user_id  String
+  user     User   @relation(fields: [user_id], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+  Items     Items[]
+}
+
+model Unit {
+  id   String @id @default(cuid())
+  name String
+
+  workspace_id String
+  workspace    Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+
+  owner_id String
+  user_id  String
+  user     User   @relation(fields: [user_id], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+  Items     Items[]
+}
+
+//############################# Caterogy Setup ##End## ###################################################
 
 model NotificationEvent {
   id         String    @id @default(cuid())
@@ -983,6 +1139,7 @@ model Customer {
   // relations
   owner     User      @relation(fields: [owner_id], references: [id], onDelete: Cascade)
   workspace Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  invoice   Invoice[]
 }
 
 model Vendor {
@@ -1009,6 +1166,7 @@ model Vendor {
   // relations
   owner     User      @relation(fields: [owner_id], references: [id], onDelete: Cascade)
   workspace Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  Items     Items[]
 }
 
 model Pipeline {
