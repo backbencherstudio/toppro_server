@@ -21,13 +21,13 @@ import { VendorService } from './vendor.service';
 export class VendorController {
   constructor(private readonly vendorService: VendorService) {}
 
-  // @Post()
-  // @UseGuards(JwtAuthGuard, RolePermissionGuard)
-  // @PermissionsGuard(Permissions.vendor_create)
-  // @PermissionsGuard(Permissions.vendor_manage)
-  // create(@Body() createVendorDto: CreateVendorDto) {
-  //   return this.vendorService.create(createVendorDto);
-  // }
+  @Post()
+  @UseGuards(JwtAuthGuard, RolePermissionGuard)
+  @PermissionsGuard(Permissions.vendor_create)
+  @PermissionsGuard(Permissions.vendor_manage)
+  create(@Body() createVendorDto: CreateVendorDto) {
+    return this.vendorService.create(createVendorDto);
+  }
 
   @Get("all/:ownerId/:workspaceId")
   @UseGuards(JwtAuthGuard, RolePermissionGuard)
