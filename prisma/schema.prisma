@@ -90,7 +90,6 @@ model User {
   Label                    Label[]
   Source                   Source[]
   Customer                 Customer[]
-  Vendor                   Vendor[]
   invoices                 Invoice[]
   itemCategory             ItemCategory[]
   invoiceCategory          InvoiceCategory[]
@@ -98,15 +97,15 @@ model User {
   tax                      Tax[]
   Unit                     Unit[]
   Items                    Items[]
-  leads                    Lead[]       @relation("LeadUsers")
-  owned_leads              Lead[]       @relation("lead_owner")
+  leads                    Lead[]                  @relation("LeadUsers")
+  owned_leads              Lead[]                  @relation("lead_owner")
   primary_user_leads       Lead[]
   owned_tasks              Task[]
   owned_email_texts        EmailText[]
-  owned_calls              Call[]       @relation("call_owner")
-  owned_activities         Activity[]   @relation("activity_owner")
+  owned_calls              Call[]                  @relation("call_owner")
+  owned_activities         Activity[]              @relation("activity_owner")
   actor_activities         Activity[]
-  assigned_calls           Call[]       @relation("call_assignee")
+  assigned_calls           Call[]                  @relation("call_assignee")
 
   @@map("users")
 }
@@ -316,7 +315,7 @@ model Items {
   unit         Unit?         @relation(fields: [unit_id], references: [id])
   tax          Tax?          @relation(fields: [tax_id], references: [id])
   itemCategory ItemCategory? @relation(fields: [itemCategory_id], references: [id])
-  vendor       Vendor?       @relation(fields: [vendor_id], references: [id])
+  vendor       Vendor[]
   itemType     ItemType?     @relation(fields: [itemType_id], references: [id])
   invoice      Invoice?      @relation(fields: [invoice_id], references: [id], onDelete: Cascade)
 
@@ -428,6 +427,7 @@ model ItemType {
   updatedAt DateTime  @default(now()) @updatedAt
   items     Items[]
   Invoice   Invoice[]
+  Vendor    Vendor[]
 }
 
 // ###############################################################################################################################
@@ -1221,12 +1221,14 @@ model Vendor {
   workspace_id String
   owner_id     String
 
-  // relations
-  owner     User      @relation(fields: [owner_id], references: [id], onDelete: Cascade)
-  workspace Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
-  Items     Items[]
-}
+  item_id String?
+  item    Items?  @relation(fields: [item_id], references: [id])
 
+  // relations
+  workspace   Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  ItemType    ItemType? @relation(fields: [itemType_id], references: [id])
+  itemType_id String?
+}
 
 // ###############################################################################################################################
 //   ############################# CRM Setup ##Start## #########################################################################
@@ -1343,7 +1345,6 @@ model Source {
   @@map("sources")
 }
 
-
 //############################# Lead CRM ###########################
 
 enum LeadStageStatus {
@@ -1368,10 +1369,10 @@ enum CallType {
 }
 
 model Lead {
-  id           String   @id @default(uuid())
-  created_at   DateTime @default(now())
-  updated_at   DateTime @default(now()) @updatedAt
-  deleted_at   DateTime?
+  id         String    @id @default(uuid())
+  created_at DateTime  @default(now())
+  updated_at DateTime  @default(now()) @updatedAt
+  deleted_at DateTime?
 
   // tenant
   workspace_id String
@@ -1380,40 +1381,40 @@ model Lead {
   owner        User      @relation("lead_owner", fields: [owner_id], references: [id], onDelete: Cascade)
 
   // main fields
-  subject      String
-  name         String
-  email        String?
-  phone        String?
-  followup_at  DateTime?
-  stage        LeadStageStatus @default(DRAFT)
-  notes        String?   @db.Text
-  discussion   String?   @db.Text
+  subject     String
+  name        String
+  email       String?
+  phone       String?
+  followup_at DateTime?
+  stage       LeadStageStatus @default(DRAFT)
+  notes       String?         @db.Text
+  discussion  String?         @db.Text
 
   // pipeline (FK + denorm name)
   pipeline_id   String
-  pipeline      Pipeline  @relation(fields: [pipeline_id], references: [id], onDelete: Cascade)
-  pipeline_name String     // denormalized for quick display/search
+  pipeline      Pipeline @relation(fields: [pipeline_id], references: [id], onDelete: Cascade)
+  pipeline_name String // denormalized for quick display/search
 
   // (optional) lead stage
   lead_stage_id String?
   lead_stage    LeadStage? @relation(fields: [lead_stage_id], references: [id], onDelete: SetNull)
 
   // (optional) primary user snapshot (plus full M2M below)
-  user_id    String?
-  primary_user User?      @relation(fields: [user_id], references: [id], onDelete: SetNull)
-  user_name  String?      // denormalized for quick display
+  user_id      String?
+  primary_user User?   @relation(fields: [user_id], references: [id], onDelete: SetNull)
+  user_name    String? // denormalized for quick display
 
   // multi relations (implicit M2M)
-  users        User[]       @relation("LeadUsers")
-  products     Items[]      @relation("LeadItems")
-  sources      Source[]     @relation("LeadSources")
-  files        Attachment[] @relation("LeadAttachments")
+  users    User[]       @relation("LeadUsers")
+  products Items[]      @relation("LeadItems")
+  sources  Source[]     @relation("LeadSources")
+  files    Attachment[] @relation("LeadAttachments")
 
   // children (1:N)
-  tasks        Task[]
-  calls        Call[]
-  activity     Activity[]
-  emails       EmailText[]
+  tasks    Task[]
+  calls    Call[]
+  activity Activity[]
+  emails   EmailText[]
 
   @@index([workspace_id, owner_id])
   @@index([pipeline_id])
@@ -1422,9 +1423,9 @@ model Lead {
 }
 
 model Task {
-  id           String   @id @default(uuid())
-  created_at   DateTime @default(now())
-  updated_at   DateTime @default(now()) @updatedAt
+  id         String   @id @default(uuid())
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now()) @updatedAt
 
   // tenant
   workspace_id String
@@ -1434,14 +1435,14 @@ model Task {
 
   // parent lead
   lead_id String
-  lead    Lead @relation(fields: [lead_id], references: [id], onDelete: Cascade)
+  lead    Lead   @relation(fields: [lead_id], references: [id], onDelete: Cascade)
 
   // fields
-  name        String
-  date        DateTime?
-  time        String?
-  priority    TaskPriority @default(LOW)
-  status      TaskStatus   @default(ONGOING)
+  name     String
+  date     DateTime?
+  time     String?
+  priority TaskPriority @default(LOW)
+  status   TaskStatus   @default(ONGOING)
   // description removed as requested
 
   @@index([workspace_id, owner_id])
@@ -1450,9 +1451,9 @@ model Task {
 }
 
 model EmailText {
-  id           String   @id @default(uuid())
-  created_at   DateTime @default(now())
-  updated_at   DateTime @default(now()) @updatedAt
+  id         String   @id @default(uuid())
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now()) @updatedAt
 
   // tenant
   workspace_id String
@@ -1462,12 +1463,12 @@ model EmailText {
 
   // parent lead
   lead_id String
-  lead    Lead @relation(fields: [lead_id], references: [id], onDelete: Cascade)
+  lead    Lead   @relation(fields: [lead_id], references: [id], onDelete: Cascade)
 
   // email content
   mail_to     String
   subject     String
-  description String? @db.Text  // renamed from `body`
+  description String? @db.Text // renamed from `body`
 
   @@index([workspace_id, owner_id])
   @@index([lead_id])
@@ -1475,9 +1476,9 @@ model EmailText {
 }
 
 model Call {
-  id           String   @id @default(uuid())
-  created_at   DateTime @default(now())
-  updated_at   DateTime @default(now()) @updatedAt
+  id         String   @id @default(uuid())
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now()) @updatedAt
 
   // tenant
   workspace_id String
@@ -1487,13 +1488,13 @@ model Call {
 
   // parent lead
   lead_id String
-  lead    Lead @relation(fields: [lead_id], references: [id], onDelete: Cascade)
+  lead    Lead   @relation(fields: [lead_id], references: [id], onDelete: Cascade)
 
   subject     String
   call_type   CallType
   duration    Int?
   assignee_id String?
-  assignee    User? @relation("call_assignee", fields: [assignee_id], references: [id], onDelete: SetNull)
+  assignee    User?    @relation("call_assignee", fields: [assignee_id], references: [id], onDelete: SetNull)
   description String?
   result      String?
 
@@ -1503,9 +1504,9 @@ model Call {
 }
 
 model Activity {
-  id           String   @id @default(uuid())
-  created_at   DateTime @default(now())
-  updated_at   DateTime @default(now()) @updatedAt
+  id         String   @id @default(uuid())
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now()) @updatedAt
 
   workspace_id String
   owner_id     String
@@ -1513,19 +1514,18 @@ model Activity {
   owner        User      @relation("activity_owner", fields: [owner_id], references: [id], onDelete: Cascade)
 
   lead_id String
-  lead    Lead @relation(fields: [lead_id], references: [id], onDelete: Cascade)
+  lead    Lead   @relation(fields: [lead_id], references: [id], onDelete: Cascade)
 
-  type    String
-  message String
+  type     String
+  message  String
   actor_id String?
-  actor    User? @relation(fields: [actor_id], references: [id], onDelete: SetNull)
+  actor    User?   @relation(fields: [actor_id], references: [id], onDelete: SetNull)
   meta     Json?
 
   @@index([workspace_id, owner_id])
   @@index([lead_id])
   @@map("activities")
 }
-
 
 // ###############################################################################################################################
 //    ############################# CRM Setup ##End## #########################################################################

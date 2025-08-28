@@ -1,15 +1,19 @@
-import { IsString, IsOptional, IsNotEmpty } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class CreateVendorDto {
+  @IsNotEmpty()
   @IsString()
   name: string;
 
+  @IsNotEmpty()
   @IsString()
   contact: string;
 
-  @IsString()
+  @IsNotEmpty()
+  @IsEmail()
   email: string;
 
+  @IsNotEmpty()
   @IsString()
   password: string;
 
@@ -17,7 +21,7 @@ export class CreateVendorDto {
   @IsString()
   taxNumber?: string;
 
-  // Billing Address
+  // Billing info
   @IsOptional()
   @IsString()
   billingName?: string;
@@ -46,12 +50,7 @@ export class CreateVendorDto {
   @IsString()
   billingZip?: string;
 
-  
-    @IsNotEmpty()
-    @IsString()
-    owner_id: string;
-  
-    @IsNotEmpty()
-    @IsString()
-    workspace_id: string;
+  @IsOptional()
+  @IsString()
+  item_id?: string;
 }
