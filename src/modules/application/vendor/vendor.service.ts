@@ -8,11 +8,11 @@ export class VendorService {
   constructor(private readonly prisma: PrismaService) {}
 
   // Create a new vendor
-  async create(createVendorDto: CreateVendorDto) {
-    return this.prisma.vendor.create({
-      data: createVendorDto,
-    });
-  }
+  // async create(createVendorDto: CreateVendorDto) {
+  //   return this.prisma.vendor.create({
+  //     data: createVendorDto,
+  //   });
+  // }
 
   // Get all vendors
   async findAll(page: number = 1, limit: number = 10, ownerId: string, workspaceId: string) {
