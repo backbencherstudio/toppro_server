@@ -97,6 +97,7 @@ model User {
   billCategory             BillCategory[]
   tax                      Tax[]
   Unit                     Unit[]
+  Items                    Items[]
   leads                    Lead[]       @relation("LeadUsers")
   owned_leads              Lead[]       @relation("lead_owner")
   primary_user_leads       Lead[]
@@ -136,6 +137,8 @@ model Workspace {
   BillCategory    BillCategory[]
   Tax             Tax[]
   Unit            Unit[]
+  Items           Items[]
+  Invoice         Invoice[]
   Lead            Lead[]
   Task            Task[]
   EmailText       EmailText[]
@@ -247,24 +250,38 @@ model RoleUser {
 }
 
 model Invoice {
-  id         String    @id @default(cuid())
-  created_at DateTime  @default(now())
-  updated_at DateTime  @default(now())
-  deleted_at DateTime?
-  issued_at  DateTime?
-  due_at     DateTime?
+  id            String    @id @default(cuid())
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @default(now())
+  deleted_at    DateTime?
+  issued_at     DateTime?
+  due_at        DateTime?
+  category_id   String?
+  invoice_no    String?
+  itemType_id   String?
+  subTotal      Float?    @default(0)
+  tax_id        String?
+  total         Float?    @default(0)
+  paid          Float?    @default(0)
+  due           Float?    @default(0)
+  issued_amount Float?    @default(0)
+  status        String?   @default("draft") // draft, sent, paid, overdue, cancelled
+  owner_id      String?
+  workspace_id  String?
+  user_id       String?
 
-  status Int? @default(1) @db.SmallInt
-
-  user_id     String?
   customer_id String?
-  user        User?     @relation(fields: [user_id], references: [id])
-  customer    Customer? @relation(fields: [customer_id], references: [id])
+  category    InvoiceCategory? @relation(fields: [category_id], references: [id])
+  user        User?            @relation(fields: [user_id], references: [id])
+  customer    Customer?        @relation(fields: [customer_id], references: [id])
+  tax         Tax?             @relation(fields: [tax_id], references: [id])
+  workspace   Workspace?       @relation(fields: [workspace_id], references: [id])
 
   amount   Float?
   currency String?
 
-  items Items[]
+  items    Items[]
+  itemType ItemType? @relation(fields: [itemType_id], references: [id])
 
   @@map("invoices")
 }
@@ -275,25 +292,33 @@ model Items {
   updated_at DateTime  @default(now())
   deleted_at DateTime?
 
-  invoice_id String?
-  invoice    Invoice? @relation(fields: [invoice_id], references: [id], onDelete: Cascade)
-
+  invoice_id      String?
   name            String?
   sku             String?
   tax_id          String?
   itemCategory_id String?
   description     String?
-  sale_price      Float?  @default(0)
-  purchase_price  Float?  @default(0)
+  sale_price      Float?     @default(0)
+  purchase_price  Float?     @default(0)
   unit_id         String?
-  quantity        Int?    @default(1)
+  quantity        Int?       @default(1)
   image           String?
+  vendor_id       String?
+  itemType_id     String?
+  discount        Float?     @default(0)
+  total           Float?     @default(0)
+  owner_id        String?
+  workspace_id    String?
+  user_id         String?
+  user            User?      @relation(fields: [user_id], references: [id])
+  workspace       Workspace? @relation(fields: [workspace_id], references: [id])
 
   unit         Unit?         @relation(fields: [unit_id], references: [id])
   tax          Tax?          @relation(fields: [tax_id], references: [id])
   itemCategory ItemCategory? @relation(fields: [itemCategory_id], references: [id])
-  vendor_id    String?
   vendor       Vendor?       @relation(fields: [vendor_id], references: [id])
+  itemType     ItemType?     @relation(fields: [itemType_id], references: [id])
+  invoice      Invoice?      @relation(fields: [invoice_id], references: [id], onDelete: Cascade)
 
   unit_price  Float? @default(0)
   total_price Float? @default(0)
@@ -337,8 +362,9 @@ model InvoiceCategory {
   user_id  String
   user     User   @relation(fields: [user_id], references: [id])
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
+  Invoice   Invoice[]
 }
 
 model BillCategory {
@@ -370,9 +396,10 @@ model Tax {
   user_id  String
   user     User   @relation(fields: [user_id], references: [id])
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
   Items     Items[]
+  Invoice   Invoice[]
 }
 
 model Unit {
@@ -391,7 +418,21 @@ model Unit {
   Items     Items[]
 }
 
-//############################# Caterogy Setup ##End## ###################################################
+model ItemType {
+  id          String  @id @default(cuid())
+  name        String
+  color       String?
+  description String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
+  items     Items[]
+  Invoice   Invoice[]
+}
+
+// ###############################################################################################################################
+// ############################# Caterogy Setup ##End## ###################################################
+// ###############################################################################################################################
 
 model NotificationEvent {
   id         String    @id @default(cuid())

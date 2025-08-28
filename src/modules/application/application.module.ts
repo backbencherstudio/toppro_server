@@ -12,7 +12,9 @@ import { LeadStagesModule } from './crm/crm-setup/lead_stages/lead_stages.module
 import { DealStageModule } from './crm/crm-setup/deal_stages/deal_stages.module';
 import { WorkspaceModule } from './workspace/workspace.module';
 import { SourcesModule } from './crm/crm-setup/sources/sources.module';
+import { ItemsModule } from './items/items.module';
+import { InvoiceModule } from './invoice/invoice.module';
 @Module({
-  imports: [NotificationModule, ContactModule, FaqModule, CustomerModule, VendorModule, LeadModule, DealModule, CrmReportModule, PipelinesModule, LeadStagesModule, DealStageModule, WorkspaceModule, SourcesModule],
+  imports: [NotificationModule, ContactModule, FaqModule, CustomerModule, VendorModule, LeadModule, DealModule, CrmReportModule, PipelinesModule, LeadStagesModule, DealStageModule, WorkspaceModule, SourcesModule, ItemsModule, InvoiceModule],
 })
 export class ApplicationModule { }
