@@ -5,19 +5,31 @@ import { UpdateCustomerDto } from './dto/update-customer.dto';
 
 @Injectable()
 export class CustomerService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   // Create a new customer
-  async create(createCustomerDto: CreateCustomerDto) {
+  async create(
+    createCustomerDto: CreateCustomerDto,
+    owner_id: string,
+    workspace_id: string,
+  ) {
     return this.prisma.customer.create({
-      data: createCustomerDto,
+      data: {
+        ...createCustomerDto,
+        workspace_id: owner_id,
+        owner_id: workspace_id,
+      },
     });
   }
 
-
   // Get all customers with pagination and selected fields
-  async findAll(page: number = 1, limit: number = 10, ownerId: string, workspaceId: string) {
-    const skip = (page - 1) * limit; 
+  async findAll(
+    page: number = 1,
+    limit: number = 10,
+    ownerId: string,
+    workspaceId: string,
+  ) {
+    const skip = (page - 1) * limit;
 
     const [customers, total] = await Promise.all([
       this.prisma.customer.findMany({
@@ -43,7 +55,6 @@ export class CustomerService {
     const to = skip + customers.length;
     const range = `Showing ${from} to ${to} of ${total} entries`;
 
-
     return {
       data: customers,
       pagination: {
@@ -57,24 +68,29 @@ export class CustomerService {
   }
 
   // Get a customer by ID
-  async findOne(id: string) {
+  async findOne(id: string, owner_id: string, workspace_id: string) {
     return this.prisma.customer.findUnique({
-      where: { id },
+      where: { id, owner_id, workspace_id },
     });
   }
 
   // Update a customer's details
-  async update(id: string, updateCustomerDto: UpdateCustomerDto) {
+  async update(
+    id: string,
+    updateCustomerDto: UpdateCustomerDto,
+    owner_id: string,
+    workspace_id: string,
+  ) {
     return this.prisma.customer.update({
-      where: { id },
+      where: { id, owner_id, workspace_id },
       data: updateCustomerDto,
     });
   }
 
   // Delete a customer by ID
-  async remove(id: string) {
+  async remove(id: string, owner_id: string, workspace_id: string) {
     return this.prisma.customer.delete({
-      where: { id },
+      where: { id, owner_id, workspace_id },
     });
   }
 }

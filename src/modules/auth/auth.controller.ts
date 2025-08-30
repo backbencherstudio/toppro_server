@@ -118,7 +118,7 @@ export class AuthController {
         // After OWNER creation, create the workspace using owner_id and super_id
         const workspace = await this.authService.createWorkspace({
           ownerName: name,
-          owner_id: ownerResponse.data.id,
+          owner_id: ownerResponse.data?.id || '',
           super_id: super_id,
           workspace_name: workspace_name || `${name}'s Workspace`,
         });

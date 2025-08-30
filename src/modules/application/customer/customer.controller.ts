@@ -7,6 +7,7 @@ import {
   Post,
   Put,
   Query,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { Permissions } from 'src/ability/permissions.enum';
@@ -25,20 +26,21 @@ export class CustomerController {
   @UseGuards(JwtAuthGuard, RolePermissionGuard)
   @PermissionsGuard(Permissions.customer_create)
   @PermissionsGuard(Permissions.customer_manage)
-  create(@Body() createCustomerDto: CreateCustomerDto) {
-    return this.customerService.create(createCustomerDto);
+  create(@Body() createCustomerDto: CreateCustomerDto, @Req() req) {
+    const { owner_id: ownerId, workspace_id: workspaceId } = req.user;
+    return this.customerService.create(createCustomerDto, ownerId, workspaceId);
   }
 
-  @Get('all/:ownerId/:workspaceId')
+  @Get('all')
   @UseGuards(JwtAuthGuard, RolePermissionGuard)
   @PermissionsGuard(Permissions.customer_view)
   @PermissionsGuard(Permissions.customer_manage)
   findAll(
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10, // Default to limit 10
-    @Param('ownerId') ownerId: string,
-    @Param('workspaceId') workspaceId: string,
+    @Req() req,
   ) {
+    const { owner_id: ownerId, workspace_id: workspaceId } = req.user;
     return this.customerService.findAll(page, limit, ownerId, workspaceId);
   }
 
@@ -46,8 +48,9 @@ export class CustomerController {
   @UseGuards(JwtAuthGuard, RolePermissionGuard)
   @PermissionsGuard(Permissions.customer_view)
   @PermissionsGuard(Permissions.customer_manage)
-  findOne(@Param('id') id: string) {
-    return this.customerService.findOne(id);
+  findOne(@Param('id') id: string, @Req() req) {
+    const { owner_id: ownerId, workspace_id: workspaceId } = req.user;
+    return this.customerService.findOne(id, ownerId, workspaceId);
   }
 
   @Put(':id')
@@ -57,15 +60,19 @@ export class CustomerController {
   update(
     @Param('id') id: string,
     @Body() updateCustomerDto: UpdateCustomerDto,
+    @Req() req,
   ) {
-    return this.customerService.update(id, updateCustomerDto);
+    const { owner_id: ownerId, workspace_id: workspaceId } = req.user;
+
+    return this.customerService.update(id, updateCustomerDto, ownerId, workspaceId);
   }
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolePermissionGuard)
   @PermissionsGuard(Permissions.customer_delete)
   @PermissionsGuard(Permissions.customer_manage)
-  remove(@Param('id') id: string) {
-    return this.customerService.remove(id);
+  remove(@Param('id') id: string, @Req() req) {
+    const { owner_id: ownerId, workspace_id: workspaceId } = req.user;
+    return this.customerService.remove(id, ownerId, workspaceId);
   }
 }

@@ -7,6 +7,7 @@ import {
   Post,
   Put,
   Query,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { Permissions } from 'src/ability/permissions.enum';
@@ -21,24 +22,52 @@ import { VendorService } from './vendor.service';
 export class VendorController {
   constructor(private readonly vendorService: VendorService) {}
 
-  // @Post()
-  // @UseGuards(JwtAuthGuard, RolePermissionGuard)
-  // @PermissionsGuard(Permissions.vendor_create)
-  // @PermissionsGuard(Permissions.vendor_manage)
-  // create(@Body() createVendorDto: CreateVendorDto) {
-  //   return this.vendorService.create(createVendorDto);
-  // }
+  @Post()
+  @UseGuards(JwtAuthGuard, RolePermissionGuard)
+  @PermissionsGuard(Permissions.vendor_create)
+  @PermissionsGuard(Permissions.vendor_manage)
+  create(@Body() createVendorDto: CreateVendorDto, @Req() req) {
+    const {
+      owner_id: ownerId,
+      workspace_id: workspaceId,
+      user_id: userId,
+    } = req.user;
+    return this.vendorService.create(
+      createVendorDto,
+      ownerId,
+      workspaceId,
+      userId,
+    );
+  }
 
-  @Get("all/:ownerId/:workspaceId")
+  @Post(':itemId')
+  @UseGuards(JwtAuthGuard)
+  async createWithItem(
+    @Param('itemId') itemId: string,
+    @Body() createVendorDto: CreateVendorDto,
+    @Req() req,
+  ) {
+    // Pull user info from JWT
+    const { owner_id: ownerId, workspace_id: workspaceId } = req.user;
+
+    return this.vendorService.createWithItem(
+      createVendorDto,
+      itemId,
+      ownerId,
+      workspaceId,
+    );
+  }
+
+  @Get('all')
   @UseGuards(JwtAuthGuard, RolePermissionGuard)
   @PermissionsGuard(Permissions.vendor_view)
   @PermissionsGuard(Permissions.vendor_manage)
   findAll(
     @Query('page') page: number = 1, // Default to page 1
     @Query('limit') limit: number = 10, // Default to limit 10
-    @Param('ownerId') ownerId: string,
-    @Param('workspaceId') workspaceId: string,
+    @Req() req,
   ) {
+    const { owner_id: ownerId, workspace_id: workspaceId } = req.user;
     return this.vendorService.findAll(page, limit, ownerId, workspaceId);
   }
 
@@ -46,23 +75,30 @@ export class VendorController {
   @UseGuards(JwtAuthGuard, RolePermissionGuard)
   @PermissionsGuard(Permissions.vendor_view)
   @PermissionsGuard(Permissions.vendor_manage)
-  findOne(@Param('id') id: string) {
-    return this.vendorService.findOne(id);
+  findOne(@Param('id') id: string, @Req() req) {
+    const { owner_id: ownerId, workspace_id: workspaceId } = req.user;
+    return this.vendorService.findOne(id, ownerId, workspaceId);
   }
 
   @Put(':id')
   @UseGuards(JwtAuthGuard, RolePermissionGuard)
   @PermissionsGuard(Permissions.vendor_update)
   @PermissionsGuard(Permissions.vendor_manage)
-  update(@Param('id') id: string, @Body() updateVendorDto: UpdateVendorDto) {
-    return this.vendorService.update(id, updateVendorDto);
+  update(
+    @Param('id') id: string,
+    @Req() req,
+    @Body() updateVendorDto: UpdateVendorDto,
+  ) {
+    const { owner_id: ownerId, workspace_id: workspaceId } = req.user;
+    return this.vendorService.update(id, updateVendorDto, ownerId, workspaceId);
   }
-
+  
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolePermissionGuard)
   @PermissionsGuard(Permissions.vendor_delete)
   @PermissionsGuard(Permissions.vendor_manage)
-  remove(@Param('id') id: string) {
-    return this.vendorService.remove(id);
+  remove(@Param('id') id: string,@Req() req) {
+    const { owner_id: ownerId, workspace_id: workspaceId } = req.user;
+    return this.vendorService.remove(id, ownerId, workspaceId);
   }
 }

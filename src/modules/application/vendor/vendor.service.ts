@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateVendorDto } from './dto/create-vendor.dto';
 import { UpdateVendorDto } from './dto/update-vendor.dto';
@@ -8,14 +9,49 @@ export class VendorService {
   constructor(private readonly prisma: PrismaService) {}
 
   // Create a new vendor
-  // async create(createVendorDto: CreateVendorDto) {
-  //   return this.prisma.vendor.create({
-  //     data: createVendorDto,
-  //   });
-  // }
+  async create(
+    createVendorDto: CreateVendorDto,
+    ownerId: string,
+    workspaceId: string,
+    userId: string,
+  ) {
+    return this.prisma.vendor.create({
+      data: {
+        ...createVendorDto,
+        workspace_id: workspaceId,
+        owner_id: ownerId,
+        // user_id: userId,
+      },
+    });
+  }
+
+  // Create vendor and link it to an item
+  async createWithItem(
+    createVendorDto: CreateVendorDto,
+    itemId: string,
+    ownerId: string,
+    workspaceId: string,
+  ) {
+    // Hash password before saving
+
+    // Use UncheckedCreateInput to allow direct foreign key assignment
+    const data: Prisma.VendorUncheckedCreateInput = {
+      ...createVendorDto,
+      item_id: itemId,
+      owner_id: ownerId,
+      workspace_id: workspaceId,
+    };
+
+    return this.prisma.vendor.create({ data });
+  }
 
   // Get all vendors
-  async findAll(page: number = 1, limit: number = 10, ownerId: string, workspaceId: string) {
+  async findAll(
+    page: number = 1,
+    limit: number = 10,
+    ownerId: string,
+    workspaceId: string,
+  ) {
     const skip = (page - 1) * limit; // Calculate how many records to skip based on the page
 
     const [vendors, total] = await Promise.all([
@@ -42,7 +78,6 @@ export class VendorService {
     const to = skip + vendors.length;
     const range = `Showing ${from} to ${to} of ${total} entries`;
 
-
     return {
       data: vendors,
       pagination: {
@@ -56,24 +91,29 @@ export class VendorService {
   }
 
   // Get a vendor by ID
-  async findOne(id: string) {
+  async findOne(id: string, ownerId: string, workspaceId: string) {
     return this.prisma.vendor.findUnique({
-      where: { id },
+      where: { id, owner_id: ownerId, workspace_id: workspaceId },
     });
   }
 
   // Update a vendor's details
-  async update(id: string, updateVendorDto: UpdateVendorDto) {
+  async update(
+    id: string,
+    updateVendorDto: UpdateVendorDto,
+    owner_id: string,
+    workspace_id: string,
+  ) {
     return this.prisma.vendor.update({
-      where: { id },
+      where: { id, owner_id, workspace_id },
       data: updateVendorDto,
     });
   }
 
   // Delete a vendor by ID
-  async remove(id: string) {
+  async remove(id: string, owner_id: string, workspace_id: string) {
     return this.prisma.vendor.delete({
-      where: { id },
+      where: { id, owner_id, workspace_id },
     });
   }
 }

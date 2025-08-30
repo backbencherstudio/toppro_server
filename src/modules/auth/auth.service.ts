@@ -511,7 +511,6 @@ export class AuthService {
           name: user.name,
           token: token.token,
           type: type,
-          password: password,
         });
       }
 
