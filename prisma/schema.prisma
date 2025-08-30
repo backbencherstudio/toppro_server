@@ -106,6 +106,8 @@ model User {
   owned_activities         Activity[]              @relation("activity_owner")
   actor_activities         Activity[]
   assigned_calls           Call[]                  @relation("call_assignee")
+  Purchase                 Purchase[]
+  Bill                     Bill[]
 
   @@map("users")
 }
@@ -143,6 +145,8 @@ model Workspace {
   EmailText       EmailText[]
   Call            Call[]
   Activity        Activity[]
+  Purchase        Purchase[]
+  Bill            Bill[]
 
   @@map("workspaces")
 }
@@ -322,10 +326,94 @@ model Items {
   unit_price  Float? @default(0)
   total_price Float? @default(0)
 
-  leads Lead[] @relation("LeadItems")
+  leads         Lead[]       @relation("LeadItems")
+  Purchase      Purchase[]
+  AccountType   AccountType? @relation(fields: [accountTypeId], references: [id])
+  accountTypeId String?
 
   @@map("items")
 }
+
+model Purchase {
+  id         String    @id @default(cuid())
+  created_at DateTime  @default(now())
+  updated_at DateTime  @default(now())
+  deleted_at DateTime?
+
+  accountType_id     String?
+  vendor_id          String?
+  billingCategory_id String?
+  itemCategory_id    String?
+  purchase_no        String?
+  item_id            String?
+  discount           Float?  @default(0)
+  tax_id             String?
+  quantity     Int?    @default(1)
+
+  // bill_id         String?
+  unit_price   Float?  @default(0)
+  total_price  Float?  @default(0)
+  owner_id     String?
+  workspace_id String?
+  user_id      String?
+
+  tax                Tax?    @relation(fields: [tax_id], references: [id])
+  billing_category BillCategory? @relation(fields: [billingCategory_id], references: [id])
+  itemCategory     ItemCategory? @relation(fields: [itemCategory_id], references: [id])
+  vendor           Vendor?       @relation(fields: [vendor_id], references: [id])
+  user             User?         @relation(fields: [user_id], references: [id])
+  workspace        Workspace?    @relation(fields: [workspace_id], references: [id])
+  // bill         Bill?         @relation(fields: [bill_id], references: [id], onDelete: Cascade)
+  item             Items?        @relation(fields: [item_id], references: [id])
+  AccountType      AccountType?  @relation(fields: [accountType_id], references: [id])
+  Bill             Bill?         @relation(fields: [billId], references: [id])
+  billId           String?
+
+  @@map("purchases")
+}
+
+// ###############################################################################################################################
+//############################# Account Setup ##Start## #########################################################################
+// ###############################################################################################################################
+model Bill {
+  id             String    @id @default(cuid())
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @default(now())
+  deleted_at     DateTime?
+  issued_at      DateTime?
+  due_at         DateTime?
+  category_id    String?
+  bill_no        String?
+  subTotal       Float?    @default(0)
+  tax_id         String?
+  total          Float?    @default(0)
+  paid           Float?    @default(0)
+  due            Float?    @default(0)
+  status         String?   @default("draft") // draft, sent, paid, overdue, cancelled
+  owner_id       String?
+  workspace_id   String?
+  user_id        String?
+  accountType_id String?
+
+  vendor_id String?
+  category  BillCategory? @relation(fields: [category_id], references: [id])
+  user      User?         @relation(fields: [user_id], references: [id])
+  vendor    Vendor?       @relation(fields: [vendor_id], references: [id])
+  tax       Tax?          @relation(fields: [tax_id], references: [id])
+  workspace Workspace?    @relation(fields: [workspace_id], references: [id])
+
+  amount   Float?
+  currency String?
+
+  purchases   Purchase[]
+  AccountType AccountType? @relation(fields: [accountType_id], references: [id])
+
+  @@map("bills")
+}
+
+// ###############################################################################################################################
+//############################# Account Setup ##End## #########################################################################
+// ###############################################################################################################################
 
 // ###############################################################################################################################
 //############################# Caterogy Setup ##Start## #########################################################################
@@ -343,9 +431,10 @@ model ItemCategory {
   user_id  String
   user     User   @relation(fields: [user_id], references: [id])
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @default(now()) @updatedAt
   Items     Items[]
+  Purchase  Purchase[]
 }
 
 model InvoiceCategory {
@@ -379,8 +468,10 @@ model BillCategory {
   user_id  String
   user     User   @relation(fields: [user_id], references: [id])
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @default(now()) @updatedAt
+  Bill      Bill[]
+  Purchase  Purchase[]
 }
 
 model Tax {
@@ -395,10 +486,12 @@ model Tax {
   user_id  String
   user     User   @relation(fields: [user_id], references: [id])
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @default(now()) @updatedAt
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @default(now()) @updatedAt
   Items     Items[]
   Invoice   Invoice[]
+  Bill      Bill[]
+  Purchase  Purchase[]
 }
 
 model Unit {
@@ -428,6 +521,17 @@ model ItemType {
   items     Items[]
   Invoice   Invoice[]
   Vendor    Vendor[]
+}
+
+model AccountType {
+  id   String @id @default(cuid())
+  name String
+
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @default(now()) @updatedAt
+  Bill      Bill[]
+  Purchase  Purchase[]
+  items     Items[]
 }
 
 // ###############################################################################################################################
@@ -1225,9 +1329,11 @@ model Vendor {
   item    Items?  @relation(fields: [item_id], references: [id])
 
   // relations
-  workspace   Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
-  ItemType    ItemType? @relation(fields: [itemType_id], references: [id])
+  workspace   Workspace  @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  ItemType    ItemType?  @relation(fields: [itemType_id], references: [id])
   itemType_id String?
+  Bill        Bill[]
+  Purchase    Purchase[]
 }
 
 // ###############################################################################################################################
