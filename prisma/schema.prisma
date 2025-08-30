@@ -1598,7 +1598,7 @@ model Call {
 
   subject     String
   call_type   CallType
-  duration    Int?
+  duration    String?
   assignee_id String?
   assignee    User?    @relation("call_assignee", fields: [assignee_id], references: [id], onDelete: SetNull)
   description String?
