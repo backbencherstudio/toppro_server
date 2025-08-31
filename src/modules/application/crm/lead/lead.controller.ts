@@ -1,38 +1,21 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
-import { LeadService } from './lead.service';
+// leads.controller.ts
+import { Controller, Post, Body, Req, UseGuards } from '@nestjs/common';
 import { CreateLeadDto } from './dto/create-lead.dto';
-import { UpdateLeadDto } from './dto/update-lead.dto';
+import { LeadsService } from './lead.service';
 import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
-import { ApiBearerAuth } from '@nestjs/swagger';
 
-@ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
-@Controller('lead')
-export class LeadController {
-  constructor(private readonly leadService: LeadService) {}
+@Controller('leads')
+export class LeadsController {
+  constructor(private readonly leadsService: LeadsService) { }
 
-  @Post()
-  create(@Body() createLeadDto: CreateLeadDto) {
-    return this.leadService.create(createLeadDto);
-  }
+  @UseGuards(JwtAuthGuard)
+  @Post('create')
+  async createLead(@Req() req, @Body() dto: CreateLeadDto) {
+    // req.user comes from JWT strategy
+    const ownerId = req.user.id;
+    const workspaceId = req.user.workspace_id;
+    const userId = req.user.id;
 
-  @Get()
-  findAll() {
-    return this.leadService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.leadService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateLeadDto: UpdateLeadDto) {
-    return this.leadService.update(+id, updateLeadDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.leadService.remove(+id);
+    return this.leadsService.createLead(dto, ownerId, workspaceId, userId);
   }
 }

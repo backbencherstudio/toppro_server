@@ -1,1 +1,28 @@
-export class CreateLeadDto {}
+// create-lead.dto.ts
+import { LeadStageStatus } from '@prisma/client';
+import { IsString, IsNotEmpty, IsEmail, IsDateString, IsArray, ArrayNotEmpty, IsOptional, IsEnum, ArrayUnique } from 'class-validator';
+
+export class CreateLeadDto {
+    @IsString()
+    @IsNotEmpty()
+    subject: string;
+
+    @IsString()
+    @IsNotEmpty()
+    name: string;
+
+    @IsEmail()
+    email: string;
+
+    @IsString()
+    phone: string;
+
+    @IsDateString()
+    followup_at: string;
+
+    @IsArray()
+    @ArrayUnique() // no duplicates
+    @IsOptional()  // can be empty; owner will always be added anyway
+    users?: string[];
+
+}
