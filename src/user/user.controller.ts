@@ -5,8 +5,11 @@ import {
   Get,
   Param,
   Post,
-  Put
+  Put,
+  Req,
+  UseGuards,
 } from '@nestjs/common';
+import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 import { CreateUserDto } from './dto/create_user-dto';
 import { LoginDto } from './dto/login_dto';
 import { UserService } from './user.service';
@@ -16,6 +19,7 @@ export class UserController {
 
   // Endpoint for registering a new user.
   @Post('register')
+  @UseGuards(JwtAuthGuard)
   async register(@Body() createUserDto: CreateUserDto) {
     return this.userService.create(createUserDto);
   }
@@ -31,24 +35,37 @@ export class UserController {
     return this.userService.login(loginDto);
   }
 
-// Get all users by ownerId and workspaceId
-@Get('all/:ownerId/:workspaceId')
-async getUsers(@Param('ownerId') ownerId: string, @Param('workspaceId') workspaceId: string) {
-  return this.userService.getAllUsers(ownerId, workspaceId);
-}
-
+  // Get all users by ownerId and workspaceId
+  @Get('all')
+  @UseGuards(JwtAuthGuard)
+  async getUsers(
+    @Req() req, // Request object to extract user info`
+  ) {
+    const {
+      owner_id: ownerId,
+      workspace_id: workspaceId,
+      sub: userId,
+    } = req.user;
+    return this.userService.getAllUsers(ownerId, workspaceId, userId);
+  }
 
   // Get all customers
-  @Get('customer/all/:ownerId/:workspaceId')
-  async getCustomers(@Param('ownerId') ownerId: string, @Param('workspaceId') workspaceId: string) {
-    return this.userService.getAllCustomers(ownerId, workspaceId); // no body needed
-  }
+  // @Get('customer/all/:ownerId/:workspaceId')
+  // async getCustomers(
+  //   @Param('ownerId') ownerId: string,
+  //   @Param('workspaceId') workspaceId: string,
+  // ) {
+  //   return this.userService.getAllCustomers(ownerId, workspaceId); // no body needed
+  // }
 
-  // Get all vendors
-  @Get('vendor/all/:ownerId/:workspaceId')
-  async getVendors(@Param('ownerId') ownerId: string, @Param('workspaceId') workspaceId: string) {
-    return this.userService.getAllVendor(ownerId, workspaceId); // no body needed
-  }
+  // // Get all vendors
+  // @Get('vendor/all/:ownerId/:workspaceId')
+  // async getVendors(
+  //   @Param('ownerId') ownerId: string,
+  //   @Param('workspaceId') workspaceId: string,
+  // ) {
+  //   return this.userService.getAllVendor(ownerId, workspaceId); // no body needed
+  // }
 
   // Endpoint to assign a role to a user
   @Put(':userId/assign-role') // Using PUT method to update the role assignment
@@ -61,9 +78,19 @@ async getUsers(@Param('ownerId') ownerId: string, @Param('workspaceId') workspac
 
   // Endpoint to get a single user by userId
   @Get(':userId')
-  // @UseGuards(JwtAuthGuard)
   async getUser(@Param('userId') userId: string) {
-    return this.userService.getUserById(userId); // Get single user by ID
+    return this.userService.getUserById(userId);
+  }
+
+  @Get('crm/all')
+  @UseGuards(JwtAuthGuard)
+  async getUsersWithCrmAccess(@Req() req) {
+    const {
+      owner_id: ownerId,
+      workspace_id: workspaceId,
+      sub: userId,
+    } = req.user;
+    return this.userService.getUsersWithCrmAccess(ownerId, workspaceId, userId);
   }
 
   // Endpoint to update a user's information

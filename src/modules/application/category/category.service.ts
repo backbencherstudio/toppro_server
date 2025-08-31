@@ -1,249 +1,398 @@
+// -------- CATEGORY SERVICE (Refactored) --------
 import { Injectable } from '@nestjs/common';
+import { CreateCategoryDto } from 'src/modules/application/category/dto/create-category.dto';
+import { UpdateCategoryDto } from 'src/modules/application/category/dto/update-category.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { CreateCategoryDto } from './dto/create-category.dto';
-import { UpdateCategoryDto } from './dto/update-category.dto';
 
 @Injectable()
 export class CategoryService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   // -------- ITEM CATEGORY --------
-  createItemCategory(
+  async createItemCategory(
     dto: CreateCategoryDto,
     ownerId: string,
     workspaceId: string,
-    user_id: string,
+    userId: string,
   ) {
-    console.log('Creating item category with ownerId:', ownerId, 'and workspaceId:', workspaceId, dto);
-     return this.prisma.itemCategory.create({
-    data: {
-      name: dto.name,
-      color: dto.color,
-      owner_id: ownerId,
-      workspace: { connect: { id: workspaceId } }, // ✅ workspace relation
-    },
-  });
+    const created = await this.prisma.itemCategory.create({
+      data: {
+        name: dto.name,
+        color: dto.color,
+        owner_id: ownerId,
+        workspace: { connect: { id: workspaceId } },
+      },
+    });
+    return {
+      success: true,
+      message: 'Item category created successfully',
+      data: created,
+    };
   }
 
-  findAllItemCategories(ownerId: string, workspaceId: string) {
-    return this.prisma.itemCategory.findMany({
+  async findAllItemCategories(ownerId: string, workspaceId: string) {
+    const data = await this.prisma.itemCategory.findMany({
       where: { owner_id: ownerId, workspace_id: workspaceId },
     });
+    return { success: true, data };
   }
 
-  updateItemCategory(
+  async findItemCategoryOne(id: string, ownerId: string, workspaceId: string) {
+    const data = await this.prisma.itemCategory.findFirst({
+      where: { id: id, owner_id: ownerId, workspace_id: workspaceId },
+    });
+    return { success: true, data };
+  }
+
+  async updateItemCategory(
     id: string,
     dto: UpdateCategoryDto,
     ownerId: string,
     workspaceId: string,
   ) {
-    return this.prisma.itemCategory.update({
+    const updated = await this.prisma.itemCategory.update({
       where: { id, owner_id: ownerId, workspace_id: workspaceId },
       data: dto,
     });
+    return {
+      success: true,
+      message: 'Item category updated successfully',
+      data: updated,
+    };
   }
 
-  removeItemCategory(id: string, ownerId: string, workspaceId: string) {
-    return this.prisma.itemCategory.delete({
+  async removeItemCategory(id: string, ownerId: string, workspaceId: string) {
+    const deleted = await this.prisma.itemCategory.delete({
       where: { id, owner_id: ownerId, workspace_id: workspaceId },
     });
+    return {
+      success: true,
+      message: 'Item category deleted successfully',
+      data: deleted,
+    };
   }
 
   // -------- INVOICE CATEGORY --------
-  createInvoiceCategory(
+  async createInvoiceCategory(
     dto: CreateCategoryDto,
     ownerId: string,
     workspaceId: string,
   ) {
-    return this.prisma.invoiceCategory.create({
+    const created = await this.prisma.invoiceCategory.create({
       data: { ...dto, owner_id: ownerId, workspace_id: workspaceId },
     });
+    return {
+      success: true,
+      message: 'Invoice category created',
+      data: created,
+    };
   }
 
-  findAllInvoiceCategories(ownerId: string, workspaceId: string) {
-    return this.prisma.invoiceCategory.findMany({
+  async findInvoiceCategoryOne(
+    id: string,
+    ownerId: string,
+    workspaceId: string,
+  ) {
+    const data = await this.prisma.invoiceCategory.findFirst({
+      where: { id, owner_id: ownerId, workspace_id: workspaceId },
+    });
+    return { success: true, data };
+  }
+
+  async findAllInvoiceCategories(ownerId: string, workspaceId: string) {
+    const data = await this.prisma.invoiceCategory.findMany({
       where: { owner_id: ownerId, workspace_id: workspaceId },
     });
+    return { success: true, data };
   }
 
-  updateInvoiceCategory(
+  async updateInvoiceCategory(
     id: string,
     dto: UpdateCategoryDto,
     ownerId: string,
     workspaceId: string,
   ) {
-    return this.prisma.invoiceCategory.update({
-      where: { id, owner_id: ownerId, workspace_id: workspaceId },
+    const updated = await this.prisma.invoiceCategory.update({
+      where: { id },
       data: dto,
     });
+    return {
+      success: true,
+      message: 'Invoice category updated',
+      data: updated,
+    };
   }
 
-  removeInvoiceCategory(id: string, ownerId: string, workspaceId: string) {
-    return this.prisma.invoiceCategory.delete({
-      where: { id, owner_id: ownerId, workspace_id: workspaceId },
-    });
+  async removeInvoiceCategory(
+    id: string,
+    ownerId: string,
+    workspaceId: string,
+  ) {
+    const deleted = await this.prisma.invoiceCategory.delete({ where: { id } });
+    return {
+      success: true,
+      message: 'Invoice category deleted',
+      data: deleted,
+    };
   }
 
   // -------- BILL CATEGORY --------
-  createBillCategory(
+  async createBillCategory(
     dto: CreateCategoryDto,
     ownerId: string,
     workspaceId: string,
   ) {
-    return this.prisma.billCategory.create({
+    const created = await this.prisma.billCategory.create({
       data: { ...dto, owner_id: ownerId, workspace_id: workspaceId },
     });
+    return { success: true, message: 'Bill category created', data: created };
   }
 
-  findAllBillCategories(ownerId: string, workspaceId: string) {
-    return this.prisma.billCategory.findMany({
+  async findBillCategoryOne(id: string, ownerId: string, workspaceId: string) {
+    const data = await this.prisma.billCategory.findFirst({
+      where: { id, owner_id: ownerId, workspace_id: workspaceId },
+    });
+    return { success: true, data };
+  }
+
+  async findAllBillCategories(ownerId: string, workspaceId: string) {
+    const data = await this.prisma.billCategory.findMany({
       where: { owner_id: ownerId, workspace_id: workspaceId },
     });
+    return { success: true, data };
   }
 
-  updateBillCategory(
+  async updateBillCategory(
     id: string,
     dto: UpdateCategoryDto,
     ownerId: string,
     workspaceId: string,
   ) {
-    return this.prisma.billCategory.update({
-      where: { id, owner_id: ownerId, workspace_id: workspaceId },
+    const updated = await this.prisma.billCategory.update({
+      where: { id },
       data: dto,
     });
+    return { success: true, message: 'Bill category updated', data: updated };
   }
 
-  removeBillCategory(id: string, ownerId: string, workspaceId: string) {
-    return this.prisma.billCategory.delete({
-      where: { id, owner_id: ownerId, workspace_id: workspaceId },
-    });
+  async removeBillCategory(id: string, ownerId: string, workspaceId: string) {
+    const deleted = await this.prisma.billCategory.delete({ where: { id } });
+    return { success: true, message: 'Bill category deleted', data: deleted };
   }
 
   // -------- TAX --------
-  createTax(dto: CreateCategoryDto, ownerId: string, workspaceId: string) {
-    return this.prisma.tax.create({
-      data: { ...dto, owner_id: ownerId, workspace_id: workspaceId },
-    });
-  }
-
-  findAllTaxes(ownerId: string, workspaceId: string) {
-    return this.prisma.tax.findMany({
-      where: { owner_id: ownerId, workspace_id: workspaceId },
-    });
-  }
-
-  updateTax(
-    id: string,
-    dto: UpdateCategoryDto,
-    ownerId: string,
-    workspaceId: string,
-  ) {
-    return this.prisma.tax.update({
-      where: { id, owner_id: ownerId, workspace_id: workspaceId },
-      data: dto,
-    });
-  }
-
-  removeTax(id: string, ownerId: string, workspaceId: string) {
-    return this.prisma.tax.delete({
-      where: { id, owner_id: ownerId, workspace_id: workspaceId },
-    });
-  }
-
-  // -------- UNIT --------
-  createUnit(dto: CreateCategoryDto, ownerId: string, workspaceId: string) {
-    return this.prisma.unit.create({
-      data: { ...dto, owner_id: ownerId, workspace_id: workspaceId },
-    });
-  }
-
-  findAllUnits(ownerId: string, workspaceId: string) {
-    return this.prisma.unit.findMany({
-      where: { owner_id: ownerId, workspace_id: workspaceId },
-    });
-  }
-
-  updateUnit(
-    id: string,
-    dto: UpdateCategoryDto,
-    ownerId: string,
-    workspaceId: string,
-  ) {
-    return this.prisma.unit.update({
-      where: { id, owner_id: ownerId, workspace_id: workspaceId },
-      data: dto,
-    });
-  }
-
-  removeUnit(id: string, ownerId: string, workspaceId: string) {
-    return this.prisma.unit.delete({
-      where: { id, owner_id: ownerId, workspace_id: workspaceId },
-    });
-  }
-
-  // -------- ITEM TYPE --------
-  createItemType(dto: CreateCategoryDto, ownerId: string, workspaceId: string) {
-    return this.prisma.itemType.create({
-      data: { ...dto, owner_id: ownerId, workspace_id: workspaceId },
-    });
-  }
-
-  findAllItemTypes(ownerId: string, workspaceId: string) {
-    return this.prisma.itemType.findMany({
-      where: { owner_id: ownerId, workspace_id: workspaceId },
-    });
-  }
-
-  updateItemType(
-    id: string,
-    dto: UpdateCategoryDto,
-    ownerId: string,
-    workspaceId: string,
-  ) {
-    return this.prisma.itemType.update({
-      where: { id, owner_id: ownerId, workspace_id: workspaceId },
-      data: dto,
-    });
-  }
-
-  removeItemType(id: string, ownerId: string, workspaceId: string) {
-    return this.prisma.itemType.delete({
-      where: { id, owner_id: ownerId, workspace_id: workspaceId },
-    });
-  }
-
-  // -------- ACCOUNT TYPE --------
-  createAccountType(
+  async createTax(
     dto: CreateCategoryDto,
     ownerId: string,
     workspaceId: string,
   ) {
-    return this.prisma.accountType.create({
+    const created = await this.prisma.tax.create({
       data: { ...dto, owner_id: ownerId, workspace_id: workspaceId },
     });
+    return { success: true, message: 'Tax created', data: created };
   }
 
-  findAllAccountTypes(ownerId: string, workspaceId: string) {
-    return this.prisma.accountType.findMany({
+  async findTaxCategoryOne(id: string, ownerId: string, workspaceId: string) {
+    const data = await this.prisma.tax.findFirst({
+      where: { id, owner_id: ownerId, workspace_id: workspaceId },
+    });
+    return { success: true, data };
+  }
+
+  async findAllTaxes(ownerId: string, workspaceId: string) {
+    const data = await this.prisma.tax.findMany({
       where: { owner_id: ownerId, workspace_id: workspaceId },
     });
+    return { success: true, data };
   }
 
-  updateAccountType(
+  async updateTax(
     id: string,
     dto: UpdateCategoryDto,
     ownerId: string,
     workspaceId: string,
   ) {
-    return this.prisma.accountType.update({
-      where: { id, owner_id: ownerId, workspace_id: workspaceId },
-      data: dto,
-    });
+    const updated = await this.prisma.tax.update({ where: { id }, data: dto });
+    return { success: true, message: 'Tax updated', data: updated };
   }
 
-  removeAccountType(id: string, ownerId: string, workspaceId: string) {
-    return this.prisma.accountType.delete({
+  async removeTax(id: string, ownerId: string, workspaceId: string) {
+    const deleted = await this.prisma.tax.delete({ where: { id } });
+    return { success: true, message: 'Tax deleted', data: deleted };
+  }
+
+  // -------- UNIT --------
+  async createUnit(
+    dto: CreateCategoryDto,
+    ownerId: string,
+    workspaceId: string,
+  ) {
+    try {
+      const created = await this.prisma.unit.create({
+        data: { ...dto, owner_id: ownerId, workspace_id: workspaceId },
+      });
+
+      return { success: true, message: 'Unit created', data: created };
+    } catch (error: any) {
+      // Handle Prisma unique constraint error
+      if (error.code === 'P2002' && error.meta?.target?.includes('name')) {
+        return {
+          success: false,
+          message: `Unit with name "${dto.name}" already exists. Please choose a different name.`,
+          data: null,
+        };
+      }
+
+      // Generic error fallback
+      return {
+        success: false,
+        message: 'An unexpected error occurred while creating the unit.',
+        data: null,
+      };
+    }
+  }
+
+  async findUnitCategoryOne(id: string, ownerId: string, workspaceId: string) {
+    const data = await this.prisma.unit.findFirst({
       where: { id, owner_id: ownerId, workspace_id: workspaceId },
     });
+    return { success: true, data };
+  }
+
+  async findAllUnits(ownerId: string, workspaceId: string) {
+    const data = await this.prisma.unit.findMany({
+      where: { owner_id: ownerId, workspace_id: workspaceId },
+    });
+    return { success: true, data };
+  }
+
+  async updateUnit(
+    id: string,
+    dto: UpdateCategoryDto,
+    ownerId: string,
+    workspaceId: string,
+  ) {
+    try {
+      const updated = await this.prisma.unit.update({
+        where: { id },
+        data: { ...dto, owner_id: ownerId, workspace_id: workspaceId },
+      });
+
+      return {
+        success: true,
+        message: 'Unit updated successfully',
+        data: updated,
+      };
+    } catch (error: any) {
+      // Handle Prisma unique constraint error
+      if (error.code === 'P2002' && error.meta?.target?.includes('name')) {
+        return {
+          success: false,
+          message: `Unit with name "${dto.name}" already exists. Please choose a different name.`,
+          data: null,
+        };
+      }
+
+      // Generic fallback
+      return {
+        success: false,
+        message: 'An unexpected error occurred while updating the unit.',
+        data: null,
+      };
+    }
+  }
+
+  async removeUnit(id: string, ownerId: string, workspaceId: string) {
+    const deleted = await this.prisma.unit.delete({ where: { id } });
+    return { success: true, message: 'Unit deleted', data: deleted };
+  }
+
+  // -------- ITEM TYPE --------
+  async createItemType(
+    dto: CreateCategoryDto,
+    ownerId: string,
+    workspaceId: string,
+  ) {
+    const created = await this.prisma.itemType.create({
+      data: { ...dto, owner_id: ownerId, workspace_id: workspaceId },
+    });
+    return { success: true, message: 'Item type created', data: created };
+  }
+
+    async findItemTypesCategoryOne(id: string, ownerId: string, workspaceId: string) {
+    const data = await this.prisma.itemType.findFirst({
+      where: { id, owner_id: ownerId, workspace_id: workspaceId },
+    });
+    return { success: true, data };
+  }
+
+
+  async findAllItemTypes(ownerId: string, workspaceId: string) {
+    const data = await this.prisma.itemType.findMany({
+      where: { owner_id: ownerId, workspace_id: workspaceId },
+    });
+    return { success: true, data };
+  }
+
+  async updateItemType(
+    id: string,
+    dto: UpdateCategoryDto,
+    ownerId: string,
+    workspaceId: string,
+  ) {
+    const updated = await this.prisma.itemType.update({
+      where: { id },
+      data: dto,
+    });
+    return { success: true, message: 'Item type updated', data: updated };
+  }
+
+  async removeItemType(id: string, ownerId: string, workspaceId: string) {
+    const deleted = await this.prisma.itemType.delete({ where: { id } });
+    return { success: true, message: 'Item type deleted', data: deleted };
+  }
+
+  // -------- ACCOUNT TYPE --------
+  async createAccountType(
+    dto: CreateCategoryDto,
+    ownerId: string,
+    workspaceId: string,
+  ) {
+    const created = await this.prisma.accountType.create({
+      data: { ...dto, owner_id: ownerId, workspace_id: workspaceId },
+    });
+    return { success: true, message: 'Account type created', data: created };
+  }
+  
+      async findIAccountTypesCategoryOne(id: string, ownerId: string, workspaceId: string) {
+    const data = await this.prisma.accountType.findFirst({
+      where: { id, owner_id: ownerId, workspace_id: workspaceId },
+    });
+    return { success: true, data };
+  }
+
+  async findAllAccountTypes(ownerId: string, workspaceId: string) {
+    const data = await this.prisma.accountType.findMany({
+      where: { owner_id: ownerId, workspace_id: workspaceId },
+    });
+    return { success: true, data };
+  }
+
+  async updateAccountType(
+    id: string,
+    dto: UpdateCategoryDto,
+    ownerId: string,
+    workspaceId: string,
+  ) {
+    const updated = await this.prisma.accountType.update({
+      where: { id },
+      data: dto,
+    });
+    return { success: true, message: 'Account type updated', data: updated };
+  }
+
+  async removeAccountType(id: string, ownerId: string, workspaceId: string) {
+    const deleted = await this.prisma.accountType.delete({ where: { id } });
+    return { success: true, message: 'Account type deleted', data: deleted };
   }
 }
