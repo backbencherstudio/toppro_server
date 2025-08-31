@@ -13,7 +13,7 @@ export class CreateCallDto {
   @IsEnum(CallType)
   call_type: CallType = CallType.OUTBOUND;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Duration in h:m:s format (e.g., 00:35:20)',
     required: false
   })
