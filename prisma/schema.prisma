@@ -486,7 +486,7 @@ model Tax {
 
 model Unit {
   id   String @id @default(cuid())
-  name String @unique
+  name String
 
   workspace_id String
   workspace    Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
@@ -1474,49 +1474,100 @@ enum CallType {
   OUTBOUND
 }
 
+// model Lead {
+//   id         String    @id @default(uuid())
+//   created_at DateTime  @default(now())
+//   updated_at DateTime  @default(now()) @updatedAt
+//   deleted_at DateTime?
+
+//   // tenant
+//   workspace_id String
+//   owner_id     String
+//   workspace    Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+//   owner        User      @relation("lead_owner", fields: [owner_id], references: [id], onDelete: Cascade)
+
+//   // main fields
+//   subject     String
+//   name        String
+//   email       String?
+//   phone       String?
+//   followup_at DateTime?
+//   stage       LeadStageStatus @default(DRAFT)
+//   notes       String?         @db.Text
+//   discussion  String?         @db.Text
+
+//   // pipeline (FK + denorm name)
+//   pipeline_id   String
+//   pipeline      Pipeline @relation(fields: [pipeline_id], references: [id], onDelete: Cascade)
+//   pipeline_name String // denormalized for quick display/search
+
+//   // (optional) lead stage
+//   lead_stage_id String?
+//   lead_stage    LeadStage? @relation(fields: [lead_stage_id], references: [id], onDelete: SetNull)
+
+//   // (optional) primary user snapshot (plus full M2M below)
+//   user_id      String?
+//   primary_user User?   @relation(fields: [user_id], references: [id], onDelete: SetNull)
+//   user_name    String? // denormalized for quick display
+
+//   // multi relations (implicit M2M)
+//   users    User[]       @relation("LeadUsers")
+//   products Items[]      @relation("LeadItems")
+//   sources  Source[]     @relation("LeadSources")
+//   files    Attachment[] @relation("LeadAttachments")
+
+//   // children (1:N)
+//   tasks    Task[]
+//   calls    Call[]
+//   activity Activity[]
+//   emails   EmailText[]
+
+//   @@index([workspace_id, owner_id])
+//   @@index([pipeline_id])
+//   @@index([lead_stage_id])
+//   @@map("leads")
+// }
+
 model Lead {
   id         String    @id @default(uuid())
   created_at DateTime  @default(now())
-  updated_at DateTime  @default(now()) @updatedAt
+  updated_at DateTime  @updatedAt
   deleted_at DateTime?
 
-  // tenant
   workspace_id String
   owner_id     String
   workspace    Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
   owner        User      @relation("lead_owner", fields: [owner_id], references: [id], onDelete: Cascade)
 
-  // main fields
+
   subject     String
   name        String
-  email       String?
-  phone       String?
-  followup_at DateTime?
+  email       String
+  phone       String
+  followup_at DateTime
+
   stage       LeadStageStatus @default(DRAFT)
   notes       String?         @db.Text
   discussion  String?         @db.Text
+  pipeline_id   String?
+  pipeline      Pipeline? @relation(fields: [pipeline_id], references: [id], onDelete: SetNull)
+  pipeline_name String?
 
-  // pipeline (FK + denorm name)
-  pipeline_id   String
-  pipeline      Pipeline @relation(fields: [pipeline_id], references: [id], onDelete: Cascade)
-  pipeline_name String // denormalized for quick display/search
 
-  // (optional) lead stage
   lead_stage_id String?
   lead_stage    LeadStage? @relation(fields: [lead_stage_id], references: [id], onDelete: SetNull)
 
-  // (optional) primary user snapshot (plus full M2M below)
+
   user_id      String?
   primary_user User?   @relation(fields: [user_id], references: [id], onDelete: SetNull)
-  user_name    String? // denormalized for quick display
+  user_name    String?
 
-  // multi relations (implicit M2M)
   users    User[]       @relation("LeadUsers")
+
   products Items[]      @relation("LeadItems")
   sources  Source[]     @relation("LeadSources")
   files    Attachment[] @relation("LeadAttachments")
 
-  // children (1:N)
   tasks    Task[]
   calls    Call[]
   activity Activity[]
@@ -1527,6 +1578,7 @@ model Lead {
   @@index([lead_stage_id])
   @@map("leads")
 }
+
 
 model Task {
   id         String   @id @default(uuid())
