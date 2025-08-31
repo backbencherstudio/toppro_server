@@ -14,15 +14,10 @@ import { WorkspaceModule } from './workspace/workspace.module';
 import { SourcesModule } from './crm/crm-setup/sources/sources.module';
 import { ItemsModule } from './items/items.module';
 import { InvoiceModule } from './invoice/invoice.module';
-<<<<<<< HEAD
 import { CategoryModule } from './category/category.module';
 import { PurchaseModule } from './purchase/purchase.module';
 @Module({
   imports: [NotificationModule, ContactModule, FaqModule, CustomerModule, VendorModule, LeadModule, DealModule, CrmReportModule, PipelinesModule, LeadStagesModule, DealStageModule, WorkspaceModule, SourcesModule, ItemsModule, InvoiceModule, CategoryModule, PurchaseModule],
-=======
-import { CallModule } from './crm/call/call.module';
-@Module({
-  imports: [NotificationModule, ContactModule, FaqModule, CustomerModule, VendorModule, LeadModule, DealModule, CrmReportModule, PipelinesModule, LeadStagesModule, DealStageModule, WorkspaceModule, SourcesModule, ItemsModule, InvoiceModule, CallModule],
->>>>>>> 87901ff66a3213e80919293e55df1d48b67547bb
+
 })
 export class ApplicationModule { }
