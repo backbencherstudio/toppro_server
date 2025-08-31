@@ -93,6 +93,17 @@ export class UserController {
     return this.userService.getUsersWithCrmAccess(ownerId, workspaceId, userId);
   }
 
+  @Get('purchase/all')
+  @UseGuards(JwtAuthGuard)
+  async getUsersWithPurchaseAccess(@Req() req) {
+    const {
+      owner_id: ownerId,
+      workspace_id: workspaceId,
+      sub: userId,
+    } = req.user;
+    return this.userService.getUsersWithPurchaseAccess(ownerId, workspaceId, userId);
+  }
+
   // Endpoint to update a user's information
   @Put(':userId')
   async updateUser(

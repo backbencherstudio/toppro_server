@@ -272,7 +272,7 @@ export class UserService {
     };
   }
 
-
+// Get users with CRM access
 async getUsersWithCrmAccess(ownerId: string, workspaceId: string, userId: string) {
   const users = await this.prisma.user.findMany({
     where: {
@@ -284,6 +284,59 @@ async getUsersWithCrmAccess(ownerId: string, workspaceId: string, userId: string
             some: {
               title: {
                 in: ['crm_read', 'crm_manage'], // filter
+              },
+            },
+          },
+        },
+      },
+    },
+    include: {
+      roles: {
+        include: {
+          permissions: true,
+        },
+      },
+    },
+  });
+
+  return {
+    success: true,
+    message: 'Users with CRM access fetched successfully',
+    users: users.map((user) => {
+      const { password, ...safeUser } = user;
+
+      const rolesWithPermissions = user.roles.map((role) => ({
+        roleId: role.id,
+        roleName: role.title,
+        permissions: role.permissions.map((p) => p.title),
+      }));
+
+      return {
+        id: safeUser.id,
+        email: safeUser.email,
+        first_name: safeUser.first_name,
+        name: safeUser.last_name,
+        last_name: safeUser.last_name,
+        type: safeUser.type,
+        created_at: safeUser.created_at,
+        updated_at: safeUser.updated_at,
+      };
+    }),
+  };
+}
+
+// Get users with CRM access
+async getUsersWithPurchaseAccess(ownerId: string, workspaceId: string, userId: string) {
+  const users = await this.prisma.user.findMany({
+    where: {
+      owner_id: ownerId || userId,
+      workspace_id: workspaceId,
+      roles: {
+        some: {
+          permissions: {
+            some: {
+              title: {
+                in: ['purchase_read', 'purchase_manage'], // filter
               },
             },
           },
