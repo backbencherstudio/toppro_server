@@ -20,7 +20,7 @@ import { UpdateCustomerDto } from './dto/update-customer.dto';
 
 @Controller('customers')
 export class CustomerController {
-  constructor(private readonly customerService: CustomerService) {}
+  constructor(private readonly customerService: CustomerService) { }
 
   @Post()
   @UseGuards(JwtAuthGuard, RolePermissionGuard)
