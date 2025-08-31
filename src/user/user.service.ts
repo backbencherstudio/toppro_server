@@ -94,12 +94,12 @@ export class UserService {
   }
 
   // Get all users
-  async getAllUsers(ownerId: string, workspaceId: string) {
-    return this.prisma.user.findMany({
+  async getAllUsers(ownerId: string, workspaceId: string, userId: string) {
+    const data = this.prisma.user.findMany({
       where: {
-        type: 'USER', // filter only Users
-        owner_id: ownerId, // Match ownerId
+        owner_id: ownerId || userId, // Match ownerId
         workspace_id: workspaceId, // Match workspaceId
+        type: 'USER', // filter only Users
       },
       select: {
         id: true,
@@ -115,55 +115,58 @@ export class UserService {
       },
       orderBy: { id: 'asc' },
     });
+
+    // console.log('All users data:', data); // Debug log to check the data being returned
+    return data;
   }
 
-  // Get all customers
-  async getAllCustomers(ownerId: string, workspaceId: string) {
-    return this.prisma.user.findMany({
-      where: {
-        type: 'CUSTOMER',
-        owner_id: ownerId,
-        workspace_id: workspaceId,
-      },
-      select: {
-        id: true,
-        username: true,
-        email: true,
-        type: true,
-        owner_id: true,
-        phone_number: true,
-        created_at: true,
-        updated_at: true,
-        first_name: true,
-        last_name: true,
-      },
-      orderBy: { id: 'asc' },
-    });
-  }
+  // // Get all customers
+  // async getAllCustomers(ownerId: string, workspaceId: string) {
+  //   return this.prisma.user.findMany({
+  //     where: {
+  //       type: 'CUSTOMER',
+  //       owner_id: ownerId,
+  //       workspace_id: workspaceId,
+  //     },
+  //     select: {
+  //       id: true,
+  //       username: true,
+  //       email: true,
+  //       type: true,
+  //       owner_id: true,
+  //       phone_number: true,
+  //       created_at: true,
+  //       updated_at: true,
+  //       first_name: true,
+  //       last_name: true,
+  //     },
+  //     orderBy: { id: 'asc' },
+  //   });
+  // }
 
-  // Get all vendors
-  async getAllVendor(ownerId: string, workspaceId: string) {
-    return this.prisma.user.findMany({
-      where: {
-        type: 'VENDOR',
-        owner_id: ownerId,
-        workspace_id: workspaceId,
-      },
-      select: {
-        id: true,
-        username: true,
-        email: true,
-        type: true,
-        owner_id: true,
-        phone_number: true,
-        created_at: true,
-        updated_at: true,
-        first_name: true,
-        last_name: true,
-      },
-      orderBy: { id: 'asc' },
-    });
-  }
+  // // Get all vendors
+  // async getAllVendor(ownerId: string, workspaceId: string) {
+  //   return this.prisma.user.findMany({
+  //     where: {
+  //       type: 'VENDOR',
+  //       owner_id: ownerId,
+  //       workspace_id: workspaceId,
+  //     },
+  //     select: {
+  //       id: true,
+  //       username: true,
+  //       email: true,
+  //       type: true,
+  //       owner_id: true,
+  //       phone_number: true,
+  //       created_at: true,
+  //       updated_at: true,
+  //       first_name: true,
+  //       last_name: true,
+  //     },
+  //     orderBy: { id: 'asc' },
+  //   });
+  // }
 
   // Assign role to a user (helper method)
   async assignRoleToUser(userId: string, roleId: string) {
@@ -224,7 +227,6 @@ export class UserService {
   }
 
   // Get a single user by userId
-  // Get a user by their ID and include their roles and the associated permissions
   async getUserById(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -269,6 +271,61 @@ export class UserService {
       },
     };
   }
+
+
+async getUsersWithCrmAccess(ownerId: string, workspaceId: string, userId: string) {
+  const users = await this.prisma.user.findMany({
+    where: {
+      owner_id: ownerId || userId,
+      workspace_id: workspaceId,
+      roles: {
+        some: {
+          permissions: {
+            some: {
+              title: {
+                in: ['crm_read', 'crm_manage'], // filter
+              },
+            },
+          },
+        },
+      },
+    },
+    include: {
+      roles: {
+        include: {
+          permissions: true,
+        },
+      },
+    },
+  });
+
+  return {
+    success: true,
+    message: 'Users with CRM access fetched successfully',
+    users: users.map((user) => {
+      const { password, ...safeUser } = user;
+
+      const rolesWithPermissions = user.roles.map((role) => ({
+        roleId: role.id,
+        roleName: role.title,
+        permissions: role.permissions.map((p) => p.title),
+      }));
+
+      return {
+        id: safeUser.id,
+        email: safeUser.email,
+        first_name: safeUser.first_name,
+        name: safeUser.last_name,
+        last_name: safeUser.last_name,
+        type: safeUser.type,
+        created_at: safeUser.created_at,
+        updated_at: safeUser.updated_at,
+      };
+    }),
+  };
+}
+
+
 
   async deleteUser(userId: string) {
     const user = await this.prisma.user.findUnique({
