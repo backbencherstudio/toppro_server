@@ -91,11 +91,6 @@ model User {
   Source                   Source[]
   Customer                 Customer[]
   invoices                 Invoice[]
-  itemCategory             ItemCategory[]
-  invoiceCategory          InvoiceCategory[]
-  billCategory             BillCategory[]
-  tax                      Tax[]
-  Unit                     Unit[]
   Items                    Items[]
   leads                    Lead[]                  @relation("LeadUsers")
   owned_leads              Lead[]                  @relation("lead_owner")
@@ -147,6 +142,8 @@ model Workspace {
   Activity        Activity[]
   Purchase        Purchase[]
   Bill            Bill[]
+  ItemType        ItemType[]
+  AccountType     AccountType[]
 
   @@map("workspaces")
 }
@@ -348,7 +345,7 @@ model Purchase {
   item_id            String?
   discount           Float?  @default(0)
   tax_id             String?
-  quantity     Int?    @default(1)
+  quantity           Int?    @default(1)
 
   // bill_id         String?
   unit_price   Float?  @default(0)
@@ -357,7 +354,7 @@ model Purchase {
   workspace_id String?
   user_id      String?
 
-  tax                Tax?    @relation(fields: [tax_id], references: [id])
+  tax              Tax?          @relation(fields: [tax_id], references: [id])
   billing_category BillCategory? @relation(fields: [billingCategory_id], references: [id])
   itemCategory     ItemCategory? @relation(fields: [itemCategory_id], references: [id])
   vendor           Vendor?       @relation(fields: [vendor_id], references: [id])
@@ -427,10 +424,8 @@ model ItemCategory {
   workspace_id String
   workspace    Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
 
-  owner_id String
-  user_id  String
-  user     User   @relation(fields: [user_id], references: [id])
-
+  owner_id  String
+  status    Int?       @default(1) @db.SmallInt
   createdAt DateTime   @default(now())
   updatedAt DateTime   @default(now()) @updatedAt
   Items     Items[]
@@ -445,10 +440,9 @@ model InvoiceCategory {
 
   workspace_id String
   workspace    Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  status       Int?      @default(1) @db.SmallInt
+  owner_id     String
 
-  owner_id String
-  user_id  String
-  user     User   @relation(fields: [user_id], references: [id])
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @default(now()) @updatedAt
@@ -463,10 +457,8 @@ model BillCategory {
 
   workspace_id String
   workspace    Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
-
-  owner_id String
-  user_id  String
-  user     User   @relation(fields: [user_id], references: [id])
+  status       Int?      @default(1) @db.SmallInt
+  owner_id     String
 
   createdAt DateTime   @default(now())
   updatedAt DateTime   @default(now()) @updatedAt
@@ -482,10 +474,8 @@ model Tax {
   workspace_id String
   workspace    Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
 
-  owner_id String
-  user_id  String
-  user     User   @relation(fields: [user_id], references: [id])
-
+  owner_id  String
+  status    Int?       @default(1) @db.SmallInt
   createdAt DateTime   @default(now())
   updatedAt DateTime   @default(now()) @updatedAt
   Items     Items[]
@@ -500,10 +490,8 @@ model Unit {
 
   workspace_id String
   workspace    Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
-
-  owner_id String
-  user_id  String
-  user     User   @relation(fields: [user_id], references: [id])
+  status       Int?      @default(1) @db.SmallInt
+  owner_id     String
 
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
@@ -516,6 +504,11 @@ model ItemType {
   color       String?
   description String?
 
+  workspace_id String
+  workspace    Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+
+  owner_id  String
+  status    Int?      @default(1) @db.SmallInt
   createdAt DateTime  @default(now())
   updatedAt DateTime  @default(now()) @updatedAt
   items     Items[]
@@ -526,6 +519,13 @@ model ItemType {
 model AccountType {
   id   String @id @default(cuid())
   name String
+
+  workspace_id String
+  workspace    Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+
+  owner_id String
+
+  status Int? @default(1) @db.SmallInt
 
   createdAt DateTime   @default(now())
   updatedAt DateTime   @default(now()) @updatedAt

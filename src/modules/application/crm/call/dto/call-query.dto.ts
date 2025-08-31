@@ -12,5 +12,5 @@ export class CallQueryDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  assignee_id?: string;
+  assignee_name?: string;
 }

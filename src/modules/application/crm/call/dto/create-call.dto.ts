@@ -1,3 +1,4 @@
+// src/calls/dto/create-call.dto.ts
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
 import { CallType } from '@prisma/client';
@@ -20,10 +21,10 @@ export class CreateCallDto {
   @IsString()
   duration?: string;
 
-  @ApiProperty({ description: 'ID of the user assigned to this call', required: false })
+  @ApiProperty({ description: 'Name of the user assigned to this call', required: false })
   @IsOptional()
   @IsString()
-  assignee_id?: string;
+  assignee_name?: string;
 
   @ApiProperty({ description: 'Description of the call', required: false })
   @IsOptional()

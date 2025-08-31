@@ -23,7 +23,7 @@ export class CustomerService {
   }
 
   // Get all customers with pagination and selected fields
-  async findAll(
+  async  findAll(
     page: number = 1,
     limit: number = 10,
     ownerId: string,

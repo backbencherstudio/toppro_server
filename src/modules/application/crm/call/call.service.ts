@@ -1,4 +1,3 @@
-// src/calls/call.service.ts
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { CreateCallDto } from './dto/create-call.dto';
 import { UpdateCallDto } from './dto/update-call.dto';
@@ -10,6 +9,24 @@ import { PrismaService } from 'src/prisma/prisma.service';
 export class CallService {
   constructor(private prisma: PrismaService) {}
 
+  // Get all users that can be assigned to calls
+  async getAssignees(workspaceId: string) {
+    return this.prisma.user.findMany({
+      where: {
+        workspace_id: workspaceId,
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+      },
+      orderBy: {
+        name: 'asc',
+      },
+    });
+  }
+
+  // Create a new call
   async create(createCallDto: CreateCallDto, userId: string, workspaceId: string): Promise<CallEntity> {
     // Verify lead exists and belongs to the same workspace
     const lead = await this.prisma.lead.findFirst({
@@ -23,17 +40,22 @@ export class CallService {
       throw new BadRequestException('Lead not found or does not belong to this workspace');
     }
 
-    // If assignee_id is provided, verify user exists
-    if (createCallDto.assignee_id) {
+    let assignee_id = null;
+    
+    // If assignee_name is provided, find the user and get their ID
+    if (createCallDto.assignee_name) {
       const assignee = await this.prisma.user.findFirst({
         where: {
-          id: createCallDto.assignee_id,
+          name: createCallDto.assignee_name,
+          workspace_id: workspaceId,
         },
       });
 
       if (!assignee) {
-        throw new BadRequestException('Assignee not found');
+        throw new BadRequestException(`Assignee with name '${createCallDto.assignee_name}' not found`);
       }
+      
+      assignee_id = assignee.id;
     }
 
     // Validate duration format if provided
@@ -43,15 +65,46 @@ export class CallService {
 
     const call = await this.prisma.call.create({
       data: {
-        ...createCallDto,
+        subject: createCallDto.subject,
+        call_type: createCallDto.call_type,
+        duration: createCallDto.duration,
+        assignee_id: assignee_id,
+        description: createCallDto.description,
+        result: createCallDto.result,
+        lead_id: createCallDto.lead_id,
         workspace_id: workspaceId,
-        owner_id: userId, // This is the user creating the call
+        owner_id: userId,
+      },
+      include: {
+        lead: {
+          select: {
+            id: true,
+            subject: true,
+            name: true,
+            email: true,
+          },
+        },
+        owner: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        assignee: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
       },
     });
 
     return new CallEntity(call);
   }
 
+  // Get all calls with optional filtering
   async findAll(
     workspaceId: string,
     leadId?: string,
@@ -69,8 +122,31 @@ export class CallService {
       whereClause.call_type = query.call_type;
     }
 
-    if (query?.assignee_id) {
-      whereClause.assignee_id = query.assignee_id;
+    if (query?.assignee_name) {
+      // Find users with the specified name
+      const assignees = await this.prisma.user.findMany({
+        where: {
+          name: {
+            contains: query.assignee_name,
+            mode: 'insensitive',
+          },
+          workspace_id: workspaceId,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      const assigneeIds = assignees.map(assignee => assignee.id);
+      
+      if (assigneeIds.length > 0) {
+        whereClause.assignee_id = {
+          in: assigneeIds,
+        };
+      } else {
+        // No assignees found with that name, return empty result
+        return [];
+      }
     }
 
     const calls = await this.prisma.call.findMany({
@@ -107,6 +183,7 @@ export class CallService {
     return calls.map(call => new CallEntity(call));
   }
 
+  // Get a single call by ID
   async findOne(id: string, workspaceId: string): Promise<CallEntity> {
     const call = await this.prisma.call.findFirst({
       where: {
@@ -146,6 +223,7 @@ export class CallService {
     return new CallEntity(call);
   }
 
+  // Update a call
   async update(
     id: string,
     updateCallDto: UpdateCallDto,
@@ -177,16 +255,26 @@ export class CallService {
       }
     }
 
-    // If assignee_id is being updated, verify user exists
-    if (updateCallDto.assignee_id) {
-      const assignee = await this.prisma.user.findFirst({
-        where: {
-          id: updateCallDto.assignee_id,
-        },
-      });
+    let assignee_id = undefined;
+    
+    // If assignee_name is provided, find the user and get their ID
+    if (updateCallDto.assignee_name !== undefined) {
+      if (updateCallDto.assignee_name === '') {
+        // Empty string means remove the assignee
+        assignee_id = null;
+      } else {
+        const assignee = await this.prisma.user.findFirst({
+          where: {
+            name: updateCallDto.assignee_name,
+            workspace_id: workspaceId,
+          },
+        });
 
-      if (!assignee) {
-        throw new BadRequestException('Assignee not found');
+        if (!assignee) {
+          throw new BadRequestException(`Assignee with name '${updateCallDto.assignee_name}' not found`);
+        }
+        
+        assignee_id = assignee.id;
       }
     }
 
@@ -195,9 +283,20 @@ export class CallService {
       throw new BadRequestException('Duration must be in h:m:s format (e.g., 00:35:20)');
     }
 
+    // Prepare update data
+    const updateData: any = { ...updateCallDto };
+    
+    // Remove assignee_name from update data as it's not a database field
+    delete updateData.assignee_name;
+    
+    // Add assignee_id if it was resolved
+    if (assignee_id !== undefined) {
+      updateData.assignee_id = assignee_id;
+    }
+
     const updatedCall = await this.prisma.call.update({
       where: { id },
-      data: updateCallDto,
+      data: updateData,
       include: {
         lead: {
           select: {
@@ -227,6 +326,7 @@ export class CallService {
     return new CallEntity(updatedCall);
   }
 
+  // Delete a call
   async remove(id: string, workspaceId: string): Promise<void> {
     // Check if call exists and belongs to workspace
     const existingCall = await this.prisma.call.findFirst({

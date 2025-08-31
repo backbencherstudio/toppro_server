@@ -1,4 +1,3 @@
-// src/calls/call.controller.ts
 import {
   Controller,
   Get,
@@ -23,7 +22,14 @@ import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 @UseGuards(JwtAuthGuard)
 @Controller('calls')
 export class CallController {
-  constructor(private readonly callService: CallService) {}
+  constructor(private readonly callService: CallService) { }
+
+  @Get('assignees')
+  @ApiOperation({ summary: 'Get all users that can be assigned to calls' })
+  @ApiResponse({ status: 200 })
+  getAssignees(@Request() req) {
+    return this.callService.getAssignees(req.user.workspaceId);
+  }
 
   @Post()
   @ApiOperation({ summary: 'Create a new call' })
