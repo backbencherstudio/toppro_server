@@ -9,14 +9,14 @@ export class RolesService {
   constructor(private readonly prisma: PrismaService) {}
 
   // Function to create a role and assign permissions to it
-  async createRoleWithPermissions(createRoleDto: CreateRoleDto) {
+  async createRoleWithPermissions(createRoleDto: CreateRoleDto, ownerId: string, workspaceId: string) {
     // Step 1: Create the role
     const role = await this.prisma.role.create({
       data: {
         title: createRoleDto.title,
         description: createRoleDto.description,
-        owner_id: createRoleDto.owner_id,
-        workspace_id: createRoleDto.workspace_id,
+        owner_id: ownerId,
+        workspace_id: workspaceId,
       },
     });
 

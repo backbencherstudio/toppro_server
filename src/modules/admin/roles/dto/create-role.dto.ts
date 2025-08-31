@@ -10,11 +10,10 @@ export class CreateRoleDto {
 
   @IsString()
   @IsOptional()
-  @IsNotEmpty()
   owner_id?: string;
 
   @IsString()
-  @IsNotEmpty()
+  @IsOptional()
   workspace_id?: string; 
 
 

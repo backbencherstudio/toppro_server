@@ -1,8 +1,17 @@
-import { Body, Controller, Get, Param, Post, Put } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Put,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { UpdateRoleDto } from 'src/modules/admin/roles/dto/update-role.dto';
+import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 import { CreateRoleDto } from './dto/create-role.dto'; // DTO for creating a role
 import { RolesService } from './roles.service';
-
 
 @Controller('roles')
 export class RolesController {
@@ -10,33 +19,38 @@ export class RolesController {
 
   // Endpoint to create a new role and assign permissions to that role
   @Post('create')
-  async createRole(@Body() createRoleDto: CreateRoleDto) {
-    return this.rolesService.createRoleWithPermissions(createRoleDto);  // Create a role and assign permissions
+  @UseGuards(JwtAuthGuard)
+  async createRole(@Body() createRoleDto: CreateRoleDto, @Req() req) {
+    const { owner_id: ownerId, workspace_id: workspaceId } = req.user;
+    return this.rolesService.createRoleWithPermissions(
+      createRoleDto,
+      ownerId,
+      workspaceId,
+    ); // Create a role and assign permissions
   }
 
-  
-
-    // Endpoint to get all roles (name and ID)
-  @Get('all/:ownerId/:workspaceId')
-  async getAllRoles( @Param('ownerId') ownerId: string, @Param('workspaceId') workspaceId: string) {
-    return this.rolesService.getAllRoles( ownerId, workspaceId);
+  // Endpoint to get all roles (name and ID)
+  @Get('all')
+  @UseGuards(JwtAuthGuard)
+  async getAllRoles(
+    @Req() req, // Request object to extract user info`
+  ) {
+    const { owner_id: ownerId, workspace_id: workspaceId } = req.user;
+    return this.rolesService.getAllRoles(ownerId, workspaceId);
   }
 
-// Endpoint to get a single role by ID
-@Get(':id')
-async getRoleById(@Param('id') roleId: string) {
-  return this.rolesService.getRoleById(roleId);
-}
-
+  // Endpoint to get a single role by ID
+  @Get(':id')
+  async getRoleById(@Param('id') roleId: string) {
+    return this.rolesService.getRoleById(roleId);
+  }
 
   // Endpoint to update a role with new permissions (if needed)
   @Put(':roleId')
   async updateRole(
     @Param('roleId') roleId: string,
-    @Body() updateRoleDto: UpdateRoleDto,  // Body will contain the data to update the role
+    @Body() updateRoleDto: UpdateRoleDto, // Body will contain the data to update the role
   ) {
     return this.rolesService.updateRole(roleId, updateRoleDto);
   }
-
-
 }

@@ -486,7 +486,7 @@ model Tax {
 
 model Unit {
   id   String @id @default(cuid())
-  name String
+  name String @unique
 
   workspace_id String
   workspace    Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
