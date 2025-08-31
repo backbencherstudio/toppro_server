@@ -46,4 +46,15 @@ export enum Permissions {
   accounting_read = 'accounting_read',
   accounting_update = 'accounting_update',
   accounting_delete = 'accounting_delete',
+
+  // Purchase
+  purchase_manage = 'purchase_manage',
+  purchase_create = 'purchase_create',
+  purchase_read = 'purchase_read',
+  purchase_update = 'purchase_update',
+  purchase_delete = 'purchase_delete',
+  purchase_view = 'purchase_view',
+
+
+
 }

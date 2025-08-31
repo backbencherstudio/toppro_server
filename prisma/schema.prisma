@@ -318,7 +318,7 @@ model Items {
   itemCategory ItemCategory? @relation(fields: [itemCategory_id], references: [id])
   vendor       Vendor[]
   itemType     ItemType?     @relation(fields: [itemType_id], references: [id])
-  invoice      Invoice?      @relation(fields: [invoice_id], references: [id], onDelete: Cascade)
+  invoice      Invoice[]
 
   unit_price  Float? @default(0)
   total_price Float? @default(0)
@@ -361,7 +361,7 @@ model Purchase {
   user             User?         @relation(fields: [user_id], references: [id])
   workspace        Workspace?    @relation(fields: [workspace_id], references: [id])
   // bill         Bill?         @relation(fields: [bill_id], references: [id], onDelete: Cascade)
-  item             Items?        @relation(fields: [item_id], references: [id])
+  item             Items[]
   AccountType      AccountType?  @relation(fields: [accountType_id], references: [id])
   Bill             Bill?         @relation(fields: [billId], references: [id])
   billId           String?
