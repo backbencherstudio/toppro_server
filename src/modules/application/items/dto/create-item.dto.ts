@@ -1,6 +1,9 @@
-import { IsOptional, IsString, IsNumber } from 'class-validator';
+import { IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class CreateItemDto {
+  @IsString()
+  id: string;
+
   @IsString()
   name: string;
 
@@ -19,6 +22,10 @@ export class CreateItemDto {
   @IsOptional()
   @IsNumber()
   purchase_price?: number;
+
+  @IsOptional()
+  @IsNumber()
+  unit_price?: number;
 
   @IsOptional()
   @IsNumber()
