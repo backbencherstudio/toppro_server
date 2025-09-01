@@ -24,10 +24,10 @@ export class UserController {
     return this.userService.create(createUserDto);
   }
 
-  @Post('createUser')
-  async createUser(@Body() createUserDto: CreateUserDto) {
-    return this.userService.create(createUserDto);
-  }
+  // @Post('createUser')
+  // async createUser(@Body() createUserDto: CreateUserDto) {
+  //   return this.userService.create(createUserDto);
+  // }
 
   // Endpoint for logging in.
   @Post('login')
@@ -68,13 +68,13 @@ export class UserController {
   // }
 
   // Endpoint to assign a role to a user
-  @Put(':userId/assign-role') // Using PUT method to update the role assignment
-  async assignRoleToUser(
-    @Param('userId') userId: string,
-    @Body() assignRoleDto: { roleId: string },
-  ) {
-    return this.userService.assignRoleToUser(userId, assignRoleDto.roleId);
-  }
+  // @Put(':userId/assign-role') // Using PUT method to update the role assignment
+  // async assignRoleToUser(
+  //   @Param('userId') userId: string,
+  //   @Body() assignRoleDto: { roleId: string },
+  // ) {
+  //   return this.userService.assignRoleToUser(userId, assignRoleDto.roleId);
+  // }
 
   // Endpoint to get a single user by userId
   @Get(':userId')

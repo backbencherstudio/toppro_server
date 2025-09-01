@@ -43,9 +43,9 @@ export class UserService {
     });
 
     // Assign role if provided (roleId)
-    if (dto.roleId) {
-      await this.assignRoleToUser(user.id, dto.roleId);
-    }
+    // if (dto.roleId) {
+    //   await this.assignRoleToUse(user.id, dto.roleId);
+    // }
 
     // Exclude unnecessary fields
     const { password, created_at, updated_at, ...safeUser } = user;
@@ -173,38 +173,38 @@ export class UserService {
   // }
 
   // Assign role to a user (helper method)
-  async assignRoleToUser(userId: string, roleId: string) {
-    const role = await this.prisma.role.findUnique({
-      where: { id: roleId },
-    });
+  // async assignRoleToUser(userId: string, roleId: string) {
+  //   const role = await this.prisma.role.findUnique({
+  //     where: { id: roleId },
+  //   });
 
-    if (!role) {
-      return {
-        success: false,
-        message: 'Role not found with this roleId',
-      };
-    }
+  //   if (!role) {
+  //     return {
+  //       success: false,
+  //       message: 'Role not found with this roleId',
+  //     };
+  //   }
 
-    try {
-      // roleId already ache, just user_id update korte hobe
-      const updatedRole = await this.prisma.role.update({
-        where: { id: roleId },
-        data: { user_id: userId },
-      });
+  //   try {
+  //     // roleId already ache, just user_id update korte hobe
+  //     const updatedRole = await this.prisma.role.update({
+  //       where: { id: roleId },
+  //       data: { user_id: userId },
+  //     });
 
-      return {
-        success: true,
-        message: 'User assigned to role successfully!',
-        data: updatedRole,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        message: 'Failed to assign role to user',
-        error: error.message,
-      };
-    }
-  }
+  //     return {
+  //       success: true,
+  //       message: 'User assigned to role successfully!',
+  //       data: updatedRole,
+  //     };
+  //   } catch (error) {
+  //     return {
+  //       success: false,
+  //       message: 'Failed to assign role to user',
+  //       error: error.message,
+  //     };
+  //   }
+  // }
 
   async updateUser(userId: string, updateUserDto: CreateUserDto) {
     const user = await this.prisma.user.findUnique({
@@ -373,7 +373,7 @@ export class UserService {
     const users = await this.prisma.user.findMany({
       where: {
         workspace_id: workspaceId,
-        ...(ownerId ? { owner_id: ownerId } : {}), // ownerId না থাকলে skip
+        ...(ownerId ? { owner_id: ownerId } : {}),
         role_users: {
           some: {
             role: {
@@ -435,6 +435,7 @@ export class UserService {
       })),
     };
   }
+
 
   async deleteUser(userId: string) {
     const user = await this.prisma.user.findUnique({
