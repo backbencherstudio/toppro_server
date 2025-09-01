@@ -1,8 +1,10 @@
 import { IsNumber, IsOptional, IsString } from 'class-validator';
+import { CreateItemDto } from 'src/modules/application/items/dto/create-item.dto';
+import { Item } from 'src/modules/application/items/entities/item.entity';
 
 export class CreatePurchaseDto {
-  @IsString()
-  item_id: string; // selected item
+
+  item: CreateItemDto[]
 
   @IsOptional()
   @IsString()

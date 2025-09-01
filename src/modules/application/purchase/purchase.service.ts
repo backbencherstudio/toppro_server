@@ -7,104 +7,66 @@ import { UpdatePurchaseDto } from './dto/update-purchase.dto';
 export class PurchaseService {
   constructor(private readonly prisma: PrismaService) {} // inject PrismaService
 
-  async create(
-    createPurchaseDto: CreatePurchaseDto,
-    ownerId: string,
-    workspaceId: string,
-    userId: string,
-  ) {
-    const {
-      item_id,
-      quantity,
-      unit_price,
-      discount = 0,
-      tax_id,
-      accountType_id,
-      billingCategory_id,
-      itemCategory_id,
-      purchase_no,
-    } = createPurchaseDto;
-
-    // 1️⃣ Validate item exists
-    const item = await this.prisma.items.findUnique({
-      where: { id: item_id },
+async create(
+  dto: CreatePurchaseDto,
+  ownerId: string,
+  workspaceId: string,
+  userId: string
+) {
+  try {
+    // Validate all items exist
+    const itemIds = dto.item.map(i => i.id);
+    const existingItems = await this.prisma.items.findMany({
+      where: { id: { in: itemIds } },
     });
-    if (!item) throw new BadRequestException('Item not found');
 
-    // 2️⃣ Validate foreign keys exist (optional but recommended)
-    // if (itemCategory_id) {
-    //   const category = await this.prisma.itemCategory.findUnique({
-    //     where: { id: itemCategory_id },
-    //   });
-    //   if (!category) throw new BadRequestException('Item category not found');
-    // }
-
-    if (tax_id) {
-      const tax = await this.prisma.tax.findUnique({ where: { id: tax_id } });
-      if (!tax) throw new BadRequestException('Tax not found');
+    if (existingItems.length !== itemIds.length) {
+      throw new BadRequestException('One or more items do not exist');
     }
 
-    if (accountType_id) {
-      const accountType = await this.prisma.accountType.findUnique({
-        where: { id: accountType_id },
-      });
-      if (!accountType) throw new BadRequestException('Account type not found');
-    }
+    // Calculate total price dynamically
+    const totalPrice = dto.item.reduce(
+      (sum, i) => sum + i.quantity * i.unit_price,
+      0
+    );
 
-    if (billingCategory_id) {
-      const billingCategory = await this.prisma.billCategory.findUnique({
-        where: { id: billingCategory_id },
-      });
-      if (!billingCategory)
-        throw new BadRequestException('Billing category not found');
-    }
-
-    // 3️⃣ Calculate total price
-    const total_price = (unit_price || 0) * (quantity || 1) - (discount || 0);
-
-    // 4️⃣ Create purchase
+    // Create purchase
     const purchase = await this.prisma.purchase.create({
       data: {
-        ...createPurchaseDto,
+        purchase_no: dto.purchase_no,
+        tax_id: dto.tax_id,
+        accountType_id: dto.accountType_id,
+        billingCategory_id: dto.billingCategory_id,
+        itemCategory_id: dto.itemCategory_id,
         owner_id: ownerId,
         workspace_id: workspaceId,
         user_id: userId,
-        total_price,
+        discount: dto.discount ?? 0,
+        total_price: totalPrice,
+        item: {
+          connect: dto.item.map(i => ({ id: i.id })),
+        },
       },
     });
 
     return {
       success: true,
       message: 'Purchase created successfully',
-      data: purchase,
+      purchase,
     };
+  } catch (error) {
+    throw new BadRequestException(error.message);
   }
+}
 
-  // Get all purchases for a user/workspace/owner
-  async findAll(ownerId: string, workspaceId: string, userId?: string) {
-    const purchases = await this.prisma.purchase.findMany({
-      where: {
-        owner_id: ownerId || userId,
-        workspace_id: workspaceId,
-      },
-      // include: {
-      //   item: true,
-      //   vendor: true,
-      //   tax: true,
-      //   billing_category: true,
-      //   itemCategory: true,
-      //   AccountType: true,
-      //   workspace: true,
-      //   user: true,
-      // },
-      // orderBy: { created_at: 'desc' },
+
+  // Get all purchases for an owner/workspace
+  async findAll(ownerId: string, workspaceId: string, userId: string) {
+    return this.prisma.purchase.findMany({
+      where: { owner_id: ownerId, workspace_id: workspaceId },
+      include: { item: true },
+      orderBy: { created_at: 'desc' }
     });
-
-    return {
-      success: true,
-      message: 'Purchases fetched successfully',
-      data: purchases,
-    };
   }
 
   findOne(id: number) {
