@@ -1,5 +1,5 @@
 // leads.service.ts
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateLeadDto } from './dto/create-lead.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 
@@ -56,6 +56,50 @@ export class LeadsService {
         users: true,
       },
     });
+  }
+
+  // ✅ Get all leads for a workspace
+  async getAllLeads(workspaceId: string) {
+    return this.prisma.lead.findMany({
+      where: {
+        workspace_id: workspaceId,
+        deleted_at: null, // exclude soft-deleted
+      },
+      include: {
+        users: true,
+        owner: true,
+        pipeline: true,
+        lead_stage: true,
+      },
+      orderBy: { created_at: 'desc' },
+    });
+  }
+
+  // ✅ Get specific lead by ID
+  async getLeadById(id: string, workspaceId: string) {
+    const lead = await this.prisma.lead.findFirst({
+      where: {
+        id,
+        workspace_id: workspaceId,
+        deleted_at: null,
+      },
+      include: {
+        users: true,
+        owner: true,
+        pipeline: true,
+        lead_stage: true,
+        tasks: true,
+        calls: true,
+        emails: true,
+        activity: true,
+      },
+    });
+
+    if (!lead) {
+      throw new NotFoundException(`Lead with id ${id} not found`);
+    }
+
+    return lead;
   }
 
 }
