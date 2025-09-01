@@ -186,7 +186,7 @@ model Role {
   owner_id     String?
   workspace_id String?
 
-  user User? @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user User[]
 
   permission_roles PermissionRole[]
   role_users       RoleUser[]
