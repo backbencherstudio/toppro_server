@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create_user-dto';
@@ -230,155 +234,207 @@ export class UserService {
   async getUserById(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      include: {
-        roles: {
-          include: {
-            permissions: true, // Include permissions related to the role
+      select: {
+        id: true,
+        email: true,
+        first_name: true,
+        last_name: true,
+        username: true,
+        type: true,
+        owner_id: true,
+        phone_number: true,
+        created_at: true,
+        updated_at: true,
+        // 🔗 pivot → role → permissions (minimal fields only)
+        role_users: {
+          select: {
+            role: {
+              select: {
+                id: true,
+                title: true,
+                permissions: {
+                  select: { title: true }, // শুধু title লাগলে এটুকুই রাখো
+                },
+              },
+            },
           },
         },
       },
     });
 
     if (!user) {
-      throw new Error('User not found');
+      throw new NotFoundException('User not found');
     }
 
-    // Exclude sensitive data (like password) from the response
-    const { password, ...safeUser } = user;
-
-    // Format the roles and permissions
-    const rolesWithPermissions = user.roles.map((role) => ({
-      roleId: role.id,
-      roleName: role.title,
-      permissions: role.permissions.map((permission) => permission.title), // Only include permission titles
+    // 🎯 Map roles & permissions from pivot
+    const rolesWithPermissions = user.role_users.map((ru) => ({
+      roleId: ru.role.id,
+      roleName: ru.role.title,
+      permissions: ru.role.permissions.map((p) => p.title), // ["crm_read", ...]
     }));
 
     return {
       success: true,
       message: 'User fetched successfully',
       user: {
-        id: safeUser.id,
-        email: safeUser.email,
-        first_name: safeUser.first_name,
-        last_name: safeUser.last_name,
-        type: safeUser.type,
-        owner_id: safeUser.owner_id,
-        phone_number: safeUser.phone_number,
-        created_at: safeUser.created_at,
-        updated_at: safeUser.updated_at,
-        username: safeUser.username,
-        roles: rolesWithPermissions, // Include roles and permissions in the response
+        id: user.id,
+        email: user.email,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        type: user.type,
+        owner_id: user.owner_id,
+        phone_number: user.phone_number,
+        created_at: user.created_at,
+        updated_at: user.updated_at,
+        username: user.username,
+        roles: rolesWithPermissions,
       },
     };
   }
 
-// Get users with CRM access
-async getUsersWithCrmAccess(ownerId: string, workspaceId: string, userId: string) {
-  const users = await this.prisma.user.findMany({
-    where: {
-      owner_id: ownerId || userId,
-      workspace_id: workspaceId,
-      roles: {
-        some: {
-          permissions: {
-            some: {
-              title: {
-                in: ['crm_read', 'crm_manage'], // filter
+  // Get users with CRM access
+  async getUsersWithCrmAccess(
+    ownerId: string,
+    workspaceId: string,
+    userId: string,
+  ) {
+    const users = await this.prisma.user.findMany({
+      where: {
+        workspace_id: workspaceId,
+        ...(ownerId ? { owner_id: ownerId } : {}), // ownerId না থাকলে skip
+        role_users: {
+          some: {
+            role: {
+              permissions: {
+                some: {
+                  title: { in: ['crm_read', 'crm_manage'] },
+                },
               },
             },
           },
         },
       },
-    },
-    include: {
-      roles: {
-        include: {
-          permissions: true,
-        },
-      },
-    },
-  });
-
-  return {
-    success: true,
-    message: 'Users with CRM access fetched successfully',
-    users: users.map((user) => {
-      const { password, ...safeUser } = user;
-
-      const rolesWithPermissions = user.roles.map((role) => ({
-        roleId: role.id,
-        roleName: role.title,
-        permissions: role.permissions.map((p) => p.title),
-      }));
-
-      return {
-        id: safeUser.id,
-        email: safeUser.email,
-        first_name: safeUser.first_name,
-        name: safeUser.last_name,
-        last_name: safeUser.last_name,
-        type: safeUser.type,
-        created_at: safeUser.created_at,
-        updated_at: safeUser.updated_at,
-      };
-    }),
-  };
-}
-
-// Get users with CRM access
-async getUsersWithPurchaseAccess(ownerId: string, workspaceId: string, userId: string) {
-  const users = await this.prisma.user.findMany({
-    where: {
-      owner_id: ownerId || userId,
-      workspace_id: workspaceId,
-      roles: {
-        some: {
-          permissions: {
-            some: {
-              title: {
-                in: ['purchase_read', 'purchase_manage'], // filter
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        first_name: true,
+        last_name: true,
+        name: true,
+        type: true,
+        created_at: true,
+        updated_at: true,
+        role_users: {
+          select: {
+            role: {
+              select: {
+                id: true,
+                title: true,
+                permissions: { select: { title: true } },
               },
             },
           },
         },
       },
-    },
-    include: {
-      roles: {
-        include: {
-          permissions: true,
+      orderBy: { created_at: 'desc' },
+    });
+
+    // shape response (roles + permission titles)
+    return {
+      success: true,
+      message: 'Users with CRM access fetched successfully',
+      users: users.map((u) => ({
+        id: u.id,
+        email: u.email,
+        first_name: u.first_name,
+        last_name: u.last_name,
+        name:
+          u.name ||
+          [u.first_name, u.last_name].filter(Boolean).join(' ').trim() ||
+          null,
+        type: u.type,
+        created_at: u.created_at,
+        updated_at: u.updated_at,
+        roles: u.role_users.map((ru) => ({
+          roleId: ru.role.id,
+          roleName: ru.role.title,
+          permissions: ru.role.permissions.map((p) => p.title),
+        })),
+      })),
+    };
+  }
+
+  // Get users with CRM access
+  async getUsersWithPurchaseAccess(
+    ownerId: string,
+    workspaceId: string,
+    userId: string,
+  ) {
+    const users = await this.prisma.user.findMany({
+      where: {
+        workspace_id: workspaceId,
+        ...(ownerId ? { owner_id: ownerId } : {}), // ownerId না থাকলে skip
+        role_users: {
+          some: {
+            role: {
+              permissions: {
+                some: {
+                  title: { in: ['pruchase_read', 'pruchase_manage'] },
+                },
+              },
+            },
+          },
         },
       },
-    },
-  });
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        first_name: true,
+        last_name: true,
+        name: true,
+        type: true,
+        created_at: true,
+        updated_at: true,
+        role_users: {
+          select: {
+            role: {
+              select: {
+                id: true,
+                title: true,
+                permissions: { select: { title: true } },
+              },
+            },
+          },
+        },
+      },
+      orderBy: { created_at: 'desc' },
+    });
 
-  return {
-    success: true,
-    message: 'Users with CRM access fetched successfully',
-    users: users.map((user) => {
-      const { password, ...safeUser } = user;
-
-      const rolesWithPermissions = user.roles.map((role) => ({
-        roleId: role.id,
-        roleName: role.title,
-        permissions: role.permissions.map((p) => p.title),
-      }));
-
-      return {
-        id: safeUser.id,
-        email: safeUser.email,
-        first_name: safeUser.first_name,
-        name: safeUser.last_name,
-        last_name: safeUser.last_name,
-        type: safeUser.type,
-        created_at: safeUser.created_at,
-        updated_at: safeUser.updated_at,
-      };
-    }),
-  };
-}
-
-
+    // shape response (roles + permission titles)
+    return {
+      success: true,
+      message: 'Users with CRM access fetched successfully',
+      users: users.map((u) => ({
+        id: u.id,
+        email: u.email,
+        first_name: u.first_name,
+        last_name: u.last_name,
+        name:
+          u.name ||
+          [u.first_name, u.last_name].filter(Boolean).join(' ').trim() ||
+          null,
+        type: u.type,
+        created_at: u.created_at,
+        updated_at: u.updated_at,
+        roles: u.role_users.map((ru) => ({
+          roleId: ru.role.id,
+          roleName: ru.role.title,
+          permissions: ru.role.permissions.map((p) => p.title),
+        })),
+      })),
+    };
+  }
 
   async deleteUser(userId: string) {
     const user = await this.prisma.user.findUnique({
