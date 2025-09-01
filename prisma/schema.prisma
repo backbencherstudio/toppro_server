@@ -171,6 +171,7 @@ model Ucode {
 
   @@map("ucodes")
 }
+//
 
 model Role {
   id          String    @id @default(cuid())
