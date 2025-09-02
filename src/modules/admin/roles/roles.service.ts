@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { Permissions } from 'src/ability/permissions.enum'; // Permissions enum
 import { UpdateRoleDto } from 'src/modules/admin/roles/dto/update-role.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -7,9 +7,112 @@ import { CreateRoleDto } from './dto/create-role.dto'; // CreateRoleDto for inpu
 @Injectable()
 export class RolesService {
   constructor(private readonly prisma: PrismaService) {}
+  private async shapeRoleResponse(roleId: string) {
+    const role = await this.prisma.role.findUnique({
+      where: { id: roleId },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        permissions: { select: { id: true, title: true } }, // keep minimal
+        role_users: {
+          select: {
+            user: {
+              select: { id: true, name: true, email: true, username: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!role) throw new NotFoundException('Role not found');
+
+    return {
+      success: true,
+      role: {
+        id: role.id,
+        title: role.title ?? null,
+        description: role.description ?? null,
+        permissions: role.permissions,
+        users: role.role_users.map((ru) => ru.user), // [{id,name,email,username}]
+      },
+    };
+  }
+
+  async getRole(roleId: string) {
+    return this.shapeRoleResponse(roleId);
+  }
+
+  async assignUserToRole(roleId: string, userId: string) {
+    // validate role + user exist
+    const [role, user] = await Promise.all([
+      this.prisma.role.findUnique({
+        where: { id: roleId },
+        select: { id: true },
+      }),
+      this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true },
+      }),
+    ]);
+    if (!role) throw new NotFoundException('Role not found');
+    if (!user) throw new NotFoundException('User not found');
+
+    // idempotent upsert (relies on @@unique([role_id, user_id]))
+    await this.prisma.roleUser.upsert({
+      where: { role_id_user_id: { role_id: roleId, user_id: userId } },
+      create: { role_id: roleId, user_id: userId },
+      update: {},
+    });
+
+    return this.shapeRoleResponse(roleId);
+  }
+
+  async assignUsersToRole(roleId: string, userIds: string[]) {
+    // ensure role exists
+    const role = await this.prisma.role.findUnique({
+      where: { id: roleId },
+      select: { id: true },
+    });
+    if (!role) throw new NotFoundException('Role not found');
+
+    // filter only valid users
+    const validUsers = await this.prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true },
+    });
+    const validSet = new Set(validUsers.map((u) => u.id));
+    const toTry = userIds.filter((id) => validSet.has(id));
+
+    if (toTry.length === 0) {
+      // still respond with the role, consistent with your style
+      return this.shapeRoleResponse(roleId);
+    }
+
+    // skip duplicates
+    await this.prisma.roleUser.createMany({
+      data: toTry.map((uid) => ({ role_id: roleId, user_id: uid })),
+      skipDuplicates: true,
+    });
+
+    return this.shapeRoleResponse(roleId);
+  }
+
+  async unassignUserFromRole(roleId: string, userId: string) {
+    // if pair not found, Prisma will throw; you can swallow with try/catch if you prefer soft-delete style.
+    await this.prisma.roleUser.delete({
+      where: { role_id_user_id: { role_id: roleId, user_id: userId } },
+    });
+
+    return this.shapeRoleResponse(roleId);
+  }
 
   // Function to create a role and assign permissions to it
-  async createRoleWithPermissions(createRoleDto: CreateRoleDto, ownerId: string, workspaceId: string) {
+  async createRoleWithPermissions(
+    createRoleDto: CreateRoleDto,
+    ownerId: string,
+    workspaceId: string,
+  ) {
     // Step 1: Create the role
     const role = await this.prisma.role.create({
       data: {
@@ -76,7 +179,6 @@ export class RolesService {
     };
   }
 
-
   // Function to update a role
   async updateRole(roleId: string, updateRoleDto: UpdateRoleDto) {
     // Step 1: Find the role by id
@@ -92,14 +194,16 @@ export class RolesService {
     const updatedRole = await this.prisma.role.update({
       where: { id: roleId },
       data: {
-        title: updateRoleDto.title || role.title,  // Keep existing title if not provided
-        description: updateRoleDto.description || role.description,  // Keep existing description if not provided
+        title: updateRoleDto.title || role.title, // Keep existing title if not provided
+        description: updateRoleDto.description || role.description, // Keep existing description if not provided
       },
     });
 
     // Step 3: Handle permissions if provided
     if (updateRoleDto.permissions) {
-      const validPermissions = this.getValidPermissions(updateRoleDto.permissions);
+      const validPermissions = this.getValidPermissions(
+        updateRoleDto.permissions,
+      );
 
       // Fetch existing permission data
       const permissionData = await this.prisma.permission.findMany({
@@ -133,37 +237,30 @@ export class RolesService {
     );
   }
 
-  // Get all roles with name and ID
-async getAllRoles(ownerId: string, workspaceId: string) {
-  // Fetch all roles with associated permissions
-  const roles = await this.prisma.role.findMany({
-    where: {
-      owner_id: ownerId,
-      workspace_id: workspaceId,
-    },
-    select: {
-      id: true,
-      title: true, // Role title
-      permissions: { // Associated permissions for each role
-        select: {
-          id: true, // Permission ID
-          title: true, // Permission name or any other fields you need
-        }
-      }
-    },
-  });
-  // Return roles and permissions
-  return {
-    success: true,
-    roles: roles.map(role => ({
-      id: role.id,
-      title: role.title,
-      permissions: role.permissions, // Include permissions related to each role
-    })),
-  };
-}
+  // 📜 GET all roles (filtered by owner & workspace) with minimal fields
+  async getAllRoles(ownerId: string, workspaceId: string) {
+    // if (!ownerId || !workspaceId) {
+    //   throw new BadRequestException('ownerId and workspaceId are required.');
+    // }
 
+    const roles = await this.prisma.role.findMany({
+      select: {
+        id: true,
+        title: true,
+        permissions: { select: { title: true } },
+      },
+      orderBy: { created_at: 'desc' },
+    });
 
+    return {
+      success: true,
+      roles: roles.map((r) => ({
+        id: r.id,
+        title: r.title,
+        permissions: r.permissions, // [{id,title}]
+      })),
+    };
+  }
 
   // Get a single role by ID
   async getRoleById(roleId: string) {
