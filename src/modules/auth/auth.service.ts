@@ -322,12 +322,12 @@ export class AuthService {
       }
 
       // Log for debugging
-      console.log('Creating workspace for owner:', {
-        ownerName,
-        owner_id,
-        super_id,
-        workspace_name,
-      });
+      // console.log('Creating workspace for owner:', {
+      //   ownerName,
+      //   owner_id,
+      //   super_id,
+      //   workspace_name,
+      // });
 
       // Create the workspace for the OWNER
       const workspace = await this.prisma.workspace.create({
@@ -340,7 +340,7 @@ export class AuthService {
         },
       });
 
-      console.log('Workspace created successfully:', workspace);
+      // console.log('Workspace created successfully:', workspace);
 
       return workspace;
     } catch (error) {

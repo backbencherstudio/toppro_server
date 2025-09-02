@@ -101,6 +101,7 @@ model User {
   Purchase                 Purchase[]
   Bill                     Bill[]
   roleId                   String?
+  PurchaseItems            PurchaseItems[]
 
   @@map("users")
 }
@@ -139,6 +140,7 @@ model Workspace {
   Bill            Bill[]
   ItemType        ItemType[]
   AccountType     AccountType[]
+  PurchaseItems   PurchaseItems[]
 
   @@map("workspaces")
 }
@@ -244,7 +246,6 @@ model RoleUser {
 
   // prevent duplicates: same user cannot be assigned the same role multiple times
   @@unique([role_id, user_id])
-
   @@map("role_users")
 }
 
@@ -279,8 +280,10 @@ model Invoice {
   amount   Float?
   currency String?
 
-  items    Items[]
-  itemType ItemType? @relation(fields: [itemType_id], references: [id])
+  items           Items[]
+  itemType        ItemType?      @relation(fields: [itemType_id], references: [id])
+  PurchaseItems   PurchaseItems? @relation(fields: [purchaseItemsId], references: [id])
+  purchaseItemsId String?
 
   @@map("invoices")
 }
@@ -322,10 +325,11 @@ model Items {
   unit_price  Float? @default(0)
   total_price Float? @default(0)
 
-  leads         Lead[]       @relation("LeadItems")
+  leads         Lead[]          @relation("LeadItems")
   Purchase      Purchase[]
-  AccountType   AccountType? @relation(fields: [accountTypeId], references: [id])
+  AccountType   AccountType?    @relation(fields: [accountTypeId], references: [id])
   accountTypeId String?
+  PurchaseItems PurchaseItems[]
 
   @@map("items")
 }
@@ -353,19 +357,69 @@ model Purchase {
   workspace_id String?
   user_id      String?
 
-  tax              Tax?          @relation(fields: [tax_id], references: [id])
-  billing_category BillCategory? @relation(fields: [billingCategory_id], references: [id])
-  itemCategory     ItemCategory? @relation(fields: [itemCategory_id], references: [id])
-  vendor           Vendor?       @relation(fields: [vendor_id], references: [id])
-  user             User?         @relation(fields: [user_id], references: [id])
-  workspace        Workspace?    @relation(fields: [workspace_id], references: [id])
+  tax              Tax?           @relation(fields: [tax_id], references: [id])
+  billing_category BillCategory?  @relation(fields: [billingCategory_id], references: [id])
+  itemCategory     ItemCategory?  @relation(fields: [itemCategory_id], references: [id])
+  vendor           Vendor?        @relation(fields: [vendor_id], references: [id])
+  user             User?          @relation(fields: [user_id], references: [id])
+  workspace        Workspace?     @relation(fields: [workspace_id], references: [id])
   // bill         Bill?         @relation(fields: [bill_id], references: [id], onDelete: Cascade)
   item             Items[]
-  AccountType      AccountType?  @relation(fields: [accountType_id], references: [id])
-  Bill             Bill?         @relation(fields: [billId], references: [id])
+  AccountType      AccountType?   @relation(fields: [accountType_id], references: [id])
+  Bill             Bill?          @relation(fields: [billId], references: [id])
   billId           String?
+  PurchaseItems    PurchaseItems? @relation(fields: [purchaseItemsId], references: [id])
+  purchaseItemsId  String?
 
   @@map("purchases")
+}
+
+model PurchaseItems {
+  id          String    @id @default(cuid())
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @default(now())
+  deleted_at  DateTime?
+  name        String?
+  sku         String?
+  description String?
+  quantity    Int?      @default(1)
+  image       String?
+  discount    Float?    @default(0)
+  total       Float?    @default(0)
+
+  item Items[]
+
+  invoice_id      String?
+  tax_id          String?
+  itemCategory_id String?
+  sale_price      Float?  @default(0)
+  purchase_price  Float?  @default(0)
+  unit_id         String?
+  vendor_id       String?
+  itemType_id     String?
+  owner_id        String?
+  workspace_id    String?
+  user_id         String?
+  account_type_id String?
+
+  user      User?      @relation(fields: [user_id], references: [id])
+  workspace Workspace? @relation(fields: [workspace_id], references: [id])
+
+  unit         Unit?         @relation(fields: [unit_id], references: [id])
+  tax          Tax?          @relation(fields: [tax_id], references: [id])
+  itemCategory ItemCategory? @relation(fields: [itemCategory_id], references: [id])
+  vendor       Vendor[]
+  itemType     ItemType?     @relation(fields: [itemType_id], references: [id])
+  invoice      Invoice[]
+
+  unit_price  Float? @default(0)
+  total_price Float? @default(0)
+
+  leads         Lead[]
+  Purchase      Purchase[]
+  Account_type   AccountType? @relation(fields: [account_type_id], references: [id])
+
+  @@map("Purchase_items")
 }
 
 // ###############################################################################################################################
@@ -423,12 +477,13 @@ model ItemCategory {
   workspace_id String
   workspace    Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
 
-  owner_id  String
-  status    Int?       @default(1) @db.SmallInt
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @default(now()) @updatedAt
-  Items     Items[]
-  Purchase  Purchase[]
+  owner_id      String
+  status        Int?            @default(1) @db.SmallInt
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @default(now()) @updatedAt
+  Items         Items[]
+  Purchase      Purchase[]
+  PurchaseItems PurchaseItems[]
 }
 
 model InvoiceCategory {
@@ -472,14 +527,15 @@ model Tax {
   workspace_id String
   workspace    Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
 
-  owner_id  String
-  status    Int?       @default(1) @db.SmallInt
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @default(now()) @updatedAt
-  Items     Items[]
-  Invoice   Invoice[]
-  Bill      Bill[]
-  Purchase  Purchase[]
+  owner_id      String
+  status        Int?            @default(1) @db.SmallInt
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @default(now()) @updatedAt
+  Items         Items[]
+  Invoice       Invoice[]
+  Bill          Bill[]
+  Purchase      Purchase[]
+  PurchaseItems PurchaseItems[]
 }
 
 model Unit {
@@ -491,9 +547,10 @@ model Unit {
   status       Int?      @default(1) @db.SmallInt
   owner_id     String
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
-  Items     Items[]
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @default(now()) @updatedAt
+  Items         Items[]
+  PurchaseItems PurchaseItems[]
 }
 
 model ItemType {
@@ -505,13 +562,14 @@ model ItemType {
   workspace_id String
   workspace    Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
 
-  owner_id  String
-  status    Int?      @default(1) @db.SmallInt
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @default(now()) @updatedAt
-  items     Items[]
-  Invoice   Invoice[]
-  Vendor    Vendor[]
+  owner_id      String
+  status        Int?            @default(1) @db.SmallInt
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @default(now()) @updatedAt
+  items         Items[]
+  Invoice       Invoice[]
+  Vendor        Vendor[]
+  PurchaseItems PurchaseItems[]
 }
 
 model AccountType {
@@ -525,11 +583,12 @@ model AccountType {
 
   status Int? @default(1) @db.SmallInt
 
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @default(now()) @updatedAt
-  Bill      Bill[]
-  Purchase  Purchase[]
-  items     Items[]
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @default(now()) @updatedAt
+  Bill          Bill[]
+  Purchase      Purchase[]
+  items         Items[]
+  PurchaseItems PurchaseItems[]
 }
 
 // ###############################################################################################################################
@@ -1251,7 +1310,6 @@ model PostPerformance {
   @@map("post_performances")
 }
 
-
 model Customer {
   id        String   @id @default(uuid())
   name      String   @db.VarChar(255)
@@ -1312,11 +1370,13 @@ model Vendor {
   item    Items?  @relation(fields: [item_id], references: [id])
 
   // relations
-  workspace   Workspace  @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
-  ItemType    ItemType?  @relation(fields: [itemType_id], references: [id])
-  itemType_id String?
-  Bill        Bill[]
-  Purchase    Purchase[]
+  workspace       Workspace      @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  ItemType        ItemType?      @relation(fields: [itemType_id], references: [id])
+  itemType_id     String?
+  Bill            Bill[]
+  Purchase        Purchase[]
+  PurchaseItems   PurchaseItems? @relation(fields: [purchaseItemsId], references: [id])
+  purchaseItemsId String?
 }
 
 // ###############################################################################################################################
@@ -1457,7 +1517,6 @@ enum CallType {
   OUTBOUND
 }
 
-
 model Lead {
   id         String    @id @default(uuid())
   created_at DateTime  @default(now())
@@ -1495,10 +1554,12 @@ model Lead {
   sources  Source[]     @relation("LeadSources")
   files    Attachment[] @relation("LeadAttachments")
 
-  tasks    Task[]
-  calls    Call[]
-  activity Activity[]
-  emails   EmailText[]
+  tasks           Task[]
+  calls           Call[]
+  activity        Activity[]
+  emails          EmailText[]
+  PurchaseItems   PurchaseItems? @relation(fields: [purchaseItemsId], references: [id])
+  purchaseItemsId String?
 
   @@index([workspace_id, owner_id])
   @@index([pipeline_id])
@@ -1511,7 +1572,6 @@ model Task {
   created_at DateTime @default(now())
   updated_at DateTime @default(now()) @updatedAt
 
-  
   // parent lead
   lead_id String
   lead    Lead   @relation(fields: [lead_id], references: [id], onDelete: Cascade)
@@ -1539,7 +1599,7 @@ model EmailText {
   // email content
   mail_to     String
   subject     String
-  description String? @db.Text 
+  description String? @db.Text
 
   @@index([lead_id])
   @@map("email_texts")
