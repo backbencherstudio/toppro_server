@@ -7,7 +7,8 @@ import { PurchaseService } from './purchase.service';
 @Controller('purchase')
 export class PurchaseController {
   constructor(private readonly purchaseService: PurchaseService) {}
-
+  
+// 
   @Post()
     @UseGuards(JwtAuthGuard)
   create(@Body() createPurchaseDto: CreatePurchaseDto, @Req() req) {
