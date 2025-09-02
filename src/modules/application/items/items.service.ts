@@ -1,58 +1,99 @@
+// src/modules/items/items.service.ts
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateItemDto } from './dto/create-item.dto';
 import { UpdateItemDto } from './dto/update-item.dto';
 
+function nullify(v?: string | null) {
+  return v === undefined || v === null || v === '' || v === 'null' ? null : v;
+}
+
 @Injectable()
 export class ItemsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-  async create(dto: CreateItemDto) {
-    return this.prisma.items.create({
-      data: dto,
-    });
-  }
+  async create(
+    dto: CreateItemDto,
+    user_id: string,
+    owner_id: string,
+    workspace_id: string,
+  ) {
+    // Clean up "null" strings → real nulls, so relations don’t break
+    const cleaned = {
+      ...dto,
+      tax_id: nullify(dto.tax_id),
+      itemCategory_id: nullify(dto.itemCategory_id),
+      unit_id: nullify(dto.unit_id),
+      image: nullify(dto.image),
+      vendor_id: nullify(dto.vendor_id),
+      itemType_id: nullify(dto.itemType_id),
+      invoice_id: nullify(dto.invoice_id),
+    };
 
-  // Get all items for a specific owner and workspace
-  async findAll(owner_id: string, workspace_id: string) {
-    return this.prisma.items.findMany({
-      where: {
-        owner_id: owner_id,
-        workspace_id: workspace_id,
-        deleted_at: null, // optional: only fetch non-deleted items
+    const item = await this.prisma.items.create({
+      data: {
+        ...cleaned,
+        user_id,
+        owner_id,
+        workspace_id,
       },
     });
+
+    return { success: true, message: 'Item created successfully!', item };
   }
 
-  // Get single item by id
-  async findOne(id: string) {
-    const item = await this.prisma.items.findUnique({ where: { id } });
+  async findAll(workspace_id: string) {
+    const items = await this.prisma.items.findMany({
+      where: { workspace_id },
+      orderBy: { created_at: 'desc' },
+    });
+    return { success: true, data: items };
+  }
+
+  async findOne(id: string, workspace_id: string) {
+    const item = await this.prisma.items.findFirst({
+      where: { id, workspace_id },
+    });
     if (!item) throw new NotFoundException('Item not found');
-    return item;
+    return { success: true, data: item };
   }
 
-  // Update an item by id
-  async update(id: string, dto: UpdateItemDto) {
+  async update(dto: UpdateItemDto, workspace_id: string) {
+    const { id, ...rest } = dto;
+
+    const exists = await this.prisma.items.findFirst({
+      where: { id, workspace_id },
+      select: { id: true },
+    });
+    if (!exists) throw new NotFoundException('Item not found');
+
+    const cleaned = {
+      ...rest,
+      tax_id: nullify(rest.tax_id),
+      itemCategory_id: nullify(rest.itemCategory_id),
+      unit_id: nullify(rest.unit_id),
+      image: nullify(rest.image),
+      vendor_id: nullify(rest.vendor_id),
+      itemType_id: nullify(rest.itemType_id),
+      invoice_id: nullify(rest.invoice_id),
+    };
+
     const item = await this.prisma.items.update({
       where: { id },
-      data: dto,
+      data: cleaned,
     });
 
-    return {
-      success: true,
-      message: 'Item updated successfully!',
-      item,
-    };
+    return { success: true, message: 'Item updated', item };
   }
 
-  // Delete an item by id
-  async remove(id: string) {
-    const item = await this.prisma.items.delete({ where: { id } });
+  async remove(id: string, workspace_id: string) {
+    const exists = await this.prisma.items.findFirst({
+      where: { id, workspace_id },
+      select: { id: true },
+    });
+    if (!exists) throw new NotFoundException('Item not found');
 
-    return {
-      success: true,
-      message: 'Item deleted successfully!',
-      item,
-    };
+    await this.prisma.items.delete({ where: { id } });
+    return { success: true, message: 'Item deleted' };
   }
 }
