@@ -95,7 +95,6 @@ model User {
   leads                    Lead[]                  @relation("LeadUsers")
   owned_leads              Lead[]                  @relation("lead_owner")
   primary_user_leads       Lead[]
-  owned_tasks              Task[]
   owned_email_texts        EmailText[]
   owned_calls              Call[]                  @relation("call_owner")
   owned_activities         Activity[]              @relation("activity_owner")
@@ -137,7 +136,6 @@ model Workspace {
   Items           Items[]
   Invoice         Invoice[]
   Lead            Lead[]
-  Task            Task[]
   EmailText       EmailText[]
   Call            Call[]
   Activity        Activity[]
@@ -1257,21 +1255,6 @@ model PostPerformance {
   @@map("post_performances")
 }
 
-// this table stores example
-// model Note {
-//   id                String  @id @default(cuid())
-//   created_at DateTime  @default(now())
-//   updated_at DateTime  @default(now())
-//   deleted_at DateTime?
-//   status     Int?      @default(1) @db.SmallInt
-
-//   title String?
-//   body  String? @db.Text
-
-//   tenant_id Int?
-//   tenant    Organization? @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
-//   @@map("notes")
-// }
 
 model Customer {
   id        String   @id @default(uuid())
@@ -1478,59 +1461,6 @@ enum CallType {
   OUTBOUND
 }
 
-// model Lead {
-//   id         String    @id @default(uuid())
-//   created_at DateTime  @default(now())
-//   updated_at DateTime  @default(now()) @updatedAt
-//   deleted_at DateTime?
-
-//   // tenant
-//   workspace_id String
-//   owner_id     String
-//   workspace    Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
-//   owner        User      @relation("lead_owner", fields: [owner_id], references: [id], onDelete: Cascade)
-
-//   // main fields
-//   subject     String
-//   name        String
-//   email       String?
-//   phone       String?
-//   followup_at DateTime?
-//   stage       LeadStageStatus @default(DRAFT)
-//   notes       String?         @db.Text
-//   discussion  String?         @db.Text
-
-//   // pipeline (FK + denorm name)
-//   pipeline_id   String
-//   pipeline      Pipeline @relation(fields: [pipeline_id], references: [id], onDelete: Cascade)
-//   pipeline_name String // denormalized for quick display/search
-
-//   // (optional) lead stage
-//   lead_stage_id String?
-//   lead_stage    LeadStage? @relation(fields: [lead_stage_id], references: [id], onDelete: SetNull)
-
-//   // (optional) primary user snapshot (plus full M2M below)
-//   user_id      String?
-//   primary_user User?   @relation(fields: [user_id], references: [id], onDelete: SetNull)
-//   user_name    String? // denormalized for quick display
-
-//   // multi relations (implicit M2M)
-//   users    User[]       @relation("LeadUsers")
-//   products Items[]      @relation("LeadItems")
-//   sources  Source[]     @relation("LeadSources")
-//   files    Attachment[] @relation("LeadAttachments")
-
-//   // children (1:N)
-//   tasks    Task[]
-//   calls    Call[]
-//   activity Activity[]
-//   emails   EmailText[]
-
-//   @@index([workspace_id, owner_id])
-//   @@index([pipeline_id])
-//   @@index([lead_stage_id])
-//   @@map("leads")
-// }
 
 model Lead {
   id         String    @id @default(uuid())
@@ -1585,12 +1515,7 @@ model Task {
   created_at DateTime @default(now())
   updated_at DateTime @default(now()) @updatedAt
 
-  // tenant
-  workspace_id String
-  owner_id     String
-  workspace    Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
-  owner        User      @relation(fields: [owner_id], references: [id], onDelete: Cascade)
-
+  
   // parent lead
   lead_id String
   lead    Lead   @relation(fields: [lead_id], references: [id], onDelete: Cascade)
@@ -1601,9 +1526,7 @@ model Task {
   time     String?
   priority TaskPriority @default(LOW)
   status   TaskStatus   @default(ONGOING)
-  // description removed as requested
 
-  @@index([workspace_id, owner_id])
   @@index([lead_id])
   @@map("tasks")
 }
