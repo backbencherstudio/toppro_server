@@ -169,7 +169,7 @@ model Ucode {
   @@map("ucodes")
 }
 
-//
+// Junction 
 
 model Role {
   id          String    @id @default(cuid())
