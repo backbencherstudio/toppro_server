@@ -18,8 +18,10 @@ import { CategoryModule } from './category/category.module';
 import { PurchaseModule } from './purchase/purchase.module';
 import { TasksModule } from './crm/tasks/tasks.module';
 import { EmailtextModule } from './crm/emailtext/emailtext.module';
+import { CallModule } from './crm/call/call.module';
+import { LeadsUserModule } from './crm/lead/leadusers/leadusers.module';
 @Module({
-  imports: [NotificationModule, ContactModule, FaqModule, CustomerModule, VendorModule, LeadModule, DealModule, CrmReportModule, PipelinesModule, LeadStagesModule, DealStageModule, WorkspaceModule, SourcesModule, ItemsModule, InvoiceModule, CategoryModule, PurchaseModule, TasksModule, EmailtextModule],
+  imports: [NotificationModule, ContactModule, FaqModule, CustomerModule, VendorModule, LeadModule, DealModule, CrmReportModule, PipelinesModule, LeadStagesModule, DealStageModule, WorkspaceModule, SourcesModule, ItemsModule, InvoiceModule, CategoryModule, PurchaseModule, TasksModule, EmailtextModule, CallModule, LeadsUserModule],
 
 })
 export class ApplicationModule { }
