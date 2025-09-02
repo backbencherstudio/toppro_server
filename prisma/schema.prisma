@@ -95,7 +95,6 @@ model User {
   leads                    Lead[]                  @relation("LeadUsers")
   owned_leads              Lead[]                  @relation("lead_owner")
   primary_user_leads       Lead[]
-  owned_email_texts        EmailText[]
   owned_calls              Call[]                  @relation("call_owner")
   owned_activities         Activity[]              @relation("activity_owner")
   actor_activities         Activity[]
@@ -136,7 +135,6 @@ model Workspace {
   Items           Items[]
   Invoice         Invoice[]
   Lead            Lead[]
-  EmailText       EmailText[]
   Call            Call[]
   Activity        Activity[]
   Purchase        Purchase[]
@@ -1536,12 +1534,6 @@ model EmailText {
   created_at DateTime @default(now())
   updated_at DateTime @default(now()) @updatedAt
 
-  // tenant
-  workspace_id String
-  owner_id     String
-  workspace    Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
-  owner        User      @relation(fields: [owner_id], references: [id], onDelete: Cascade)
-
   // parent lead
   lead_id String
   lead    Lead   @relation(fields: [lead_id], references: [id], onDelete: Cascade)
@@ -1549,9 +1541,8 @@ model EmailText {
   // email content
   mail_to     String
   subject     String
-  description String? @db.Text // renamed from `body`
+  description String? @db.Text 
 
-  @@index([workspace_id, owner_id])
   @@index([lead_id])
   @@map("email_texts")
 }
