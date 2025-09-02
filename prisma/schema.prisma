@@ -73,11 +73,11 @@ model User {
   sender_messages           Message[]      @relation("sender")
   receiver_notifications    Notification[] @relation("receiver")
   sender_notifications      Notification[] @relation("sender")
+  roles                     Role[]         @relation("UsersOnRoles")
 
   user_payment_methods     UserPaymentMethod[]
   user_settings            UserSetting[]
   ucodes                   Ucode[]
-  roles                    Role[]
   permissions              Permission[]
   role_users               RoleUser[]
   payment_transactions     PaymentTransaction[]
@@ -101,6 +101,7 @@ model User {
   assigned_calls           Call[]                  @relation("call_assignee")
   Purchase                 Purchase[]
   Bill                     Bill[]
+  roleId                   String?
 
   @@map("users")
 }
@@ -167,6 +168,7 @@ model Ucode {
 
   @@map("ucodes")
 }
+
 //
 
 model Role {
@@ -179,15 +181,16 @@ model Role {
   title       String?   @default("user")
   name        String?   @default("user")
 
-  user_id      String?
   owner_id     String?
   workspace_id String?
 
-  user User[]
+  // A role can have many users through RoleUser
+  role_users RoleUser[] // pivot
+  users      User[]     @relation("UsersOnRoles") // (optional virtual, see note below)
 
   permission_roles PermissionRole[]
-  role_users       RoleUser[]
   permissions      Permission[]     @relation("PermissionToRole")
+  userId           String?
 
   @@map("roles")
 }
@@ -233,16 +236,17 @@ model PermissionRole {
 }
 
 model RoleUser {
+  id         String   @id @default(cuid())
+  role_id    String
+  user_id    String
   created_at DateTime @default(now())
-  updated_at DateTime @default(now())
 
-  role_id String
-  role    Role   @relation(fields: [role_id], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [role_id], references: [id], onDelete: Cascade)
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  user_id String
-  user    User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  // prevent duplicates: same user cannot be assigned the same role multiple times
+  @@unique([role_id, user_id])
 
-  @@id([role_id, user_id])
   @@map("role_users")
 }
 
@@ -439,7 +443,6 @@ model InvoiceCategory {
   workspace    Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
   status       Int?      @default(1) @db.SmallInt
   owner_id     String
-
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @default(now()) @updatedAt
@@ -1468,30 +1471,27 @@ model Lead {
   workspace    Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
   owner        User      @relation("lead_owner", fields: [owner_id], references: [id], onDelete: Cascade)
 
-
   subject     String
   name        String
   email       String
   phone       String
   followup_at DateTime
 
-  stage       LeadStageStatus @default(DRAFT)
-  notes       String?         @db.Text
-  discussion  String?         @db.Text
+  stage         LeadStageStatus @default(DRAFT)
+  notes         String?         @db.Text
+  discussion    String?         @db.Text
   pipeline_id   String?
-  pipeline      Pipeline? @relation(fields: [pipeline_id], references: [id], onDelete: SetNull)
+  pipeline      Pipeline?       @relation(fields: [pipeline_id], references: [id], onDelete: SetNull)
   pipeline_name String?
-
 
   lead_stage_id String?
   lead_stage    LeadStage? @relation(fields: [lead_stage_id], references: [id], onDelete: SetNull)
-
 
   user_id      String?
   primary_user User?   @relation(fields: [user_id], references: [id], onDelete: SetNull)
   user_name    String?
 
-  users    User[]       @relation("LeadUsers")
+  users User[] @relation("LeadUsers")
 
   products Items[]      @relation("LeadItems")
   sources  Source[]     @relation("LeadSources")
@@ -1507,7 +1507,6 @@ model Lead {
   @@index([lead_stage_id])
   @@map("leads")
 }
-
 
 model Task {
   id         String   @id @default(uuid())
