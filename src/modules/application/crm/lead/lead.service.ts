@@ -1,4 +1,3 @@
-// leads.service.ts
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateLeadDto } from './dto/create-lead.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -8,28 +7,6 @@ import { UpdateLeadDto } from './dto/update-lead.dto';
 export class LeadsService {
   constructor(private prisma: PrismaService) { }
 
-  // async createLead(dto: CreateLeadDto, ownerId: string, workspaceId: string, userId: string) {
-  //   return this.prisma.lead.create({
-  //     data: {
-  //       subject: dto.subject,
-  //       name: dto.name,
-  //       email: dto.email,
-  //       phone: dto.phone,
-  //       followup_at: new Date(dto.followup_at),
-
-  //       owner_id: ownerId,       // from JWT
-  //       workspace_id: workspaceId, // from JWT
-  //       user_id: ownerId,           // from JWT
-
-  //       // users: {
-  //       //   connect: dto.users.map((id) => ({ id })),
-  //       // },
-  //     },
-  //     include: {
-  //       users: true,
-  //     },
-  //   });
-  // }
 
   async createLead(dto: CreateLeadDto, ownerId: string, workspaceId: string, userId: string) {
     // build list of unique user IDs: owner + dto.users
@@ -222,32 +199,6 @@ export class LeadsService {
       },
     });
   }
-
-  // async deleteLead(id: string, ownerId: string, workspaceId: string) {
-  //   const lead = await this.prisma.lead.findFirst({
-  //     where: {
-  //       id,
-  //       workspace_id: workspaceId,
-  //       owner_id: ownerId,
-  //     },
-  //   });
-
-  //   if (!lead) {
-  //     throw new NotFoundException(`Lead with id ${id} not found`);
-  //   }
-
-  //   await this.prisma.lead.update({
-  //     where: { id: lead.id },
-  //     data: { deleted_at: new Date() },
-  //   });
-
-  //   return {
-  //     success: true,
-  //     message: 'Lead deleted successfully',
-  //     leadId: id,
-  //     leadname: lead.name,
-  //   };
-  // }
 
   async deleteLead(id: string, ownerId: string, workspaceId: string) {
     // ✅ Validate lead existence

@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Req, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, Req, UseGuards, Get, Param } from '@nestjs/common';
 import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 import { EmailTextService } from './emailtext.service';
 import { CreateEmailTextDto } from './dto/create-emailtext.dto';
@@ -17,8 +17,8 @@ export class EmailTextController {
   }
 
   @UseGuards(JwtAuthGuard)
-  @Post('lead/:leadId')
-  async getAllByLead(@Req() req, @Body('leadId') leadId: string) {
+  @Get('lead/:leadId')
+  async getAllByLead(@Req() req, @Param('leadId') leadId: string) {
     const ownerId = req.user.id;
     const workspaceId = req.user.workspace_id;
     return this.emailTextService.getAllByLead(leadId, ownerId, workspaceId);
