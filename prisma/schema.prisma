@@ -335,41 +335,39 @@ model Items {
 }
 
 model Purchase {
-  id         String    @id @default(cuid())
-  created_at DateTime  @default(now())
-  updated_at DateTime  @default(now())
-  deleted_at DateTime?
+  id            String    @id @default(cuid())
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @default(now())
+  deleted_at    DateTime?
+  purchase_date DateTime? // <-- use this as the "purchase date" you send from client
+  status        Status?   @default(DRAFT)
 
-  accountType_id     String?
-  vendor_id          String?
-  billingCategory_id String?
-  itemCategory_id    String?
-  purchase_no        String?
-  item_id            String?
-  discount           Float?  @default(0)
-  tax_id             String?
-  quantity           Int?    @default(1)
+  // MUST-HAVE header fields
+  account_type_id String?
+  vendor_id       String?
+  billing_type_id String?
+  category_id     String?
+  purchase_no     String  @unique // <-- auto-generated like PUR0000001 (see service)
 
-  // bill_id         String?
-  unit_price   Float?  @default(0)
-  total_price  Float?  @default(0)
+  // Multitenancy / audit
   owner_id     String?
   workspace_id String?
   user_id      String?
 
-  tax              Tax?           @relation(fields: [tax_id], references: [id])
-  billing_category BillCategory?  @relation(fields: [billingCategory_id], references: [id])
-  itemCategory     ItemCategory?  @relation(fields: [itemCategory_id], references: [id])
-  vendor           Vendor?        @relation(fields: [vendor_id], references: [id])
-  user             User?          @relation(fields: [user_id], references: [id])
-  workspace        Workspace?     @relation(fields: [workspace_id], references: [id])
-  // bill         Bill?         @relation(fields: [bill_id], references: [id], onDelete: Cascade)
-  item             Items[]
-  AccountType      AccountType?   @relation(fields: [accountType_id], references: [id])
-  Bill             Bill?          @relation(fields: [billId], references: [id])
-  billId           String?
-  purchaseItems    PurchaseItems[]
-  purchaseItemsId  String?
+  // Relations (headers)
+  AccountType AccountType?  @relation(fields: [account_type_id], references: [id])
+  Vendor      Vendor?       @relation(fields: [vendor_id], references: [id])
+  BillingType BillCategory? @relation(fields: [billing_type_id], references: [id])
+  Category    ItemCategory? @relation(fields: [category_id], references: [id])
+  user        User?         @relation(fields: [user_id], references: [id])
+  workspace   Workspace?    @relation(fields: [workspace_id], references: [id])
+
+  // One purchase -> many line items
+  Bill          Bill[]
+  Tax           Tax[]
+  purchaseItems PurchaseItems[]
+  Items         Items?          @relation(fields: [itemsId], references: [id])
+  itemsId       String?
 
   @@map("purchases")
 }
@@ -415,11 +413,19 @@ model PurchaseItems {
   unit_price  Float? @default(0)
   total_price Float? @default(0)
 
-  leads         Lead[]
-  Purchase      Purchase[]
-  Account_type   AccountType? @relation(fields: [account_type_id], references: [id])
+  leads        Lead[]
+  Purchase     Purchase[]
+  Account_type AccountType? @relation(fields: [account_type_id], references: [id])
 
   @@map("Purchase_items")
+}
+
+enum Status {
+  PENDING
+  SENT
+  DELIVERED
+  READ
+  DRAFT
 }
 
 // ###############################################################################################################################

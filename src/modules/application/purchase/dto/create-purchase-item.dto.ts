@@ -1,46 +1,51 @@
-import { IsString, IsOptional, IsNumber, Min } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsInt, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 
 export class CreatePurchaseItemDto {
-  @IsString() itemId: string;
+  // required for connect
+  @IsString() item_id: string;
 
-  @IsOptional()
-  @IsString()
+  // optional connects
+  @IsOptional() 
+  @IsString() 
   name?: string;
 
-  @IsOptional()
-  @IsString()
+  @IsOptional() 
+  @IsString() 
   sku?: string;
+  
+  @IsOptional() 
+  @IsString() 
+  unit_id?: string;
 
-  @IsOptional()
-  @IsString()
-  description?: string;
+  @IsOptional() 
+  @IsString() 
+  itemCategory_id?: string;
 
-  @IsOptional()
-  @IsString()
-  unitId?: string;
+  @IsOptional() 
+  @IsString() 
+  item_type_id?: string;
 
-  @IsOptional()
-  @IsString()
-  taxId?: string;
+  @IsOptional() 
+  @IsString() 
+  tax_id?: string;
 
-  @IsOptional()
-  @IsString()
-  itemCategoryId?: string;
-
-  @IsOptional()
-  @IsString()
-  itemTypeId?: string;
-
-  @IsNumber()
+  // numbers
+  @Type(() => Number) 
+  @IsInt() 
   @Min(1)
   quantity: number;
 
+  @Type(() => Number) 
   @IsNumber()
-  unitPrice: number;
+  purchase_price: number;
 
+  @Type(() => Number) 
   @IsNumber()
-  discount: number;
+  discount: number;             // absolute amount (not %)
 
-  @IsNumber()
-  taxPercent: number;
+  // optional snapshot note
+  @IsOptional() 
+  @IsString()
+  description?: string;
 }
