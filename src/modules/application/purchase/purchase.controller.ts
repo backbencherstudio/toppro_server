@@ -1,8 +1,8 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
-import { PurchaseService } from './purchase.service';
+import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 import { CreatePurchaseDto } from './dto/create-purchase.dto';
 import { UpdatePurchaseDto } from './dto/update-purchase.dto';
-import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
+import { PurchaseService } from './purchase.service';
 
 @Controller('purchases')
 @UseGuards(JwtAuthGuard)
@@ -17,14 +17,14 @@ export class PurchaseController {
 
   @Get("all")
   async findAll(@Query() query, @Req() req: any) {
-    const { owner_id: ownerId, workspace_id: workspaceId } = req.user;
-    return this.purchaseService.findAll(ownerId, workspaceId);
+    const { owner_id: ownerId, workspace_id: workspaceId, sub: userId } = req.user;
+    return this.purchaseService.findAll(ownerId, workspaceId, userId);
   }
 
   @Get(':id')
   async findOne(@Param('id') id: string, @Req() req: any) {
-    const { owner_id: ownerId, workspace_id: workspaceId } = req.user;
-    return this.purchaseService.findOne(id, ownerId, workspaceId);
+    const { owner_id: ownerId, workspace_id: workspaceId, sub: userId } = req.user;
+    return this.purchaseService.findOne(id, ownerId, workspaceId, userId);
   }
 
   @Patch(':id')
@@ -35,7 +35,7 @@ export class PurchaseController {
 
   @Delete(':id')
   async softDelete(@Param('id') id: string, @Req() req: any) {
-    const { owner_id: ownerId, workspace_id: workspaceId } = req.user;
-    return this.purchaseService.softDelete(id, ownerId, workspaceId);
+    const { owner_id: ownerId, workspace_id: workspaceId, sub: userId } = req.user;
+    return this.purchaseService.softDelete(id, ownerId, workspaceId, userId);
   }
 }
