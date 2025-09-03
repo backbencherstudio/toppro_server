@@ -325,11 +325,11 @@ model Items {
   unit_price  Float? @default(0)
   total_price Float? @default(0)
 
-  leads         Lead[]          @relation("LeadItems")
-  Purchase      Purchase[]
-  AccountType   AccountType?    @relation(fields: [accountTypeId], references: [id])
-  accountTypeId String?
-  PurchaseItems PurchaseItems[]
+  leads           Lead[]          @relation("LeadItems")
+  Purchase        Purchase[]
+  AccountType     AccountType?    @relation(fields: [account_type_id], references: [id])
+  account_type_id String?
+  PurchaseItems   PurchaseItems[]
 
   @@map("items")
 }
@@ -399,6 +399,7 @@ model PurchaseItems {
   workspace_id    String?
   user_id         String?
   account_type_id String?
+  purchase_id     String?
 
   user      User?      @relation(fields: [user_id], references: [id])
   workspace Workspace? @relation(fields: [workspace_id], references: [id])
