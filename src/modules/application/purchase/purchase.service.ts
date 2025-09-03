@@ -1,89 +1,376 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreatePurchaseDto } from './dto/create-purchase.dto';
+import { UpdatePurchaseDto } from './dto/update-purchase.dto';
+import type { Prisma } from '@prisma/client';
 
 @Injectable()
 export class PurchaseService {
   constructor(private readonly prisma: PrismaService) {}
 
-  // Create a purchase with multiple items
-async create(dto: CreatePurchaseDto, ownerId: string, workspaceId: string, userId: string) {
-    if (!dto.items || dto.items.length === 0) {
+  // ------- helpers -------
+  private pad(n: number, width = 7) {
+    return 'PUR' + String(n).padStart(width, '0');
+  }
+
+  // simple per-workspace numberer (fine for low/mod concurrency)
+  private async nextPurchaseNo(tx: Prisma.TransactionClient, workspaceId: string) {
+    const last = await tx.purchase.findFirst({
+      where: { workspace: { id: workspaceId }, purchase_no: { startsWith: 'PUR' } },
+      orderBy: { purchase_no: 'desc' },
+      select: { purchase_no: true },
+    });
+    const next = last ? parseInt(last.purchase_no!.slice(3), 10) + 1 : 1;
+    return this.pad(next);
+  }
+
+  private async resolveLinesAndCompute(
+    tx: Prisma.TransactionClient,
+    items: Array<any>,
+    ownerId: string,
+    workspaceId: string,
+    userId?: string,
+  ): Promise<{ lineCreates: any[]; grandTotal: number }> {
+    if (!items?.length) return { lineCreates: [], grandTotal: 0 };
+
+    // 1) Load base Items inside scope
+    const requestedIds = [...new Set(items.map(i => i.item_id))];
+
+    const baseItems = await tx.items.findMany({
+      where: {
+        id: { in: requestedIds },
+        owner_id: ownerId,
+        workspace: { id: workspaceId }, // relation scope
+        deleted_at: null,
+      },
+      select: {
+        id: true,
+        name: true,
+        sku: true,
+        description: true,
+        unit_id: true,
+        tax_id: true,
+        itemCategory_id: true,
+        itemType_id: true,
+        sale_price: true,
+        purchase_price: true, // if exists on Items
+      },
+    });
+
+    const found = new Set(baseItems.map(b => b.id));
+    const missing = requestedIds.filter(id => !found.has(id));
+    if (missing.length) {
+      throw new BadRequestException({
+        code: 'ITEM_NOT_FOUND_IN_SCOPE',
+        message:
+          'Some items are not found in this workspace/owner scope or are deleted.',
+        missingIds: missing,
+      });
+    }
+
+    const baseMap = new Map(baseItems.map(b => [b.id, b]));
+
+    // 2) Resolve nulls from base snapshot
+    const resolved = items.map((raw) => {
+      const base = baseMap.get(raw.item_id)!;
+
+      const quantity = Number(raw.quantity ?? 1);
+      const price = Number(
+        raw.purchase_price ??
+          base.purchase_price ??
+          base.sale_price ??
+          0,
+      );
+      const discount = Number(raw.discount ?? 0);
+
+      const item_type_id   = raw.item_type_id    ?? base.itemType_id     ?? null;
+      const tax_id         = raw.tax_id          ?? base.tax_id          ?? null;
+      const itemCategoryId = raw.itemCategory_id ?? base.itemCategory_id ?? null;
+      const unit_id        = raw.unit_id         ?? base.unit_id         ?? null;
+
+      const name        = raw.name        ?? base.name        ?? null;
+      const sku         = raw.sku         ?? base.sku         ?? null;
+      const description = raw.description ?? base.description ?? null;
+
+      return {
+        item_id: raw.item_id,
+        quantity, price, discount,
+        item_type_id, tax_id, itemCategoryId, unit_id,
+        name, sku, description,
+      };
+    });
+
+    // 3) Fetch tax percents (by resolved tax_id)
+    const taxIds = [...new Set(resolved.map(r => r.tax_id).filter(Boolean))] as string[];
+    const taxPct = new Map<string, number>();
+    if (taxIds.length) {
+      const taxes = await tx.tax.findMany({
+        where: { id: { in: taxIds } },
+        select: { id: true, rate: true }, // adjust if your Tax uses another field
+      });
+      taxes.forEach(t => taxPct.set(t.id, Number(t.rate ?? 0)));
+    }
+
+    // 4) Build nested create payloads
+    let grandTotal = 0;
+
+    const lineCreates = resolved.map(r => {
+      const subtotal      = r.quantity * r.price;
+      const afterDiscount = subtotal - r.discount;
+      const pct           = r.tax_id ? Number(taxPct.get(r.tax_id) ?? 0) : 0;
+      const taxAmount     = afterDiscount * (pct / 100);
+      const total         = afterDiscount + taxAmount;
+
+      grandTotal += total;
+
+      const createData: any = {
+        // relations — MUST use connect (Prisma nested create expects relation fields)
+        item: { connect: { id: r.item_id } },
+        ...(r.item_type_id   ? { itemType: { connect: { id: r.item_type_id } } } : {}),
+        ...(r.tax_id         ? { tax: { connect: { id: r.tax_id } } } : {}),
+        ...(r.itemCategoryId ? { itemCategory: { connect: { id: r.itemCategoryId } } } : {}),
+        ...(r.unit_id        ? { unit: { connect: { id: r.unit_id } } } : {}),
+
+        // scalars on lines
+        quantity: r.quantity,
+        purchase_price: r.price,
+        discount: r.discount,
+        total: total,
+        description: r.description ?? undefined,
+
+        // optional snapshots (display)
+        name: r.name ?? undefined,
+        sku: r.sku ?? undefined,
+
+        // keep your legacy numeric columns in sync
+        unit_price: r.price,
+        total_price: total,
+
+        // scope on line — workspace & user as relations, owner_id as scalar
+        owner_id: ownerId,
+        workspace: { connect: { id: workspaceId } },
+        ...(userId ? { user: { connect: { id: userId } } } : {}),
+      };
+
+      return createData;
+    });
+
+    return { lineCreates, grandTotal };
+  }
+
+  // ------- CREATE -------
+  async create(
+    dto: CreatePurchaseDto, // snake_case payload
+    ownerId: string,
+    workspaceId: string,
+    userId: string,
+  ) {
+    if (!dto.items?.length) {
       throw new BadRequestException('At least one item is required');
     }
 
     return this.prisma.$transaction(async (tx) => {
-      const items = await tx.items.findMany({
-        where: { id: { in: dto.items.map(i => i.itemId) }, workspace_id: workspaceId, owner_id: ownerId },
-      });
+      const { lineCreates, grandTotal } = await this.resolveLinesAndCompute(
+        tx,
+        dto.items,
+        ownerId,
+        workspaceId,
+        userId,
+      );
 
-      const itemsMap = new Map(items.map(i => [i.id, i]));
+      const purchaseNo = await this.nextPurchaseNo(tx, workspaceId);
 
-      const linesData = dto.items.map(line => {
-        const baseItem = itemsMap.get(line.itemId);
-        if (!baseItem) throw new BadRequestException(`Item not found: ${line.itemId}`);
+      const data: any = {
+        purchase_no: purchaseNo,
+        purchase_date: dto.purchase_date ? new Date(dto.purchase_date) : undefined,
 
-        return {
-          item_id: line.itemId,
-          name: line.name ?? baseItem.name,
-          sku: line.sku ?? baseItem.sku,
-          description: line.description ?? baseItem.description,
-          unit_id: line.unitId ?? baseItem.unit_id,
-          tax_id: line.taxId ?? baseItem.tax_id,
-          itemCategory_id: line.itemCategoryId ?? baseItem.itemCategory_id,
-          itemType_id: line.itemTypeId ?? baseItem.itemType_id,
+        // header relations
+        ...(dto.account_type_id ? { AccountType: { connect: { id: dto.account_type_id } } } : {}),
+        ...(dto.vendor_id       ? { Vendor:      { connect: { id: dto.vendor_id } } }       : {}),
+        ...(dto.billing_type_id ? { BillingType: { connect: { id: dto.billing_type_id } } } : {}),
+        ...(dto.category_id     ? { Category:    { connect: { id: dto.category_id } } }     : {}),
 
-          quantity: line.quantity,
-          unit_price: line.unitPrice ?? baseItem.sale_price ?? 0,
-          discount: line.discount ?? 0,
-          taxPercent: line.taxPercent ?? 0,
+        // optional: header Items? relation (use itemsId, not item_id)
+        ...(dto.item_id ? { Items: { connect: { id: dto.item_id } } } : {}),
 
-          owner_id: ownerId,
-          workspace_id: workspaceId,
-          user_id: userId,
-        };
-      });
+        // scope on header
+        owner_id: ownerId,
+        workspace: { connect: { id: workspaceId } },
+        ...(userId ? { user: { connect: { id: userId } } } : {}),
 
-      return tx.purchase.create({
-        data: {
-          vendor_id: dto.vendorId,
-          accountType_id: dto.accountTypeId,
-          workspace_id: workspaceId,
-          owner_id: ownerId,
-          user_id: userId,
-          purchase_no: dto.purchaseNo,
-          created_at: dto.purchaseDate ? new Date(dto.purchaseDate) : undefined,
+        // nested
+        purchaseItems: { create: lineCreates },
+      };
 
-          purchaseItems: { create: linesData },
+      const purchase = await tx.purchase.create({
+        data,
+        include: {
+          purchaseItems: true,
         },
-        include: { purchaseItems: true },
       });
+
+      return {
+        ...purchase,
+        _summary: {
+          grand_total: Number(grandTotal.toFixed(2)),
+          lines_count: lineCreates.length,
+        },
+      };
     });
   }
 
-  // Get all purchases for a workspace + owner
-  // async findAll(ownerId: string, workspaceId: string) {
-  //   return this.prisma.purchase.findMany({
-  //     where: { owner_id: ownerId, workspace_id: workspaceId },
-  //     include: { 
-  //       // purchase: true,      // load PurchaseItems
-  //       vendor: true,
-  //       itemCategory: true,
-  //       billing_category: true,
-  //       AccountType: true,
-  //       tax: true,
-  //     },
-  //     orderBy: { created_at: 'desc' },
-  //   });
-  // }
+  // ------- LIST -------
+async findAll(ownerId: string, workspaceId: string) {
+  const rows = await this.prisma.purchase.findMany({
+    where: {
+      owner_id: ownerId,
+      workspace_id: workspaceId,
+      deleted_at: null, // শুধু active purchase
+    },
+    orderBy: { created_at: 'desc' },
+    select: {
+      purchase_no: true,
+      purchase_date: true,
+      deleted_at: true,
+      Vendor: { select: { name: true } },        // PascalCase
+      AccountType: { select: { name: true } },   // PascalCase
+      BillingType: { select: { name: true } },   // PascalCase
+      Category: { select: { name: true } },      // PascalCase
+    },
+  });
 
-  // // Optional: Get single purchase
-  // async findOne(id: string) {
-  //   const purchase = await this.prisma.purchase.findUnique({
-  //     where: { id },
-  //     include: { purchase: true, vendor: true },
-  //   });
-  //   if (!purchase) throw new BadRequestException('Purchase not found');
-  //   return purchase;
-  // }
+  return rows.map(r => ({
+    purchase_no: r.purchase_no,
+    vendor_name: r.Vendor?.name ?? null,
+    account_type_name: r.AccountType?.name ?? null,
+    billing_type_name: r.BillingType?.name ?? null,
+    category_name: r.Category?.name ?? null,
+    purchase_date: r.purchase_date ?? null,
+    status: r.deleted_at ? 'DELETED' : 'ACTIVE',
+  }));
+}
+
+
+  // ------- SINGLE -------
+  async findOne(id: string, ownerId: string, workspaceId: string) {
+    const row = await this.prisma.purchase.findFirst({
+      where: {
+        id,
+        deleted_at: null,
+        owner_id: ownerId,
+        workspace: { id: workspaceId },
+      },
+      include: {
+        purchaseItems: {
+          where: { deleted_at: null },
+        },
+      },
+    });
+
+    if (!row) throw new NotFoundException('Purchase not found');
+    return row;
+  }
+
+  // ------- UPDATE (header patch + replace lines if provided) -------
+  async update(
+    id: string,
+    dto: UpdatePurchaseDto,
+    ownerId: string,
+    workspaceId: string,
+    userId: string,
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      const existing = await tx.purchase.findFirst({
+        where: { id, deleted_at: null, owner_id: ownerId, workspace: { id: workspaceId } },
+        include: { purchaseItems: { select: { id: true } } },
+      });
+      if (!existing) throw new NotFoundException('Purchase not found');
+
+      const data: any = {};
+
+      // header relations (connect / disconnect / ignore)
+      const rel = [
+        ['account_type_id', 'AccountType'],
+        ['vendor_id', 'Vendor'],
+        ['billing_type_id', 'BillingType'],
+        ['category_id', 'Category'],
+      ] as const;
+
+      for (const [field, relation] of rel) {
+        if (dto[field] === undefined) continue;
+        if (dto[field] === null) data[relation] = { disconnect: true };
+        else data[relation] = { connect: { id: dto[field] as string } };
+      }
+
+      if (dto.purchase_date !== undefined) {
+        data.purchase_date = dto.purchase_date ? new Date(dto.purchase_date) : null;
+      }
+
+      // replace lines if provided
+      if (dto.items && dto.items.length) {
+        const oldLineIds = existing.purchaseItems.map(l => l.id);
+        if (oldLineIds.length) {
+          await tx.purchaseItems.updateMany({
+            where: { id: { in: oldLineIds } },
+            data: { deleted_at: new Date() },
+          });
+        }
+
+        const { lineCreates } = await this.resolveLinesAndCompute(
+          tx,
+          dto.items,
+          ownerId,
+          workspaceId,
+          userId,
+        );
+        data.purchaseItems = { create: lineCreates };
+      }
+
+      const updated = await tx.purchase.update({
+        where: { id },
+        data: {
+          ...data,
+          // keep scope relations consistent
+          workspace: { connect: { id: workspaceId } },
+          owner_id: ownerId,
+          ...(userId ? { user: { connect: { id: userId } } } : {}),
+        },
+        
+      });
+
+      return updated;
+    });
+  }
+
+  // ------- SOFT DELETE -------
+  async softDelete(id: string, ownerId: string, workspaceId: string) {
+    return this.prisma.$transaction(async (tx) => {
+      const existing = await tx.purchase.findFirst({
+        where: { id, deleted_at: null, owner_id: ownerId, workspace: { id: workspaceId } },
+        include: { purchaseItems: { select: { id: true } } },
+      });
+      if (!existing) throw new NotFoundException('Purchase not found');
+
+      const now = new Date();
+
+      await tx.purchase.update({
+        where: { id },
+        data: { deleted_at: now },
+      });
+
+      const ids = existing.purchaseItems.map(l => l.id);
+      if (ids.length) {
+        await tx.purchaseItems.updateMany({
+          where: { id: { in: ids } },
+          data: { deleted_at: now },
+        });
+      }
+
+      return { success: true };
+    });
+  }
 }
