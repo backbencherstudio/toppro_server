@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { LeadsController } from './lead.controller';
 import { LeadsService } from './lead.service';
 import { LeadsUserModule } from './leadusers/leadusers.module';
+import { LeadsourcesModule } from './leadsources/leadsources.module';
 
 
 
@@ -9,6 +10,6 @@ import { LeadsUserModule } from './leadusers/leadusers.module';
 @Module({
   controllers: [LeadsController],
   providers: [LeadsService],
-  imports: [LeadsUserModule],
+  imports: [LeadsUserModule, LeadsourcesModule],
 })
 export class LeadModule {}
