@@ -368,7 +368,7 @@ model Purchase {
   AccountType      AccountType?   @relation(fields: [accountType_id], references: [id])
   Bill             Bill?          @relation(fields: [billId], references: [id])
   billId           String?
-  PurchaseItems    PurchaseItems? @relation(fields: [purchaseItemsId], references: [id])
+  purchaseItems    PurchaseItems[]
   purchaseItemsId  String?
 
   @@map("purchases")
