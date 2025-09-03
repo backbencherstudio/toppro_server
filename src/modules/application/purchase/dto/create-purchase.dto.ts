@@ -1,48 +1,15 @@
-import { IsNumber, IsOptional, IsString } from 'class-validator';
-import { CreateItemDto } from 'src/modules/application/items/dto/create-item.dto';
-import { Item } from 'src/modules/application/items/entities/item.entity';
+import { IsArray, IsDateString, IsOptional, IsString } from 'class-validator';
+import { CreatePurchaseItemDto } from 'src/modules/application/purchase/dto/create-purchase-item.dto';
 
 export class CreatePurchaseDto {
+  @IsOptional() @IsString() vendorId?: string;
+  @IsOptional() @IsString() accountTypeId?: string;
+  @IsOptional() @IsString() workspaceId?: string;
+  @IsOptional() @IsString() userId?: string;
+  @IsOptional() @IsString() purchaseNo?: string;
 
-  item: CreateItemDto[]
+  @IsOptional() @IsDateString() purchaseDate?: string;
 
-  @IsOptional()
-  @IsString()
-  vendor_id?: string;
-
-  @IsOptional()
-  @IsString()
-  tax_id?: string;
-
-  @IsOptional()
-  @IsNumber()
-  quantity?: number;
-
-  @IsOptional()
-  @IsNumber()
-  unit_price?: number;
-
-  @IsOptional()
-  @IsNumber()
-  discount?: number;
-
-  @IsOptional()
-  @IsNumber()
-  total_price?: number;
-
-  @IsOptional()
-  @IsString()
-  accountType_id?: string;
-
-  @IsOptional()
-  @IsString()
-  itemCategory_id?: string;
-
-  @IsOptional()
-  @IsString()
-  billingCategory_id?: string;
-
-  @IsOptional()
-  @IsString()
-  purchase_no?: string;
+  @IsArray()
+  items: CreatePurchaseItemDto[];
 }
