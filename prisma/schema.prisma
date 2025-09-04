@@ -326,7 +326,7 @@ model Items {
   total_price Float? @default(0)
 
   leads           Lead[]          @relation("LeadItems")
-  Purchase        Purchase[]
+  Purchase        Purchase[]      @relation("PurchaseItems")
   AccountType     AccountType?    @relation(fields: [account_type_id], references: [id])
   account_type_id String?
   PurchaseItems   PurchaseItems[]
@@ -339,7 +339,7 @@ model Purchase {
   created_at    DateTime  @default(now())
   updated_at    DateTime  @default(now())
   deleted_at    DateTime?
-  purchase_date DateTime? // <-- use this as the "purchase date" you send from client
+  purchase_date DateTime?
   status        Status?   @default(DRAFT)
 
   // MUST-HAVE header fields
@@ -347,7 +347,7 @@ model Purchase {
   vendor_id       String?
   billing_type_id String?
   category_id     String?
-  purchase_no     String  @unique // <-- auto-generated like PUR0000001 (see service)
+  purchase_no     String  @unique
 
   // Multitenancy / audit
   owner_id     String?
@@ -366,8 +366,7 @@ model Purchase {
   Bill          Bill[]
   Tax           Tax[]
   purchaseItems PurchaseItems[]
-  Items         Items?          @relation(fields: [itemsId], references: [id])
-  itemsId       String?
+  Items         Items[]         @relation("PurchaseItems")
 
   @@map("purchases")
 }
@@ -384,8 +383,7 @@ model PurchaseItems {
   image       String?
   discount    Float?    @default(0)
   total       Float?    @default(0)
-
-  item Items[]
+  item_id     String
 
   invoice_id      String?
   tax_id          String?
@@ -404,6 +402,7 @@ model PurchaseItems {
   user      User?      @relation(fields: [user_id], references: [id])
   workspace Workspace? @relation(fields: [workspace_id], references: [id])
 
+  Items        Items         @relation(fields: [item_id], references: [id])
   unit         Unit?         @relation(fields: [unit_id], references: [id])
   tax          Tax?          @relation(fields: [tax_id], references: [id])
   itemCategory ItemCategory? @relation(fields: [itemCategory_id], references: [id])
@@ -415,7 +414,7 @@ model PurchaseItems {
   total_price Float? @default(0)
 
   leads        Lead[]
-  purchase    Purchase? @relation(fields: [purchase_id], references: [id])
+  purchase     Purchase?    @relation(fields: [purchase_id], references: [id])
   Account_type AccountType? @relation(fields: [account_type_id], references: [id])
 
   @@map("Purchase_items")
