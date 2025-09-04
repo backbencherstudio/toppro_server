@@ -415,7 +415,7 @@ model PurchaseItems {
   total_price Float? @default(0)
 
   leads        Lead[]
-  Purchase     Purchase[]
+  purchase    Purchase? @relation(fields: [purchase_id], references: [id])
   Account_type AccountType? @relation(fields: [account_type_id], references: [id])
 
   @@map("Purchase_items")
