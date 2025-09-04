@@ -312,14 +312,14 @@ model Items {
   owner_id        String?
   workspace_id    String?
   user_id         String?
-  user            User?      @relation(fields: [user_id], references: [id])
-  workspace       Workspace? @relation(fields: [workspace_id], references: [id])
+  user            User?      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  workspace       Workspace? @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
 
-  unit         Unit?         @relation(fields: [unit_id], references: [id])
-  tax          Tax?          @relation(fields: [tax_id], references: [id])
-  itemCategory ItemCategory? @relation(fields: [itemCategory_id], references: [id])
+  unit         Unit?         @relation(fields: [unit_id], references: [id], onDelete: Cascade)
+  tax          Tax?          @relation(fields: [tax_id], references: [id], onDelete: Cascade)
+  itemCategory ItemCategory? @relation(fields: [itemCategory_id], references: [id], onDelete: Cascade)
   vendor       Vendor[]
-  itemType     ItemType?     @relation(fields: [itemType_id], references: [id])
+  itemType     ItemType?     @relation(fields: [itemType_id], references: [id], onDelete: Cascade)
   invoice      Invoice[]
 
   unit_price  Float? @default(0)
@@ -355,12 +355,12 @@ model Purchase {
   user_id      String?
 
   // Relations (headers)
-  AccountType AccountType?  @relation(fields: [account_type_id], references: [id])
-  Vendor      Vendor?       @relation(fields: [vendor_id], references: [id])
-  BillingType BillCategory? @relation(fields: [billing_type_id], references: [id])
-  Category    ItemCategory? @relation(fields: [category_id], references: [id])
-  user        User?         @relation(fields: [user_id], references: [id])
-  workspace   Workspace?    @relation(fields: [workspace_id], references: [id])
+  AccountType AccountType?  @relation(fields: [account_type_id], references: [id], onDelete: Cascade)
+  Vendor      Vendor?       @relation(fields: [vendor_id], references: [id], onDelete: Cascade)
+  BillingType BillCategory? @relation(fields: [billing_type_id], references: [id], onDelete: Cascade)
+  Category    ItemCategory? @relation(fields: [category_id], references: [id], onDelete: Cascade)
+  user        User?         @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  workspace   Workspace?    @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
 
   // One purchase -> many line items
   Bill          Bill[]
@@ -399,15 +399,15 @@ model PurchaseItems {
   account_type_id String?
   purchase_id     String?
 
-  user      User?      @relation(fields: [user_id], references: [id])
-  workspace Workspace? @relation(fields: [workspace_id], references: [id])
+  user      User?      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  workspace Workspace? @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
 
-  Items        Items         @relation(fields: [item_id], references: [id])
-  unit         Unit?         @relation(fields: [unit_id], references: [id])
-  tax          Tax?          @relation(fields: [tax_id], references: [id])
-  itemCategory ItemCategory? @relation(fields: [itemCategory_id], references: [id])
+  Items        Items         @relation(fields: [item_id], references: [id], onDelete: Cascade)
+  unit         Unit?         @relation(fields: [unit_id], references: [id], onDelete: Cascade)
+  tax          Tax?          @relation(fields: [tax_id], references: [id], onDelete: Cascade)
+  itemCategory ItemCategory? @relation(fields: [itemCategory_id], references: [id], onDelete: Cascade)
   vendor       Vendor[]
-  itemType     ItemType?     @relation(fields: [itemType_id], references: [id])
+  itemType     ItemType?     @relation(fields: [itemType_id], references: [id], onDelete: Cascade)
   invoice      Invoice[]
 
   unit_price  Float? @default(0)
