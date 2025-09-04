@@ -2,55 +2,59 @@ import { Type } from 'class-transformer';
 import { IsInt, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 
 export class UpdatePurchaseItemDto {
-
-  @IsOptional() 
+  @IsOptional()
   @IsString()
   purchase_id?: string;
 
-  @IsOptional() 
+  @IsOptional()
   @IsString()
   line_id?: string;
 
   @IsString()
   item_id: string;
 
-  @IsOptional() 
-  @IsString() 
+  @IsOptional()
+  @IsString()
   item_type_id?: string;
 
-  @IsOptional() 
-  @IsString() 
+  @IsOptional()
+  @IsString()
   tax_id?: string;
 
-  @IsOptional() 
-  @IsString() 
+  @IsOptional()
+  @IsString()
   itemCategory_id?: string;
 
-  @IsOptional() 
-  @IsString() 
+  @IsOptional()
+  @IsString()
   unit_id?: string;
 
-  @Type(() => Number) 
-  @IsInt() 
+  @Type(() => Number)
+  @IsInt()
   @Min(1)
   quantity: number;
 
-  @Type(() => Number) 
+  @Type(() => Number)
   @IsNumber()
   purchase_price: number;
 
-  @Type(() => Number) @IsNumber()
+  @IsOptional()
+  @IsNumber()
+  unit_price: number;
+
+  @Type(() => Number)
+  @IsNumber()
   discount: number;
 
-  @IsOptional() 
-  @IsString() 
+  @IsOptional()
+  @IsString()
   name?: string;
 
-  @IsOptional() 
-  @IsString() 
+  @IsOptional()
+  @IsString()
   sku?: string;
 
-  @IsOptional() 
-  @IsString() 
+  @IsOptional()
+  @IsString()
   description?: string;
 }
