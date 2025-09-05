@@ -1544,7 +1544,6 @@ model Lead {
 
   stage         LeadStageStatus @default(DRAFT)
   notes         String?         @db.Text
-  discussion    String?         @db.Text
   pipeline_id   String?
   pipeline      Pipeline?       @relation(fields: [pipeline_id], references: [id], onDelete: SetNull)
   pipeline_name String?
@@ -1562,6 +1561,7 @@ model Lead {
   sources  Source[]     @relation("LeadSources")
   files    Attachment[] @relation("LeadAttachments")
 
+  discussions     Discussion[]
   tasks           Task[]
   calls           Call[]
   activity        Activity[]
@@ -1573,7 +1573,7 @@ model Lead {
   @@index([pipeline_id])
   @@index([lead_stage_id])
   @@map("leads")
-  Discussion Discussion[]
+  
 }
 
 model Task {
