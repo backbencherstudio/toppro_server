@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateLeadDto } from './dto/create-lead.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { UpdateLeadDto } from './dto/update-lead.dto';
+import { UpdateNotesDto } from './dto/update-notes.dto';
 
 @Injectable()
 export class LeadsService {
@@ -227,6 +228,67 @@ export class LeadsService {
       success: true,
       message: 'Lead deleted successfully',
       leadId: id,
+    };
+  }
+
+  //Leads Notes fields update endpoint....
+  async updateNotes(leadId: string, workspaceId: string, ownerId: string, dto: UpdateNotesDto) {
+    // 1️⃣ Verify lead exists for current owner/workspace
+    const lead = await this.prisma.lead.findFirst({
+      where: {
+        id: leadId,
+        workspace_id: workspaceId,
+        owner_id: ownerId,
+        deleted_at: null,
+      },
+      select: { id: true },
+    });
+
+    if (!lead) {
+      throw new NotFoundException(`Lead with id ${leadId} not found`);
+    }
+
+    // 2️⃣ Update only the notes field
+    await this.prisma.lead.update({
+      where: { id: leadId },
+      data: {
+        notes: dto.notes,
+      },
+    });
+
+    return {
+      success: true,
+      message: 'Notes updated successfully',
+      lead_id: leadId,
+      updated_notes: dto.notes,
+    };
+  }
+
+  //Leads notes fields showing endpoint...
+  async getNotes(leadId: string, workspaceId: string, ownerId: string) {
+    // 1️⃣ Verify lead exists for current owner/workspace
+    const lead = await this.prisma.lead.findFirst({
+      where: {
+        id: leadId,
+        workspace_id: workspaceId,
+        owner_id: ownerId,
+        deleted_at: null,
+      },
+      select: {
+        id: true,
+        notes: true, // Only select the notes field
+      },
+    });
+
+    if (!lead) {
+      throw new NotFoundException(`Lead with id ${leadId} not found`);
+    }
+
+    // 2️⃣ Return the notes field
+    return {
+      success: true,
+      lead_id: lead.id,
+      notes: lead.notes,
     };
   }
 

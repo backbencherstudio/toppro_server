@@ -1,5 +1,3 @@
-// create-lead.dto.ts
-import { LeadStageStatus } from '@prisma/client';
 import { IsString, IsNotEmpty, IsEmail, IsDateString, IsArray, ArrayNotEmpty, IsOptional, IsEnum, ArrayUnique } from 'class-validator';
 
 export class CreateLeadDto {

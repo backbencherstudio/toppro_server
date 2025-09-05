@@ -5,6 +5,7 @@ import { LeadsService } from './lead.service';
 import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 import { UpdateLeadDto } from './dto/update-lead.dto';
 import { ApiBearerAuth } from '@nestjs/swagger';
+import { UpdateNotesDto } from './dto/update-notes.dto';
 
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
@@ -58,6 +59,28 @@ export class LeadsController {
     const ownerId = req.user.id;
     const workspaceId = req.user.workspace_id;
     return this.leadsService.deleteLead(id, ownerId, workspaceId);
+  }
+
+  //Leads Notes fields update endpoint....
+  @UseGuards(JwtAuthGuard)
+  @Put('update-notes/:leadId')
+  async updateNotes(
+    @Req() req,
+    @Param('leadId') leadId: string,
+    @Body() dto: UpdateNotesDto,
+  ) {
+    const ownerId = req.user.id;
+    const workspaceId = req.user.workspace_id;
+    return this.leadsService.updateNotes(leadId, workspaceId, ownerId, dto);
+  }
+
+
+  @UseGuards(JwtAuthGuard)
+  @Get('notes/:leadId')
+  async getSources(@Req() req, @Param('leadId') leadId: string) {
+    const ownerId = req.user.id;
+    const workspaceId = req.user.workspace_id;
+    return this.leadsService.getNotes(leadId, workspaceId, ownerId);
   }
 
 
