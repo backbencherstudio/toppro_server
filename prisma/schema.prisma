@@ -104,6 +104,7 @@ model User {
   PurchaseItems            PurchaseItems[]
 
   @@map("users")
+  Discussion Discussion[]
 }
 
 model Workspace {
@@ -143,6 +144,7 @@ model Workspace {
   PurchaseItems   PurchaseItems[]
 
   @@map("workspaces")
+  Discussion Discussion[]
 }
 
 enum UserType {
@@ -1571,6 +1573,7 @@ model Lead {
   @@index([pipeline_id])
   @@index([lead_stage_id])
   @@map("leads")
+  Discussion Discussion[]
 }
 
 model Task {
@@ -1631,6 +1634,27 @@ model Call {
   @@index([lead_id])
   @@map("calls")
 }
+
+model Discussion {
+  id         String   @id @default(uuid())
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now()) @updatedAt
+
+  lead_id    String
+  lead       Lead     @relation(fields: [lead_id], references: [id], onDelete: Cascade)
+
+  owner_id   String
+  owner      User     @relation(fields: [owner_id], references: [id], onDelete: Cascade)
+
+  workspace_id String
+  workspace    Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)  // New field
+
+  content    String   @db.Text
+
+  @@index([lead_id])
+  @@map("discussions")
+}
+
 
 model Activity {
   id         String   @id @default(uuid())
