@@ -3,13 +3,14 @@ import { CreateCallDto } from './dto/create-call.dto';
 import { UpdateCallDto } from './dto/update-call.dto';
 import { CallEntity } from './entities/call.entity';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { ActivityService } from '../activity/activity.service';
 
 @Injectable()
 export class CallService {
-  constructor(private prisma: PrismaService) { }
+  constructor(private prisma: PrismaService,  private activityService: ActivityService,) { }
 
 
-    private timeAgo(date: Date): string {
+  private timeAgo(date: Date): string {
     const now = new Date();
     const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
@@ -51,7 +52,7 @@ export class CallService {
     }
 
     // ✅ Create call with relation `connect`
-    return this.prisma.call.create({
+    const call = await this.prisma.call.create({
       data: {
         subject: dto.subject,
         call_type: dto.call_type,
@@ -80,6 +81,34 @@ export class CallService {
         created_at: true,
       },
     });
+
+    // 2️⃣ Get owner name (for message)
+    const owner = await this.prisma.user.findUnique({
+      where: { id: ownerId },
+      select: { name: true },
+    });
+
+    // // 3️⃣ Create activity
+    // await this.prisma.activity.create({
+    //   data: {
+    //     workspace_id: workspaceId,
+    //     owner_id: ownerId,
+    //     lead_id: dto.lead_id,
+    //     type: 'call',
+    //     message: `${owner?.name || 'Someone'} created a new Lead call`,
+    //   },
+    // });
+
+    // 3️⃣ Create activity via ActivityService
+    await this.activityService.createActivity(
+      workspaceId,
+      ownerId,
+      dto.lead_id,
+      'call',
+      `${owner?.name || 'Someone'} created a new Lead call`,
+    );
+
+    return call;
   }
 
 
