@@ -3,7 +3,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class LeadsSourceService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async addSourcesToLead(
     leadId: string,
@@ -46,7 +46,7 @@ export class LeadsSourceService {
     };
   }
 
-   async getSourcesForLead(leadId: string, workspaceId: string, ownerId: string) {
+  async getSourcesForLead(leadId: string, workspaceId: string, ownerId: string) {
     // 1️⃣ Verify the lead exists
     const lead = await this.prisma.lead.findFirst({
       where: {
@@ -116,7 +116,7 @@ export class LeadsSourceService {
       throw new NotFoundException(`Source with id ${sourceId} not found`);
     }
 
-        // 3️⃣ Check if source is attached to this lead
+    // 3️⃣ Check if source is attached to this lead
     const isAttached = lead.sources.some((s) => s.id === sourceId);
     if (!isAttached) {
       throw new BadRequestException(

@@ -96,7 +96,6 @@ model User {
   owned_leads              Lead[]                  @relation("lead_owner")
   primary_user_leads       Lead[]
   owned_activities         Activity[]              @relation("activity_owner")
-  actor_activities         Activity[]
   assigned_calls           Call[]                  @relation("call_assignee")
   Purchase                 Purchase[]
   Bill                     Bill[]
@@ -1671,9 +1670,6 @@ model Activity {
 
   type     String
   message  String
-  actor_id String?
-  actor    User?   @relation(fields: [actor_id], references: [id], onDelete: SetNull)
-  meta     Json?
 
   @@index([workspace_id, owner_id])
   @@index([lead_id])

@@ -1,34 +1,32 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Post, Body, Get, Query, Param, UseGuards, Req } from '@nestjs/common';
 import { DiscussionService } from './discussion.service';
 import { CreateDiscussionDto } from './dto/create-discussion.dto';
-import { UpdateDiscussionDto } from './dto/update-discussion.dto';
+import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 
-@Controller('discussion')
+@Controller('discussions')
 export class DiscussionController {
-  constructor(private readonly discussionService: DiscussionService) {}
+  constructor(private readonly discussionService: DiscussionService) { }
 
-  @Post()
-  create(@Body() createDiscussionDto: CreateDiscussionDto) {
-    return this.discussionService.create(createDiscussionDto);
+  @UseGuards(JwtAuthGuard)
+  @Post('create')
+  async create(@Req() req, @Body() dto: CreateDiscussionDto) {
+    const ownerId = req.user.id;
+    const workspaceId = req.user.workspace_id;
+    return this.discussionService.createDiscussion(dto, ownerId, workspaceId);
   }
 
-  @Get()
-  findAll() {
-    return this.discussionService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.discussionService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateDiscussionDto: UpdateDiscussionDto) {
-    return this.discussionService.update(+id, updateDiscussionDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.discussionService.remove(+id);
+  @UseGuards(JwtAuthGuard)
+  @Get('lead/:leadId')
+  async getAllDiscussions(
+    @Req() req,
+    @Param('leadId') leadId: string,
+  ) {
+    const ownerId = req.user.id;
+    const workspaceId = req.user.workspace_id;
+    return this.discussionService.getAllDiscussionsByLead(
+      leadId,
+      ownerId,
+      workspaceId,
+    );
   }
 }
