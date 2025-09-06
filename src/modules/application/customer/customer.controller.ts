@@ -27,8 +27,8 @@ export class CustomerController {
   @PermissionsGuard(Permissions.customer_create)
   @PermissionsGuard(Permissions.customer_manage)
   create(@Body() createCustomerDto: CreateCustomerDto, @Req() req) {
-    const { owner_id: ownerId, workspace_id: workspaceId } = req.user;
-    return this.customerService.create(createCustomerDto, ownerId, workspaceId);
+    const { owner_id: ownerId, workspace_id: workspaceId, id: userId } = req.user;
+    return this.customerService.create(createCustomerDto, ownerId, workspaceId, userId);
   }
 
   @Get('all')
@@ -40,8 +40,8 @@ export class CustomerController {
     @Query('limit') limit: number = 10, // Default to limit 10
     @Req() req,
   ) {
-    const { owner_id: ownerId, workspace_id: workspaceId } = req.user;
-    return this.customerService.findAll(page, limit, ownerId, workspaceId);
+    const { owner_id: ownerId, workspace_id: workspaceId, id: userId } = req.user;
+    return this.customerService.findAll(page, limit, ownerId, workspaceId, userId);
   }
 
   @Get(':id')
@@ -49,8 +49,8 @@ export class CustomerController {
   @PermissionsGuard(Permissions.customer_view)
   @PermissionsGuard(Permissions.customer_manage)
   findOne(@Param('id') id: string, @Req() req) {
-    const { owner_id: ownerId, workspace_id: workspaceId } = req.user;
-    return this.customerService.findOne(id, ownerId, workspaceId);
+    const { owner_id: ownerId, workspace_id: workspaceId, id: userId } = req.user;
+    return this.customerService.findOne(id, ownerId, workspaceId, userId);
   }
 
   @Put(':id')
@@ -62,9 +62,9 @@ export class CustomerController {
     @Body() updateCustomerDto: UpdateCustomerDto,
     @Req() req,
   ) {
-    const { owner_id: ownerId, workspace_id: workspaceId } = req.user;
+    const { owner_id: ownerId, workspace_id: workspaceId, id: userId } = req.user;
 
-    return this.customerService.update(id, updateCustomerDto, ownerId, workspaceId);
+    return this.customerService.update(id, updateCustomerDto, ownerId, workspaceId, userId);
   }
 
   @Delete(':id')
@@ -72,7 +72,7 @@ export class CustomerController {
   @PermissionsGuard(Permissions.customer_delete)
   @PermissionsGuard(Permissions.customer_manage)
   remove(@Param('id') id: string, @Req() req) {
-    const { owner_id: ownerId, workspace_id: workspaceId } = req.user;
-    return this.customerService.remove(id, ownerId, workspaceId);
+    const { owner_id: ownerId, workspace_id: workspaceId, id: userId } = req.user;
+    return this.customerService.remove(id, ownerId, workspaceId, userId);
   }
 }

@@ -25,7 +25,7 @@ export class PurchaseController {
     const {
       owner_id: ownerId,
       workspace_id: workspaceId,
-      sub: userId,
+      id: userId,
     } = req.user;
     return this.purchaseService.create(dto, ownerId, workspaceId, userId);
   }
@@ -35,7 +35,7 @@ export class PurchaseController {
     const {
       owner_id: ownerId,
       workspace_id: workspaceId,
-      sub: userId,
+      id: userId,
     } = req.user;
     return this.purchaseService.findAll(ownerId, workspaceId, userId);
   }
@@ -45,7 +45,7 @@ export class PurchaseController {
     const {
       owner_id: ownerId,
       workspace_id: workspaceId,
-      sub: userId,
+      id: userId,
     } = req.user;
     return this.purchaseService.findOne(id, ownerId, workspaceId, userId);
   }
@@ -56,7 +56,7 @@ export class PurchaseController {
     const {
       owner_id: ownerId,
       workspace_id: workspaceId,
-      sub: userId,
+      id: userId,
     } = req.user;
     return this.purchaseService.findAllVendorsByItemId(id, ownerId, workspaceId, userId);
   }
@@ -70,7 +70,7 @@ export class PurchaseController {
     const {
       owner_id: ownerId,
       workspace_id: workspaceId,
-      sub: userId,
+      id: userId,
     } = req.user;
     return this.purchaseService.update(id, dto, ownerId, workspaceId, userId);
   }
@@ -84,7 +84,7 @@ export class PurchaseController {
     const {
       owner_id: ownerId,
       workspace_id: workspaceId,
-      sub: userId,
+      id: userId,
     } = req.user;
     return this.purchaseService.deletePurchaseItems(
       purchaseId,
@@ -100,7 +100,7 @@ export class PurchaseController {
     const {
       owner_id: ownerId,
       workspace_id: workspaceId,
-      sub: userId,
+      id: userId,
     } = req.user;
     return this.purchaseService.softDelete(id, ownerId, workspaceId, userId);
   }

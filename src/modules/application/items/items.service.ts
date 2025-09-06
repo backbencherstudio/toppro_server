@@ -18,6 +18,8 @@ export class ItemsService {
     owner_id: string,
     workspace_id: string,
   ) {
+
+    console.log('Creating item...', dto, user_id, owner_id, workspace_id);
     // Clean up "null" strings → real nulls, so relations don’t break
     const cleaned = {
       ...dto,
@@ -27,15 +29,15 @@ export class ItemsService {
       image: nullify(dto.image),
       vendor_id: nullify(dto.vendor_id),
       itemType_id: nullify(dto.itemType_id),
-      invoice_id: nullify(dto.invoice_id),
+      invoice_id: nullify(dto.invoice_id || null),
     };
 
     const item = await this.prisma.items.create({
       data: {
         ...cleaned,
-        user_id,
-        owner_id,
-        workspace_id,
+        user_id: user_id || null,
+        owner_id: owner_id === null ? user_id : owner_id,
+        workspace_id: workspace_id,
       },
     });
 
