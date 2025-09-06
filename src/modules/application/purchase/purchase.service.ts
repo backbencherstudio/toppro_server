@@ -496,7 +496,7 @@ async deletePurchaseItems(
   // Fetch the items to see if they exist before updating
   const existingItems = await this.prisma.purchaseItems.findMany({
     where: {
-        Purchase: {
+        purchase: {
       id: purchaseId, 
     },
       id: itemId,
