@@ -12,29 +12,31 @@ export class CustomerService {
     createCustomerDto: CreateCustomerDto,
     owner_id: string,
     workspace_id: string,
+    user_id: string,
   ) {
     return this.prisma.customer.create({
       data: {
         ...createCustomerDto,
         workspace_id: owner_id,
-        owner_id: workspace_id,
+        owner_id: workspace_id || user_id,
       },
     });
   }
 
   // Get all customers with pagination and selected fields
-  async  findAll(
+  async findAll(
     page: number = 1,
     limit: number = 10,
     ownerId: string,
     workspaceId: string,
+    userId: string,
   ) {
     const skip = (page - 1) * limit;
 
     const [customers, total] = await Promise.all([
       this.prisma.customer.findMany({
         where: {
-          owner_id: ownerId,
+          owner_id: ownerId || userId,
           workspace_id: workspaceId,
         },
         skip,
@@ -68,9 +70,18 @@ export class CustomerService {
   }
 
   // Get a customer by ID
-  async findOne(id: string, owner_id: string, workspace_id: string) {
+  async findOne(
+    id: string,
+    owner_id: string,
+    workspace_id: string,
+    user_id: string,
+  ) {
     return this.prisma.customer.findUnique({
-      where: { id, owner_id, workspace_id },
+      where: {
+        id,
+        owner_id: owner_id || user_id,
+        workspace_id,
+      },
     });
   }
 
@@ -80,17 +91,31 @@ export class CustomerService {
     updateCustomerDto: UpdateCustomerDto,
     owner_id: string,
     workspace_id: string,
+    user_id: string,
   ) {
     return this.prisma.customer.update({
-      where: { id, owner_id, workspace_id },
+      where: {
+        id,
+        owner_id: owner_id || user_id,
+        workspace_id,
+      },
       data: updateCustomerDto,
     });
   }
 
   // Delete a customer by ID
-  async remove(id: string, owner_id: string, workspace_id: string) {
+  async remove(
+    id: string,
+    owner_id: string,
+    workspace_id: string,
+    user_id: string,
+  ) {
     return this.prisma.customer.delete({
-      where: { id, owner_id, workspace_id },
+      where: {
+        id,
+        owner_id: owner_id || user_id,
+        workspace_id,
+      },
     });
   }
 }

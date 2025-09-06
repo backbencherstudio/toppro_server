@@ -44,7 +44,7 @@ export class UserController {
     const {
       owner_id: ownerId,
       workspace_id: workspaceId,
-      sub: userId,
+      id: userId,
     } = req.user;
     return this.userService.getAllUsers(ownerId, workspaceId, userId);
   }
@@ -88,7 +88,7 @@ export class UserController {
     const {
       owner_id: ownerId,
       workspace_id: workspaceId,
-      sub: userId,
+      id: userId,
     } = req.user;
     return this.userService.getUsersWithCrmAccess(ownerId, workspaceId, userId);
   }
@@ -99,7 +99,7 @@ export class UserController {
     const {
       owner_id: ownerId,
       workspace_id: workspaceId,
-      sub: userId,
+      id: userId,
     } = req.user;
     return this.userService.getUsersWithPurchaseAccess(ownerId, workspaceId, userId);
   }

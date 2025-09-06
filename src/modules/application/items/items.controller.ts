@@ -16,7 +16,7 @@ import { UpdateItemDto } from './dto/update-item.dto';
 import { ItemsService } from './items.service';
 
 interface JwtUser {
-  sub: string;
+  id: string;
   owner_id: string;
   workspace_id: string;
 }
@@ -28,7 +28,9 @@ export class ItemsController {
 
   @Post('create')
   async create(@Body() dto: CreateItemDto, @Req() req: any) {
-    const { sub: user_id, owner_id, workspace_id } = req.user as JwtUser;
+    const { id:user_id, owner_id, workspace_id } = req.user;
+
+    console.log('ItemsController', user_id, owner_id, workspace_id);
     return this.itemsService.create(dto, user_id, owner_id, workspace_id);
   }
 

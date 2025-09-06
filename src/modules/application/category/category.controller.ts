@@ -25,7 +25,7 @@ export class CategoryController {
     const {
       owner_id: ownerId,
       workspace_id: workspaceId,
-      sub: user_id,
+      id: user_id,
     } = req.user;
     return this.categoryService.createItemCategory(
       dto,
