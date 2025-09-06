@@ -51,15 +51,15 @@ export class PurchaseController {
   }
 
 
-  @Get(':id/vendors')
-  async findAllVendor(@Param('id') id: string, @Req() req: any) {
-    const {
-      owner_id: ownerId,
-      workspace_id: workspaceId,
-      id: userId,
-    } = req.user;
-    return this.purchaseService.findAllVendorsByItemId(id, ownerId, workspaceId, userId);
-  }
+  // @Get(':id/vendors')
+  // async findAllVendor(@Param('id') id: string, @Req() req: any) {
+  //   const {
+  //     owner_id: ownerId,
+  //     workspace_id: workspaceId,
+  //     id: userId,
+  //   } = req.user;
+  //   return this.purchaseService.findAllVendorsByItemId(id, ownerId, workspaceId, userId);
+  // }
 
   @Patch(':id')
   async update(

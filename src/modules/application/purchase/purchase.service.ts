@@ -204,7 +204,6 @@ export class PurchaseService {
 
       const data: any = {
         purchase_no: purchaseNo,
-        item_id: dto.item_id,
         purchase_date: dto.purchase_date
           ? new Date(dto.purchase_date)
           : undefined,
@@ -239,7 +238,6 @@ export class PurchaseService {
         data,
         include: {
           purchaseItems: true,
-          Items: true,
         },
       });
 
@@ -311,45 +309,6 @@ export class PurchaseService {
     if (!row) throw new NotFoundException('Purchase not found');
     return row;
   }
-
-  // ------- FIND ALL VENDORS BY ITEM ID -------
-  async findAllVendorsByItemId(
-  itemId: string,
-  ownerId: string,
-  workspaceId: string,
-  userId: string,
-) {
-  // 1️⃣ Fetch purchases with the given itemId and associated vendor details
-  // const purchases = await this.prisma.purchase.findMany({
-  //   where: {
-  //     purchaseItems: {
-  //       some: { // Filter purchaseItems to only include those with the specified itemId
-  //         item_id: itemId,
-  //       },
-  //     },
-  //     owner_id: ownerId || userId, // Ensure the correct ownerId
-  //     workspace_id: workspaceId, // Ensure the correct workspaceId
-  //     deleted_at: null, // Only consider active purchases
-  //   },
-  //   include: {
-  //     vendor: {
-  //       select: {
-  //         name: true, // Get vendor name
-  //       },
-  //     },
-  //     purchase_date: true, // Get the purchase date
-  //   },
-  // });
-
-  // // 2️⃣ Format the result to return only vendor name and purchase date
-  // const vendors = purchases.map((purchase) => ({
-  //   vendorName: purchase.vendor?.name, // Vendor name
-  //   purchaseDate: purchase.purchase_date, // Purchase date
-  // }));
-
-  // return vendors;
-}
-
 
   // ------- UPDATE (header patch + replace lines if provided) -------
   async update(
@@ -537,7 +496,7 @@ async deletePurchaseItems(
   // Fetch the items to see if they exist before updating
   const existingItems = await this.prisma.purchaseItems.findMany({
     where: {
-        purchase: {
+        Purchase: {
       id: purchaseId, 
     },
       id: itemId,
