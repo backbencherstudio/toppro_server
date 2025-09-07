@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsDateString } from 'class-validator';
+import { IsDateString, IsOptional, IsString } from 'class-validator';
 
 export class CreateLogTimeDto {
   @IsString()
@@ -8,11 +8,18 @@ export class CreateLogTimeDto {
   date: string;
 
   @IsString()
-  user_id: string;
+  @IsOptional()
+  user_id?: string;
 
   @IsString()
-  workspace_id: string;
+  @IsOptional()
+  workspace_id?: string;
 
   @IsString()
-  item_id: string;
+  @IsOptional()
+  item_id?: string;
+
+  @IsString()
+  @IsOptional()
+  owner_id?: string;
 }

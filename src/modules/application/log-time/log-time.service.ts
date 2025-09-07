@@ -14,7 +14,7 @@ export class LogTimeService {
     workspaceId: string,
     itemId: string,
   ) {
-    return await this.prisma.logTime.create({
+    const logTime = await this.prisma.logTime.create({
       data: {
         description: createLogTimeDto.description,
         date: createLogTimeDto.date,
@@ -24,29 +24,46 @@ export class LogTimeService {
         item_id: itemId,
       },
     });
+
+    return{
+      success: true,
+      message: 'LogTime created successfully',
+      // data: logTime
+    }
   }
 
   // GET all logTime entries
-  async findAll(
-    userId: string,
-    ownerId: string,
-    workspaceId: string,
-    itemId: string,
-  ) {
-    return this.prisma.logTime.findMany({
-      where: {
-        deleted_at: null,
-        owner_id: ownerId || userId,
-        workspace_id: workspaceId,
-        item_id: itemId,
-      },
-      select:{
-        id: true,
-        description: true,
-        date: true
-      }
-    });
+async findAll(
+  userId: string,
+  ownerId: string,
+  workspaceId: string,
+  itemId: string,
+) {
+  const logTime = await this.prisma.logTime.findMany({
+    where: {
+      deleted_at: null,
+      owner_id: ownerId || userId,
+      workspace_id: workspaceId,
+      item_id: itemId,
+    }
+  });
+
+  // If no logTimes are found, return a 'not found' error
+  if (logTime.length === 0) {
+    throw new NotFoundException('LogTime not found');
   }
+
+  // Returning the results
+  return {
+    success: true,
+    message: 'LogTime found successfully',
+    data: logTime.map((log) => ({
+      id: log.id || null,
+      description: log.description || null,
+      date: log.date || null,
+    })),
+  };
+}
 
 
   // DELETE a logTime entry
@@ -59,9 +76,15 @@ export class LogTimeService {
       throw new NotFoundException(`LogTime with id ${id} not found`);
     }
 
-    return this.prisma.logTime.update({
+    const deletedLogTime = await this.prisma.logTime.update({
       where: { id },
       data: { deleted_at: new Date() },
     });
+
+    return {
+      success: true,
+      message: 'LogTime deleted successfully',
+      data: deletedLogTime,
+    };
   }
 }
