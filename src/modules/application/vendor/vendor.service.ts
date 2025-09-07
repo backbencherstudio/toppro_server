@@ -9,21 +9,40 @@ export class VendorService {
   constructor(private readonly prisma: PrismaService) {}
 
   // Create a new vendor
-  async create(
-    createVendorDto: CreateVendorDto,
-    ownerId: string,
-    workspaceId: string,
-    userId: string,
-  ) {
-    return this.prisma.vendor.create({
-      data: {
-        ...createVendorDto,
-        workspace_id: workspaceId,
-        owner_id: ownerId,
-        // user_id: userId,
-      },
-    });
+async create(
+  createVendorDto: CreateVendorDto,
+  ownerId: string,
+  workspaceId: string,
+  userId: string,
+) {
+  // Check if the taxNumber already exists
+  const existingVendor = await this.prisma.vendor.findUnique({
+    where: { taxNumber: createVendorDto.taxNumber },
+  });
+
+  if (existingVendor) {
+    return {
+      success: false,
+      message: 'A vendor with this tax number already exists.',
+    };
   }
+
+  // Proceed to create the new vendor
+  const vendor = await this.prisma.vendor.create({
+    data: {
+      ...createVendorDto,
+      workspace_id: workspaceId,
+      owner_id: ownerId || userId,
+    },
+  });
+
+  return {
+    success: true,
+    message: 'Vendor created successfully!',
+    vendor,
+  };
+}
+
 
   // Create vendor and link it to an item
   async createWithItem(

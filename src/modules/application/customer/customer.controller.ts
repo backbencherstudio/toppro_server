@@ -24,8 +24,8 @@ export class CustomerController {
 
   @Post()
   @UseGuards(JwtAuthGuard, RolePermissionGuard)
-  @PermissionsGuard(Permissions.customer_create)
-  @PermissionsGuard(Permissions.customer_manage)
+  // @PermissionsGuard(Permissions.customer_create)
+  // @PermissionsGuard(Permissions.customer_manage)
   create(@Body() createCustomerDto: CreateCustomerDto, @Req() req) {
     const { owner_id: ownerId, workspace_id: workspaceId, id: userId } = req.user;
     return this.customerService.create(createCustomerDto, ownerId, workspaceId, userId);

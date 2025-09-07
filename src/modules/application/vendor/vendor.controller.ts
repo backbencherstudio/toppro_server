@@ -24,8 +24,8 @@ export class VendorController {
 
   @Post()
   @UseGuards(JwtAuthGuard, RolePermissionGuard)
-  @PermissionsGuard(Permissions.vendor_create)
-  @PermissionsGuard(Permissions.vendor_manage)
+  // @PermissionsGuard(Permissions.vendor_create)
+  // @PermissionsGuard(Permissions.vendor_manage)
   create(@Body() createVendorDto: CreateVendorDto, @Req() req) {
     const {
       owner_id: ownerId,
