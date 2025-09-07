@@ -19,7 +19,7 @@ export class CategoryService {
       data: {
         name: dto.name,
         color: dto.color,
-        owner_id: ownerId,
+        owner_id: ownerId || userId,
         workspace: { connect: { id: workspaceId } },
       },
     });
@@ -30,16 +30,16 @@ export class CategoryService {
     };
   }
 
-  async findAllItemCategories(ownerId: string, workspaceId: string) {
+  async findAllItemCategories(ownerId: string, workspaceId: string, userId: string) {
     const data = await this.prisma.itemCategory.findMany({
-      where: { owner_id: ownerId, workspace_id: workspaceId },
+      where: { owner_id: ownerId || userId, workspace_id: workspaceId },
     });
     return { success: true, data };
   }
 
-  async findItemCategoryOne(id: string, ownerId: string, workspaceId: string) {
+  async findItemCategoryOne(id: string, ownerId: string, workspaceId: string, userId: string) {
     const data = await this.prisma.itemCategory.findFirst({
-      where: { id: id, owner_id: ownerId, workspace_id: workspaceId },
+      where: { id: id, owner_id: ownerId || userId, workspace_id: workspaceId },
     });
     return { success: true, data };
   }
@@ -49,9 +49,10 @@ export class CategoryService {
     dto: UpdateCategoryDto,
     ownerId: string,
     workspaceId: string,
+    userId: string,
   ) {
     const updated = await this.prisma.itemCategory.update({
-      where: { id, owner_id: ownerId, workspace_id: workspaceId },
+      where: { id, owner_id: ownerId || userId, workspace_id: workspaceId },
       data: dto,
     });
     return {
@@ -61,9 +62,9 @@ export class CategoryService {
     };
   }
 
-  async removeItemCategory(id: string, ownerId: string, workspaceId: string) {
+  async removeItemCategory(id: string, ownerId: string, workspaceId: string, userId: string) {
     const deleted = await this.prisma.itemCategory.delete({
-      where: { id, owner_id: ownerId, workspace_id: workspaceId },
+      where: { id, owner_id: ownerId || userId, workspace_id: workspaceId },
     });
     return {
       success: true,
