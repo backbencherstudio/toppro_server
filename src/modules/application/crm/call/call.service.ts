@@ -1,7 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { CreateCallDto } from './dto/create-call.dto';
-import { UpdateCallDto } from './dto/update-call.dto';
-import { CallEntity } from './entities/call.entity';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { ActivityService } from '../activity/activity.service';
 
@@ -88,16 +86,6 @@ export class CallService {
       select: { name: true },
     });
 
-    // // 3️⃣ Create activity
-    // await this.prisma.activity.create({
-    //   data: {
-    //     workspace_id: workspaceId,
-    //     owner_id: ownerId,
-    //     lead_id: dto.lead_id,
-    //     type: 'call',
-    //     message: `${owner?.name || 'Someone'} created a new Lead call`,
-    //   },
-    // });
 
     // 3️⃣ Create activity via ActivityService
     await this.activityService.createActivity(
