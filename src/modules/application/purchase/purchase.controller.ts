@@ -25,7 +25,7 @@ export class PurchaseController {
     const {
       owner_id: ownerId,
       workspace_id: workspaceId,
-      id: userId,
+      sub: userId,
     } = req.user;
     return this.purchaseService.create(dto, ownerId, workspaceId, userId);
   }
@@ -35,7 +35,7 @@ export class PurchaseController {
     const {
       owner_id: ownerId,
       workspace_id: workspaceId,
-      id: userId,
+      sub: userId,
     } = req.user;
     return this.purchaseService.findAll(ownerId, workspaceId, userId);
   }
@@ -45,21 +45,21 @@ export class PurchaseController {
     const {
       owner_id: ownerId,
       workspace_id: workspaceId,
-      id: userId,
+      sub: userId,
     } = req.user;
     return this.purchaseService.findOne(id, ownerId, workspaceId, userId);
   }
 
 
-  // @Get(':id/vendors')
-  // async findAllVendor(@Param('id') id: string, @Req() req: any) {
-  //   const {
-  //     owner_id: ownerId,
-  //     workspace_id: workspaceId,
-  //     id: userId,
-  //   } = req.user;
-  //   return this.purchaseService.findAllVendorsByItemId(id, ownerId, workspaceId, userId);
-  // }
+  @Get(':id/vendors')
+  async findAllVendor(@Param('id') id: string, @Req() req: any) {
+    const {
+      owner_id: ownerId,
+      workspace_id: workspaceId,
+      sub: userId,
+    } = req.user;
+    return this.purchaseService.findAllVendorsByItemId(id, ownerId, workspaceId, userId);
+  }
 
   @Patch(':id')
   async update(
@@ -70,7 +70,7 @@ export class PurchaseController {
     const {
       owner_id: ownerId,
       workspace_id: workspaceId,
-      id: userId,
+      sub: userId,
     } = req.user;
     return this.purchaseService.update(id, dto, ownerId, workspaceId, userId);
   }
@@ -84,7 +84,7 @@ export class PurchaseController {
     const {
       owner_id: ownerId,
       workspace_id: workspaceId,
-      id: userId,
+      sub: userId,
     } = req.user;
     return this.purchaseService.deletePurchaseItems(
       purchaseId,
@@ -100,7 +100,7 @@ export class PurchaseController {
     const {
       owner_id: ownerId,
       workspace_id: workspaceId,
-      id: userId,
+      sub: userId,
     } = req.user;
     return this.purchaseService.softDelete(id, ownerId, workspaceId, userId);
   }

@@ -8,20 +8,40 @@ export class CustomerService {
   constructor(private readonly prisma: PrismaService) {}
 
   // Create a new customer
-  async create(
-    createCustomerDto: CreateCustomerDto,
-    owner_id: string,
-    workspace_id: string,
-    user_id: string,
-  ) {
-    return this.prisma.customer.create({
-      data: {
-        ...createCustomerDto,
-        workspace_id: owner_id,
-        owner_id: workspace_id || user_id,
-      },
-    });
+async create(
+  createCustomerDto: CreateCustomerDto,
+  owner_id: string,
+  workspace_id: string,
+  user_id: string,
+) {
+  // Example of checking for unique email before creating
+  const existingCustomer = await this.prisma.customer.findUnique({
+    where: { email: createCustomerDto.email }, 
+  });
+
+  if (existingCustomer) {
+    return {
+      success: false,
+      message: 'A customer with this email already exists.',
+    };
   }
+
+  // If no conflict, create the customer
+  const customer = await this.prisma.customer.create({
+    data: {
+      ...createCustomerDto,
+      workspace_id: workspace_id,
+      owner_id: owner_id || user_id,
+    },
+  });
+
+  return {
+    success: true,
+    message: 'Customer created successfully!',
+    customer,
+  };
+}
+
 
   // Get all customers with pagination and selected fields
   async findAll(

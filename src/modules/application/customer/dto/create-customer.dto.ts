@@ -75,11 +75,11 @@ export class CreateCustomerDto {
   @IsString()
   shippingZip?: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
   owner_id: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
   workspace_id: string;
 }

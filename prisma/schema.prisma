@@ -289,6 +289,7 @@ model Invoice {
   @@map("invoices")
 }
 
+
 model Items {
   id         String    @id @default(cuid())
   created_at DateTime  @default(now())
@@ -313,21 +314,21 @@ model Items {
   owner_id        String?
   workspace_id    String?
   user_id         String?
-  user            User?      @relation(fields: [user_id], references: [id])
-  workspace       Workspace? @relation(fields: [workspace_id], references: [id])
+  user            User?      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  workspace       Workspace? @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
 
-  unit         Unit?         @relation(fields: [unit_id], references: [id])
-  tax          Tax?          @relation(fields: [tax_id], references: [id])
-  itemCategory ItemCategory? @relation(fields: [itemCategory_id], references: [id])
+  unit         Unit?         @relation(fields: [unit_id], references: [id], onDelete: Cascade)
+  tax          Tax?          @relation(fields: [tax_id], references: [id], onDelete: Cascade)
+  itemCategory ItemCategory? @relation(fields: [itemCategory_id], references: [id], onDelete: Cascade)
   vendor       Vendor[]
-  itemType     ItemType?     @relation(fields: [itemType_id], references: [id])
+  itemType     ItemType?     @relation(fields: [itemType_id], references: [id], onDelete: Cascade)
   invoice      Invoice[]
 
   unit_price  Float? @default(0)
   total_price Float? @default(0)
 
   leads           Lead[]          @relation("LeadItems")
-  Purchase        Purchase[]
+  Purchase        Purchase[]      @relation("PurchaseItems")
   AccountType     AccountType?    @relation(fields: [account_type_id], references: [id])
   account_type_id String?
   PurchaseItems   PurchaseItems[]
@@ -340,7 +341,7 @@ model Purchase {
   created_at    DateTime  @default(now())
   updated_at    DateTime  @default(now())
   deleted_at    DateTime?
-  purchase_date DateTime? // <-- use this as the "purchase date" you send from client
+  purchase_date DateTime?
   status        Status?   @default(DRAFT)
 
   // MUST-HAVE header fields
@@ -348,7 +349,7 @@ model Purchase {
   vendor_id       String?
   billing_type_id String?
   category_id     String?
-  purchase_no     String  @unique // <-- auto-generated like PUR0000001 (see service)
+  purchase_no     String  @unique
 
   // Multitenancy / audit
   owner_id     String?
@@ -356,19 +357,18 @@ model Purchase {
   user_id      String?
 
   // Relations (headers)
-  AccountType AccountType?  @relation(fields: [account_type_id], references: [id])
-  Vendor      Vendor?       @relation(fields: [vendor_id], references: [id])
-  BillingType BillCategory? @relation(fields: [billing_type_id], references: [id])
-  Category    ItemCategory? @relation(fields: [category_id], references: [id])
-  user        User?         @relation(fields: [user_id], references: [id])
-  workspace   Workspace?    @relation(fields: [workspace_id], references: [id])
+  AccountType AccountType?  @relation(fields: [account_type_id], references: [id], onDelete: Cascade)
+  Vendor      Vendor?       @relation(fields: [vendor_id], references: [id], onDelete: Cascade)
+  BillingType BillCategory? @relation(fields: [billing_type_id], references: [id], onDelete: Cascade)
+  Category    ItemCategory? @relation(fields: [category_id], references: [id], onDelete: Cascade)
+  user        User?         @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  workspace   Workspace?    @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
 
   // One purchase -> many line items
   Bill          Bill[]
   Tax           Tax[]
   purchaseItems PurchaseItems[]
-  Items         Items?          @relation(fields: [itemsId], references: [id])
-  itemsId       String?
+  Items         Items[]         @relation("PurchaseItems")
 
   @@map("purchases")
 }
@@ -385,8 +385,7 @@ model PurchaseItems {
   image       String?
   discount    Float?    @default(0)
   total       Float?    @default(0)
-
-  item Items[]
+  item_id     String
 
   invoice_id      String?
   tax_id          String?
@@ -402,25 +401,27 @@ model PurchaseItems {
   account_type_id String?
   purchase_id     String?
 
-  user      User?      @relation(fields: [user_id], references: [id])
-  workspace Workspace? @relation(fields: [workspace_id], references: [id])
+  user      User?      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  workspace Workspace? @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
 
-  unit         Unit?         @relation(fields: [unit_id], references: [id])
-  tax          Tax?          @relation(fields: [tax_id], references: [id])
-  itemCategory ItemCategory? @relation(fields: [itemCategory_id], references: [id])
+  Items        Items         @relation(fields: [item_id], references: [id], onDelete: Cascade)
+  unit         Unit?         @relation(fields: [unit_id], references: [id], onDelete: Cascade)
+  tax          Tax?          @relation(fields: [tax_id], references: [id], onDelete: Cascade)
+  itemCategory ItemCategory? @relation(fields: [itemCategory_id], references: [id], onDelete: Cascade)
   vendor       Vendor[]
-  itemType     ItemType?     @relation(fields: [itemType_id], references: [id])
+  itemType     ItemType?     @relation(fields: [itemType_id], references: [id], onDelete: Cascade)
   invoice      Invoice[]
 
   unit_price  Float? @default(0)
   total_price Float? @default(0)
 
   leads        Lead[]
-  purchase    Purchase? @relation(fields: [purchase_id], references: [id])
+  purchase     Purchase?    @relation(fields: [purchase_id], references: [id])
   Account_type AccountType? @relation(fields: [account_type_id], references: [id])
 
   @@map("Purchase_items")
 }
+
 
 enum Status {
   PENDING
@@ -490,7 +491,7 @@ model ItemCategory {
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @default(now()) @updatedAt
   Items         Items[]
-  Purchase      Purchase[]
+  Purchase      Purchase[] 
   PurchaseItems PurchaseItems[]
 }
 
