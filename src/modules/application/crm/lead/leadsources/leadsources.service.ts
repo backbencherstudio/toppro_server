@@ -1,9 +1,10 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { ActivityService } from '../../activity/activity.service';
 
 @Injectable()
 export class LeadsSourceService {
-  constructor(private prisma: PrismaService) { }
+  constructor(private prisma: PrismaService, private activityService: ActivityService) { }
 
   async addSourcesToLead(
     leadId: string,
@@ -36,6 +37,20 @@ export class LeadsSourceService {
         },
       },
     });
+
+    const owner = await this.prisma.user.findUnique({
+      where: { id: ownerId },
+      select: { name: true },
+    });
+
+    // 3️⃣ Create activity via ActivityService
+    await this.activityService.createActivity(
+      workspaceId,
+      ownerId,
+      lead.id,
+      'source',
+      `${owner?.name || 'Someone'} update sources`,
+    );
 
     // ✅ Return clean response
     return {
