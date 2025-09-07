@@ -3,8 +3,7 @@ import { IsInt, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 
 export class CreatePurchaseItemDto {
   // required for connect
-  @IsString() 
-  item_id: string;
+  @IsString() item_id: string;
 
   // optional connects
   @IsOptional() 
