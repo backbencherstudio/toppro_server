@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Req, UseGuards } from '@nestjs/common';
 import { CreatePipelineDto } from './dto/create-pipeline.dto';
 import { PipelineService } from './pipelines.service';
 import { ApiBearerAuth } from '@nestjs/swagger';
@@ -12,29 +12,36 @@ export class PipelineController {
   constructor(private readonly pipelineService: PipelineService) { }
 
   @Post()
-  create(@Body() dto: CreatePipelineDto) {
-    return this.pipelineService.create(dto);
+  async create(@Req() req, @Body() dto: CreatePipelineDto) {
+    const ownerId = req.user.id;           // Extract from JWT token
+    const workspaceId = req.user.workspace_id;
+    return this.pipelineService.create(dto, ownerId, workspaceId);
   }
 
   // LIST: params contain workspace_id & owner_id
-  @Get('workspaceid/:workspace_id/ownerid/:owner_id')
-  findAll(
-    @Param('workspace_id') workspace_id: string,
-    @Param('owner_id') owner_id: string,
-  ) {
-    return this.pipelineService.findAll(workspace_id, owner_id);
+  @Get()
+ async findAll(@Req() req) {
+    const ownerId = req.user.id;  // Extract from JWT token
+    const workspaceId = req.user.workspace_id;
+    return this.pipelineService.findAll(ownerId, workspaceId);
   }
-   @Put(':id')
-  update(
+  @Put(':id')
+  async update(
+    @Req() req,
     @Param('id') id: string,
     @Body() dto: Pick<CreatePipelineDto, 'name'>,
   ) {
-    return this.pipelineService.updateById(id, dto);
+    const ownerId = req.user.id;           // Extract from JWT token
+    const workspaceId = req.user.workspace_id;
+    return this.pipelineService.updateById(id, dto, ownerId, workspaceId);
   }
 
   // DELETE: by pipeline id only
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.pipelineService.removeById(id);
+  async remove(@Req() req, @Param('id') id: string) {
+    const ownerId = req.user.id;           // Extract from JWT token
+    const workspaceId = req.user.workspace_id;
+    return this.pipelineService.removeById(id, ownerId, workspaceId);
   }
+
 }

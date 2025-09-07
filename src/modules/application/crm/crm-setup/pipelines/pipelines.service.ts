@@ -4,13 +4,13 @@ import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class PipelineService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   // CREATE: body theke workspace_id, owner_id
-  async create(dto: CreatePipelineDto) {
+  async create(dto: CreatePipelineDto, ownerId: string, workspaceId: string) {
     // unique name per workspace
     const dup = await this.prisma.pipeline.findFirst({
-      where: { workspace_id: dto.workspace_id, name: dto.name },
+      where: { owner_id: ownerId, workspace_id: workspaceId, name: dto.name },
       select: { id: true },
     });
     if (dup) throw new BadRequestException('Pipeline name already exists in this workspace');
@@ -18,56 +18,22 @@ export class PipelineService {
     const pipeline = await this.prisma.pipeline.create({
       data: {
         name: dto.name,
-        workspace_id: dto.workspace_id,
-        owner_id: dto.owner_id,
+        owner_id: ownerId,
+        workspace_id: workspaceId,
       },
     });
 
     return { message: 'Pipeline created successfully', pipeline };
   }
 
-  async findAll(workspace_id: string, owner_id: string) {
+  async findAll(ownerId: string, workspaceId: string) {
     const pipelines = await this.prisma.pipeline.findMany({
-      where: { workspace_id, owner_id },
+      where: { owner_id: ownerId, workspace_id: workspaceId },
     });
     return { message: 'Pipelines retrieved successfully', pipelines };
   }
 
-  // // UPDATE: params -> id, workspace_id, owner_id | body -> { name }
-  // async update(id: string, workspace_id: string, owner_id: string, dto: { name: string }) {
-  //   const existing = await this.prisma.pipeline.findFirst({
-  //     where: { id, workspace_id, owner_id },
-  //     select: { id: true, name: true },
-  //   });
-  //   if (!existing) throw new NotFoundException('Pipeline not found for this scope');
-
-  //   if (dto.name && dto.name !== existing.name) {
-  //     const dup = await this.prisma.pipeline.findFirst({
-  //       where: { workspace_id, name: dto.name },
-  //       select: { id: true },
-  //     });
-  //     if (dup) throw new BadRequestException('Another pipeline with this name already exists in this workspace');
-  //   }
-
-  //   const updatedPipeline = await this.prisma.pipeline.update({
-  //     where: { id },
-  //     data: { name: dto.name },
-  //   });
-
-  //   return { message: 'Pipeline updated successfully', updatedPipeline };
-  // }
-
-  // // DELETE: params -> id, workspace_id, owner_id
-  // async remove(id: string, workspace_id: string, owner_id: string) {
-  //   const res = await this.prisma.pipeline.deleteMany({
-  //     where: { id, workspace_id, owner_id },
-  //   });
-  //   if (res.count === 0) throw new NotFoundException('Pipeline not found for this scope');
-
-  //   return { message: 'Pipeline deleted successfully' };
-  // }
-
-  async updateById(id: string, dto: { name: string }) {
+  async updateById(id: string, dto: { name: string }, ownerId: string, workspaceId: string) {
     // Load existing to get workspace_id for uniqueness check
     const existing = await this.prisma.pipeline.findUnique({
       where: { id },
@@ -81,7 +47,7 @@ export class PipelineService {
     if (dto.name && dto.name !== existing.name) {
       const dup = await this.prisma.pipeline.findFirst({
         where: {
-          workspace_id: existing.workspace_id,
+          workspace_id: workspaceId,
           name: dto.name,
           NOT: { id },
         },
@@ -93,7 +59,7 @@ export class PipelineService {
     }
 
     const updatedPipeline = await this.prisma.pipeline.update({
-      where: { id },
+      where: { id, workspace_id: workspaceId, owner_id: ownerId },
       data: { name: dto.name },
     });
 
@@ -101,9 +67,9 @@ export class PipelineService {
   }
 
   // DELETE by pipeline id only
-  async removeById(id: string) {
+  async removeById(id: string, ownerId: string, workspaceId: string) {
     try {
-      await this.prisma.pipeline.delete({ where: { id } });
+      await this.prisma.pipeline.delete({ where: { id, owner_id: ownerId, workspace_id: workspaceId } });
       return { message: 'Pipeline deleted successfully' };
     } catch (e: any) {
       // Prisma P2025 -> record not found
