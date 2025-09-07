@@ -1,5 +1,5 @@
 // leads.controller.ts
-import { Controller, Post, Get, Put, Body, Req, UseGuards, Param, Query, Delete } from '@nestjs/common';
+import { Controller, Post, Get, Put, Body, Req, UseGuards, Param, Query, Delete, BadRequestException } from '@nestjs/common';
 import { CreateLeadDto } from './dto/create-lead.dto';
 import { LeadsService } from './lead.service';
 import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
@@ -24,6 +24,19 @@ export class LeadsController {
     return this.leadsService.createLead(dto, ownerId, workspaceId, userId);
   }
 
+  // @Post('create/leads')
+  // async createLead(@Body() dto: CreateLeadDto, @Req() req) {
+  //   const { id: userId, workspace_id: workspaceId, owner_id: ownerId } = req.user;
+  //   console.log("Request User:", req.user);
+
+
+  //   // Ensure that the logged-in user is an owner
+  //   // if (!userId) {
+  //   //   throw new BadRequestException('User ID is missing from token');
+  //   // }
+
+  //   return this.leadsService.createLead(dto, userId, workspaceId, ownerId);
+  // }
 
   @Get()
   async getAll(
