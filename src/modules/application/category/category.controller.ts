@@ -37,14 +37,14 @@ export class CategoryController {
 
   @Get('items')
   findAllItemCategories(@Req() req) {
-    const { owner_id: ownerId, workspace_id: workspaceId } = req.user;
-    return this.categoryService.findAllItemCategories(ownerId, workspaceId);
+    const { owner_id: ownerId, workspace_id: workspaceId, id: userId } = req.user;
+    return this.categoryService.findAllItemCategories(ownerId, workspaceId, userId);
   }
 
   @Get('items/:id')
   findItemCategoryOne(@Req() req, @Param('id') id: string) {
-    const { owner_id: ownerId, workspace_id: workspaceId } = req.user;
-    return this.categoryService.findItemCategoryOne(id, ownerId, workspaceId);
+    const { owner_id: ownerId, workspace_id: workspaceId, id: userId } = req.user;
+    return this.categoryService.findItemCategoryOne(id, ownerId, workspaceId, userId);
   }
 
   @Patch('items/:id')
@@ -53,19 +53,20 @@ export class CategoryController {
     @Body() dto: UpdateCategoryDto,
     @Req() req,
   ) {
-    const { owner_id: ownerId, workspace_id: workspaceId } = req.user;
+    const { owner_id: ownerId, workspace_id: workspaceId, id: userId } = req.user;
     return this.categoryService.updateItemCategory(
       id,
       dto,
       ownerId,
       workspaceId,
+      userId,
     );
   }
 
   @Delete('items/:id')
   removeItemCategory(@Param('id') id: string, @Req() req) {
-    const { owner_id: ownerId, workspace_id: workspaceId } = req.user;
-    return this.categoryService.removeItemCategory(id, ownerId, workspaceId);
+    const { owner_id: ownerId, workspace_id: workspaceId , id: userId } = req.user;
+    return this.categoryService.removeItemCategory(id, ownerId, workspaceId , userId);
   }
 
   // -------- INVOICE CATEGORY --------

@@ -101,9 +101,10 @@ model User {
   Bill                     Bill[]
   roleId                   String?
   PurchaseItems            PurchaseItems[]
+  Discussion               Discussion[]
+  LogTime                  LogTime[]
 
   @@map("users")
-  Discussion Discussion[]
 }
 
 model Workspace {
@@ -141,9 +142,10 @@ model Workspace {
   ItemType        ItemType[]
   AccountType     AccountType[]
   PurchaseItems   PurchaseItems[]
+  Discussion      Discussion[]
+  LogTime         LogTime[]
 
   @@map("workspaces")
-  Discussion Discussion[]
 }
 
 enum UserType {
@@ -289,6 +291,26 @@ model Invoice {
   @@map("invoices")
 }
 
+model LogTime {
+  id         String    @id @default(cuid())
+  created_at DateTime  @default(now())
+  updated_at DateTime  @default(now())
+  deleted_at DateTime?
+
+  description String?
+  date        DateTime?
+
+  user_id      String?
+  workspace_id String?
+  owner_id     String?
+  item_id      String?
+
+  User        User?      @relation(fields: [user_id], references: [id])
+  Workspace   Workspace? @relation(fields: [workspace_id], references: [id])
+  Items       Items?     @relation(fields: [item_id], references: [id])
+
+  @@map("log_time") // This is where the table will be mapped
+}
 
 model Items {
   id         String    @id @default(cuid())
@@ -332,6 +354,7 @@ model Items {
   AccountType     AccountType?    @relation(fields: [account_type_id], references: [id])
   account_type_id String?
   PurchaseItems   PurchaseItems[]
+  LogTime         LogTime[] 
 
   @@map("items")
 }
@@ -423,7 +446,6 @@ model PurchaseItems {
   @@map("Purchase_items")
 }
 
-
 enum Status {
   PENDING
   SENT
@@ -492,7 +514,7 @@ model ItemCategory {
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @default(now()) @updatedAt
   Items         Items[]
-  Purchase      Purchase[] 
+  Purchase      Purchase[]
   PurchaseItems PurchaseItems[]
 }
 
@@ -1575,7 +1597,6 @@ model Lead {
   @@index([pipeline_id])
   @@index([lead_stage_id])
   @@map("leads")
-  
 }
 
 model Task {
@@ -1642,21 +1663,20 @@ model Discussion {
   created_at DateTime @default(now())
   updated_at DateTime @default(now()) @updatedAt
 
-  lead_id    String
-  lead       Lead     @relation(fields: [lead_id], references: [id], onDelete: Cascade)
+  lead_id String
+  lead    Lead   @relation(fields: [lead_id], references: [id], onDelete: Cascade)
 
-  owner_id   String
-  owner      User     @relation(fields: [owner_id], references: [id], onDelete: Cascade)
+  owner_id String
+  owner    User   @relation(fields: [owner_id], references: [id], onDelete: Cascade)
 
   workspace_id String
-  workspace    Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)  // New field
+  workspace    Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade) // New field
 
-  content    String   @db.Text
+  content String @db.Text
 
   @@index([lead_id])
   @@map("discussions")
 }
-
 
 model Activity {
   id         String   @id @default(uuid())
@@ -1671,8 +1691,8 @@ model Activity {
   lead_id String
   lead    Lead   @relation(fields: [lead_id], references: [id], onDelete: Cascade)
 
-  type     String
-  message  String
+  type    String
+  message String
 
   @@index([workspace_id, owner_id])
   @@index([lead_id])
