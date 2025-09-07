@@ -53,6 +53,7 @@ export class AuthController {
   // register a user
   @ApiOperation({ summary: 'Register a user' })
   @Post('register')
+  // @UseGuards(JwtAuthGuard)
   async create(@Body() data: CreateUserDto) {
     try {
       const {
@@ -72,6 +73,7 @@ export class AuthController {
         roleId,
       } = data;
 
+
       // Validate input fields
       if (!name) {
         throw new HttpException('Name not provided', HttpStatus.UNAUTHORIZED);
@@ -85,8 +87,6 @@ export class AuthController {
           HttpStatus.UNAUTHORIZED,
         );
       }
-
-
 
       // If the user is of type 'OWNER', create a workspace
       if (type === 'OWNER') {
@@ -159,7 +159,7 @@ export class AuthController {
           address,
           password,
           type,
-          status:status? status : 0, // Always 0 for USER
+          status: status ? status : 0, // Always 0 for USER
           owner_id,
           super_id,
           workspace_id,
@@ -168,7 +168,6 @@ export class AuthController {
 
         return response;
       }
-
 
       throw new HttpException('Invalid user type', HttpStatus.BAD_REQUEST);
     } catch (error) {

@@ -284,7 +284,7 @@ export class AuthService {
       }
 
       // Step 6: Generate JWT tokens (access and refresh tokens)
-      const payload = { email: user.email, sub: user.id, owner_id:user.owner_id, workspace_id:user.workspace_id };
+      const payload = { email: user.email, id: user.id, owner_id:user.owner_id, workspace_id:user.workspace_id };
       const accessToken = this.jwtService.sign(payload, { expiresIn: '1h' });
       // const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
 
@@ -381,7 +381,7 @@ export class AuthService {
         };
       }
 
-      const payload = { email: userDetails.email, sub: userDetails.id };
+      const payload = { email: userDetails.email, id: userDetails.id };
       const accessToken = this.jwtService.sign(payload, { expiresIn: '1h' });
 
       return {
