@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class CreatePipelineDto {
   @IsString()
@@ -7,9 +7,11 @@ export class CreatePipelineDto {
 
   @IsString()
   @IsNotEmpty()
-  workspace_id: string;
+  @IsOptional()
+  owner_id: string;
 
   @IsString()
   @IsNotEmpty()
-  owner_id: string;
+  @IsOptional()
+  workspace_id: string;
 }
