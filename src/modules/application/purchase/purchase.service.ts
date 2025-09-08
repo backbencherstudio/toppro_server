@@ -647,7 +647,7 @@ export class PurchaseService {
       },
       select: {
         purchase_date: true,
-        due: true,
+        // due: true,
       },
     });
     const dailyReport = this.aggregateDailyReport(purchases);
