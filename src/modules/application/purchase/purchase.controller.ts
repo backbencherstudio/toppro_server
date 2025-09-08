@@ -143,7 +143,7 @@ async findOne(@Param('id') id: string, @Req() req: any) {
       workspace_id: workspaceId,
       sub: userId,
     } = req.user;
-    console.log(" startDate, endDate, vendor",startDate, endDate, vendor, req.user);
+    // console.log(" startDate, endDate, vendor",startDate, endDate, vendor, req.user);
     return this.purchaseService.getPurchaseReport(
       startDate,
       endDate,
