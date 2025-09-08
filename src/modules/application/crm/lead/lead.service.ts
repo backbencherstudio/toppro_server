@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateLeadDto } from './dto/create-lead.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { UpdateLeadDto } from './dto/update-lead.dto';
@@ -21,7 +21,7 @@ export class LeadsService {
         phone: dto.phone,
         followup_at: new Date(dto.followup_at),
 
-        owner_id: ownerId,        // creator
+        owner_id: userId,        // creator
         workspace_id: workspaceId,
 
         user_id: ownerId,         // optional primary snapshot
@@ -36,6 +36,52 @@ export class LeadsService {
       },
     });
   }
+
+  // async createLead(dto, userId: string, workspaceId: string, ownerId: string) {
+  //   console.log("Creating lead with data:", dto);
+  //   console.log("User ID:", userId, "Workspace ID:", workspaceId, "Owner ID:", ownerId);
+  //   // 1. Check if the user is an OWNER by looking up their `type` in the database
+  //   // const user = await this.prisma.user.findUnique({
+  //   //   where: { id: userId },
+  //   //   select: { type: true },  // Only select the `type` field
+  //   // });
+
+  //   // if (user?.type !== 'OWNER') {
+  //   //   // If the user is not an OWNER, return an error
+  //   //   throw new BadRequestException('Only owners can create leads');
+  //   // }
+
+  //   // 2. Build list of unique user IDs (owner + assigned users)
+  //   const userIds = Array.from(new Set([userId, ...dto.users]));
+
+  //   try {
+  //     // 3. Create the lead
+  //     return await this.prisma.lead.create({
+  //       data: {
+  //         subject: dto.subject,
+  //         name: dto.name,
+  //         email: dto.email,
+  //         phone: dto.phone,
+  //         followup_at: new Date(dto.followup_at),
+
+  //         owner_id: ownerId || userId,  // Use the user_id as owner_id since they are an OWNER
+  //         workspace_id: workspaceId,
+  //         user_id: userId || null,   // Optional: Primary user can be same as owner
+
+  //         // Attach both owner + assigned users
+  //         users: {
+  //           connect: userIds.map((id) => ({ id })),
+  //         },
+  //       },
+  //       include: {
+  //         users: true,  // Include users for the created lead
+  //       },
+  //     });
+  //   } catch (error) {
+  //     console.error("Error creating lead:", error);
+  //     throw new Error("Error creating lead.");
+  //   }
+  // }
 
   // ✅ Get all leads for a workspace
   async getAllLeads(ownerId: string, workspaceId: string, page = 1, limit = 10) {
@@ -87,9 +133,9 @@ export class LeadsService {
         subject: lead.subject,
         stage: lead.stage,
         followup_at: lead.followup_at,
-        owner_id: lead.owner_id,
+        owner_id: lead.owner_id ?? null,
         owner_name: lead.owner?.name ?? null,
-        workspace_id: lead.workspace_id,
+        workspace_id: lead.workspace_id ?? null,
         workspace_name: lead.workspace?.name ?? null,
         users: lead.users,
         tasks: lead._count.tasks,

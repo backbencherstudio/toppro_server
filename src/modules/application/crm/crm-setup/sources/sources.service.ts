@@ -90,7 +90,7 @@ import { UpdateSourceDto } from './dto/update-source.dto';
 
 @Injectable()
 export class SourceService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   // CREATE
   async create(dto: CreateSourceDto, ownerId: string, workspaceId: string) {
@@ -105,7 +105,7 @@ export class SourceService {
         name: dto.name,
         owner_id: ownerId,
         workspace_id: workspaceId,
-        
+
       },
     });
 
@@ -153,7 +153,7 @@ export class SourceService {
         where: { id, owner_id: ownerId, workspace_id: workspaceId },
       });
       if (!source) throw new NotFoundException('Source not found in this workspace/owner');
-      
+
       await this.prisma.source.delete({ where: { id } });
       return { message: 'Source deleted successfully' };
     } catch (e: any) {
