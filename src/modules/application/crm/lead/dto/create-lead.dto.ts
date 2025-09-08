@@ -18,6 +18,10 @@ export class CreateLeadDto {
     @IsDateString()
     followup_at: string;
 
+    // @IsArray()
+    // @IsString({ each: true })
+    // userIds?: string[];
+
     @IsArray()
     @ArrayUnique() // no duplicates
     @IsOptional()  // can be empty; owner will always be added anyway

@@ -14,6 +14,31 @@ export class LeadsController {
   constructor(private readonly leadsService: LeadsService) { }
 
 
+  // @Post('create')
+  // async createLead(
+  //   @Body() dto: CreateLeadDto,
+  //   @Req() req  // Extract the user (owner) data from the request (JWT)
+  // ) {
+  //   const { owner_id, workspace_id, id: user_id } = req.user;  // Extract from JWT payload
+
+  //   if (!owner_id || !workspace_id) {
+  //     throw new BadRequestException('Owner or workspace information is missing');
+  //   }
+
+  //   try {
+  //     // Pass the necessary data to the service
+  //     const { owner_id, workspace_id, id: user_id } = req.user;  // Extract from JWT payload
+  //     console.log("all req Users::>>", workspace_id, owner_id, user_id, dto.userIds);
+
+  //     // const result = await this.leadsService.createLead(dto, owner_id, workspace_id, user_id, dto.userIds);
+  //     const result = await this.leadsService.createLead(dto.userIds, owner_id, workspace_id, user_id);
+
+  //     return result;
+  //   } catch (error) {
+  //     throw new BadRequestException('Error creating lead: ' + error.message);
+  //   }
+  // }
+
   @Post('create')
   async createLead(@Req() req, @Body() dto: CreateLeadDto) {
     // req.user comes from JWT strategy

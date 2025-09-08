@@ -8,13 +8,13 @@ import { ActivityService } from '../activity/activity.service';
 export class TasksService {
   constructor(private prisma: PrismaService, private activityService: ActivityService) { }
 
-  async createTask(dto: CreateTaskDto, ownerId: string, workspaceId: string) {
+  async createTask(dto: CreateTaskDto, ownerId: string, workspaceId: string, userId: string) {
     // ✅ Verify lead belongs to same owner & workspace
     const lead = await this.prisma.lead.findFirst({
       where: {
         id: dto.lead_id,
         workspace_id: workspaceId,
-        owner_id: ownerId,
+        owner_id: ownerId || userId,
         deleted_at: null,
       },
     });
@@ -39,14 +39,14 @@ export class TasksService {
 
     // 2️⃣ Get owner name (for message)
     const owner = await this.prisma.user.findUnique({
-      where: { id: ownerId },
+      where: { id: ownerId || userId },
       select: { name: true },
     });
 
-        // 3️⃣ Create activity via ActivityService
+    // 3️⃣ Create activity via ActivityService
     await this.activityService.createActivity(
       workspaceId,
-      ownerId,
+      ownerId || userId,
       dto.lead_id,
       'task',
       `${owner?.name || 'Someone'} created a new Lead Task: ${dto.name}`,

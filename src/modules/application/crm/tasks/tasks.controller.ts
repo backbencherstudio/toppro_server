@@ -11,9 +11,10 @@ export class TasksController {
   @UseGuards(JwtAuthGuard)
   @Post('create')
   async createTask(@Req() req, @Body() dto: CreateTaskDto) {
-    const ownerId = req.user.id;
-    const workspaceId = req.user.workspace_id;
-    return this.tasksService.createTask(dto, ownerId, workspaceId);
+    const { id: userId, workspace_id: workspaceId, owner_id: ownerId } = req.user;
+    console.log("Request User:", req.user);
+
+    return this.tasksService.createTask(dto, ownerId, workspaceId, userId);
   }
 
   @UseGuards(JwtAuthGuard)
