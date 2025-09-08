@@ -516,8 +516,8 @@ export class PurchaseService {
     const purchase = await this.prisma.purchase.findUnique({
       where: {
         id,
-        owner_id: ownerId || userId, // Ensure that the purchase belongs to the correct owner
-        workspace_id: workspaceId, // Ensure that the purchase belongs to the correct workspace
+        owner_id: ownerId || userId,
+        workspace_id: workspaceId,
       },
     });
 
@@ -555,16 +555,9 @@ export class PurchaseService {
       throw new BadRequestException('Purchase not found');
     }
 
-    // Log the values to debug
-    console.log(
-      'Attempting to update purchase items with the following values:',
-    );
-    console.log({ purchaseId, itemId, ownerId, workspaceId });
-
     // Fetch the items to see if they exist before updating
     const existingItems = await this.prisma.purchaseItems.findMany({
       where: {
-        // purchase_id: purchaseId,
         id: itemId,
         owner_id: ownerId || userId,
         workspace_id: workspaceId,
@@ -585,14 +578,14 @@ export class PurchaseService {
         owner_id: ownerId,
         workspace_id: workspaceId,
       },
-      data: { deleted_at: new Date() }, // Update deleted_at to current date
+      data: { deleted_at: new Date() },
     });
 
     // Return the response with success message and updated data
     return {
       success: true,
       message: `Deleted ${updatedItems.count} purchase item(s) successfully.`,
-      updatedFields: updatedItems, // This will show the updated fields
+      updatedFields: updatedItems,
     };
   }
 
@@ -632,5 +625,49 @@ export class PurchaseService {
 
       return { success: true };
     });
+  }
+
+  // ------- PURCHASE REPORT -------
+
+  async getPurchaseReport(startDate: string, endDate: string, vendor: string, ownerId: string, workspaceId: string, userId: string) {
+    const start = new Date(startDate).toISOString();
+    const end = new Date(endDate).toISOString();
+
+    const purchases = await this.prisma.purchase.findMany({
+      where: {
+        owner_id: ownerId || userId,
+        workspace_id: workspaceId,
+        purchase_date: {
+          gte: start,
+          lte: end,
+        },
+
+        vendor_id: vendor !== 'all_vendor' ? vendor : undefined, 
+        
+      },
+      select: {
+        purchase_date: true,
+        due: true,
+      },
+    });
+    const dailyReport = this.aggregateDailyReport(purchases);
+    return dailyReport;
+  }
+
+  private aggregateDailyReport(purchases: any[]) {
+    const dailyReport = {};
+
+    purchases.forEach((purchase) => {
+      const date = purchase.purchase_date.toISOString().split('T')[0];
+      const dueAmount = typeof purchase.due === 'number' ? purchase.due : 0;
+
+      if (!dailyReport[date]) {
+        dailyReport[date] = 0;
+      }
+
+      dailyReport[date] += dueAmount;
+    });
+
+    return dailyReport;
   }
 }

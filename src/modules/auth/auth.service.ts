@@ -22,11 +22,11 @@ export class AuthService {
     private mailService: MailService,
   ) {}
 
-  async me(userId: string) {
+  async me(email: string) {
     try {
       const user = await this.prisma.user.findFirst({
         where: {
-          id: userId,
+          email: email,
         },
         select: {
           id: true,

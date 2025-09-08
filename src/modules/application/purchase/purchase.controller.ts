@@ -10,11 +10,11 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { Status } from '@prisma/client';
 import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 import { CreatePurchaseDto } from './dto/create-purchase.dto';
 import { UpdatePurchaseDto } from './dto/update-purchase.dto';
 import { PurchaseService } from './purchase.service';
-import { Status } from '@prisma/client';
 
 @Controller('purchases')
 @UseGuards(JwtAuthGuard)
@@ -61,6 +61,7 @@ async findOne(@Param('id') id: string, @Req() req: any) {
     _summary,
   };
 }
+
 
 
   @Patch(':id')
@@ -126,5 +127,30 @@ async findOne(@Param('id') id: string, @Req() req: any) {
       sub: userId,
     } = req.user;
     return this.purchaseService.softDelete(id, ownerId, workspaceId, userId);
+  }
+
+
+  //purchase report
+    @Get('report/daily')
+  async getDailyPurchaseReport(
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+    @Query('vendor') vendor: string,
+    @Req() req: any
+  ) {
+    const {
+      owner_id: ownerId,
+      workspace_id: workspaceId,
+      sub: userId,
+    } = req.user;
+    console.log(" startDate, endDate, vendor",startDate, endDate, vendor, req.user);
+    return this.purchaseService.getPurchaseReport(
+      startDate,
+      endDate,
+      vendor,
+      ownerId,
+      workspaceId,
+      userId
+    );
   }
 }
