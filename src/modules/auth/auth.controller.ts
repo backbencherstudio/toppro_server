@@ -31,15 +31,15 @@ export class AuthController {
 
   // get user details
   @ApiOperation({ summary: 'Get user details' })
-  @ApiBearerAuth()
+  // @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Get('me')
-  async me(@Req() req: Request) {
+  async me(@Req() req) {
     try {
-      const user_id = req.user.userId;
-      console.log('Authenticated user ID:', user_id);
+      const {email} = req.user;
+      console.log('Authenticated user ID:', req.user);
 
-      const response = await this.authService.me(user_id);
+      const response = await this.authService.me(email);
 
       return response;
     } catch (error) {
