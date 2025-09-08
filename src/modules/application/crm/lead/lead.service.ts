@@ -9,33 +9,7 @@ export class LeadsService {
   constructor(private prisma: PrismaService) { }
 
 
-  async createLead(dto: CreateLeadDto, ownerId: string, workspaceId: string, userId: string) {
-    // build list of unique user IDs: owner + dto.users
-    const userIds = Array.from(new Set([ownerId, ...dto.users]));
 
-    return this.prisma.lead.create({
-      data: {
-        subject: dto.subject,
-        name: dto.name,
-        email: dto.email,
-        phone: dto.phone,
-        followup_at: new Date(dto.followup_at),
-
-        owner_id: userId,        // creator
-        workspace_id: workspaceId,
-
-        user_id: ownerId,         // optional primary snapshot
-
-        // attach both owner + assigned users
-        users: {
-          connect: userIds.map((id) => ({ id })),
-        },
-      },
-      include: {
-        users: true,
-      },
-    });
-  }
 
   // async createLead(dto, userId: string, workspaceId: string, ownerId: string) {
   //   console.log("Creating lead with data:", dto);
@@ -84,6 +58,35 @@ export class LeadsService {
   // }
 
   // ✅ Get all leads for a workspace
+
+  async createLead(dto: CreateLeadDto, ownerId: string, workspaceId: string, userId: string) {
+    // build list of unique user IDs: owner + dto.users
+    const userIds = Array.from(new Set([ownerId, ...dto.users]));
+
+    return this.prisma.lead.create({
+      data: {
+        subject: dto.subject,
+        name: dto.name,
+        email: dto.email,
+        phone: dto.phone,
+        followup_at: new Date(dto.followup_at),
+
+        owner_id: ownerId,        // creator
+        workspace_id: workspaceId,
+
+        user_id: ownerId,         // optional primary snapshot
+
+        // attach both owner + assigned users
+        users: {
+          connect: userIds.map((id) => ({ id })),
+        },
+      },
+      include: {
+        users: true,
+      },
+    });
+  }
+
   async getAllLeads(ownerId: string, workspaceId: string, page = 1, limit = 10) {
     const skip = (page - 1) * limit;
 
