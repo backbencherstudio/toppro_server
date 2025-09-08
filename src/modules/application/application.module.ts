@@ -22,8 +22,9 @@ import { CallModule } from './crm/call/call.module';
 import { LeadsUserModule } from './crm/lead/leadusers/leadusers.module';
 import { DiscussionModule } from './crm/discussion/discussion.module';
 import { ActivityModule } from './crm/activity/activity.module';
+import { LogTimeModule } from './log-time/log-time.module';
 @Module({
-  imports: [NotificationModule, ContactModule, FaqModule, CustomerModule, VendorModule, LeadModule, DealModule, CrmReportModule, PipelinesModule, LeadStagesModule, DealStageModule, WorkspaceModule, SourcesModule, ItemsModule, InvoiceModule, CategoryModule, PurchaseModule, TasksModule, EmailtextModule, CallModule, LeadsUserModule, DiscussionModule, ActivityModule],
+  imports: [NotificationModule, ContactModule, FaqModule, CustomerModule, VendorModule, LeadModule, DealModule, CrmReportModule, PipelinesModule, LeadStagesModule, DealStageModule, WorkspaceModule, SourcesModule, ItemsModule, InvoiceModule, CategoryModule, PurchaseModule, TasksModule, EmailtextModule, CallModule, LeadsUserModule, DiscussionModule, ActivityModule, LogTimeModule],
 
 })
 export class ApplicationModule { }
