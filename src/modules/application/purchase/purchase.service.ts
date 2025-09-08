@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import type { Prisma } from '@prisma/client';
+import type { Prisma, Status } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreatePurchaseDto } from './dto/create-purchase.dto';
 import { UpdatePurchaseDto } from './dto/update-purchase.dto';
@@ -237,6 +237,7 @@ export class PurchaseService {
 
         // nested
         purchaseItems: { create: lineCreates },
+        due: grandTotal,
       };
 
       const purchase = await tx.purchase.create({
@@ -312,7 +313,36 @@ export class PurchaseService {
     });
 
     if (!row) throw new NotFoundException('Purchase not found');
-    return row;
+
+    // Calculate the updated summary
+    const _summary = {
+      total_quantity: row.purchaseItems.reduce(
+        (total, item) => total + item.quantity,
+        0,
+      ),
+      total_rate: row.purchaseItems.reduce(
+        (total, item) => total + item.purchase_price,
+        0,
+      ),
+      total_discount: row.purchaseItems.reduce(
+        (total, item) => total + item.discount,
+        0,
+      ),
+      total_tax: row.purchaseItems.reduce(
+        (total, item) =>
+          total + (item.total - item.purchase_price - item.discount),
+        0,
+      ),
+      total_price: row.purchaseItems.reduce(
+        (total, item) => total + item.total,
+        0,
+      ),
+    };
+
+    return {
+      ...row,
+      _summary,
+    };
   }
 
   // ------- UPDATE (header patch + replace lines if provided) -------
@@ -425,8 +455,8 @@ export class PurchaseService {
             purchase_price: raw.purchase_price ?? base.purchase_price ?? 0,
             discount: raw.discount ?? 0,
             total_price:
-            (raw.quantity ?? 1) *
-            // @ts-ignore
+              (raw.quantity ?? 1) *
+                // @ts-ignore
                 (raw.unit_price ?? base.purchase_price ?? 0) -
               (raw.discount ?? 0),
             owner_id: ownerId,
@@ -472,6 +502,36 @@ export class PurchaseService {
         include: { purchaseItems: { where: { deleted_at: null } } },
       });
     });
+  }
+
+  // ------- Purchase send status -------
+  async updateStatus(
+    id: string,
+    status: Status,
+    ownerId: string,
+    workspaceId: string,
+    userId: string,
+  ) {
+    // Find the purchase by ID and ensure it exists
+    const purchase = await this.prisma.purchase.findUnique({
+      where: {
+        id,
+        owner_id: ownerId || userId, // Ensure that the purchase belongs to the correct owner
+        workspace_id: workspaceId, // Ensure that the purchase belongs to the correct workspace
+      },
+    });
+
+    if (!purchase) {
+      throw new NotFoundException('Purchase not found');
+    }
+
+    // Update only the status field
+    const updatedPurchase = await this.prisma.purchase.update({
+      where: { id },
+      data: { status },
+    });
+
+    return updatedPurchase;
   }
 
   // ------- DELETE PURCHASE ITEMS -------
