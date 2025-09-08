@@ -7,6 +7,7 @@ export class UpdatePurchaseDto {
   @IsOptional() @IsString() vendor_id?: string | null;
   @IsOptional() @IsString() billing_type_id?: string | null;
   @IsOptional() @IsString() category_id?: string | null;
+  @IsOptional() @IsString() status?: string | null;
 
   @IsOptional() @IsDateString()
   purchase_date?: string | null;

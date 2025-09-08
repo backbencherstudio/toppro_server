@@ -14,6 +14,7 @@ import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 import { CreatePurchaseDto } from './dto/create-purchase.dto';
 import { UpdatePurchaseDto } from './dto/update-purchase.dto';
 import { PurchaseService } from './purchase.service';
+import { Status } from '@prisma/client';
 
 @Controller('purchases')
 @UseGuards(JwtAuthGuard)
@@ -40,15 +41,27 @@ export class PurchaseController {
     return this.purchaseService.findAll(ownerId, workspaceId, userId);
   }
 
-  @Get(':id')
-  async findOne(@Param('id') id: string, @Req() req: any) {
-    const {
-      owner_id: ownerId,
-      workspace_id: workspaceId,
-      sub: userId,
-    } = req.user;
-    return this.purchaseService.findOne(id, ownerId, workspaceId, userId);
-  }
+@Get(':id')
+async findOne(@Param('id') id: string, @Req() req: any) {
+  const { owner_id: ownerId, workspace_id: workspaceId, sub: userId } = req.user;
+  const purchase = await this.purchaseService.findOne(id, ownerId, workspaceId, userId);
+
+  // Calculate the updated summary after fetching the purchase details
+  const _summary = {
+    total_quantity: purchase.purchaseItems.reduce((total, item) => total + item.quantity, 0),
+    total_rate: purchase.purchaseItems.reduce((total, item) => total + item.purchase_price, 0),
+    total_discount: purchase.purchaseItems.reduce((total, item) => total + item.discount, 0),
+    total_tax: purchase.purchaseItems.reduce((total, item) => total + (item.total - item.purchase_price - item.discount), 0),
+    total_price: purchase.purchaseItems.reduce((total, item) => total + item.total, 0),
+  };
+
+  // Add summary to the result
+  return {
+    ...purchase,
+    _summary,
+  };
+}
+
 
   @Patch(':id')
   async update(
@@ -64,7 +77,28 @@ export class PurchaseController {
     return this.purchaseService.update(id, dto, ownerId, workspaceId, userId);
   }
 
-    @Patch(':purchaseId/:itemId')
+  // puchase send
+  @Patch(':id/purchase-send')
+  async updateStatus(
+    @Param('id') id: string,
+    @Body() { status }: { status: Status },
+    @Req() req: any,
+  ) {
+    const {
+      owner_id: ownerId,
+      workspace_id: workspaceId,
+      sub: userId,
+    } = req.user;
+    return this.purchaseService.updateStatus(
+      id,
+      status,
+      ownerId,
+      workspaceId,
+      userId,
+    );
+  }
+
+  @Patch(':purchaseId/:itemId')
   async deletePurchaseItems(
     @Param('purchaseId') purchaseId: string,
     @Param('itemId') itemId: string,
