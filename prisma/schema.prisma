@@ -103,6 +103,7 @@ model User {
   PurchaseItems            PurchaseItems[]
   Discussion               Discussion[]
   LogTime                  LogTime[]
+  InvoiceItem             InvoiceItem[] 
 
   @@map("users")
 }
@@ -144,6 +145,8 @@ model Workspace {
   PurchaseItems   PurchaseItems[]
   Discussion      Discussion[]
   LogTime         LogTime[]
+  InvoiceItem    InvoiceItem[]
+
 
   @@map("workspaces")
 }
@@ -252,45 +255,6 @@ model RoleUser {
   @@map("role_users")
 }
 
-model Invoice {
-  id            String    @id @default(cuid())
-  created_at    DateTime  @default(now())
-  updated_at    DateTime  @default(now())
-  deleted_at    DateTime?
-  issued_at     DateTime?
-  due_at        DateTime?
-  category_id   String?
-  invoice_no    String?
-  itemType_id   String?
-  subTotal      Float?    @default(0)
-  tax_id        String?
-  total         Float?    @default(0)
-  paid          Float?    @default(0)
-  due           Float?    @default(0)
-  // issued_amount Float?    @default(0)
-  status        String?   @default("draft") // draft, sent, paid, overdue, cancelled
-  owner_id      String?
-  workspace_id  String?
-  user_id       String?
-
-  customer_id String?
-  category    InvoiceCategory? @relation(fields: [category_id], references: [id])
-  user        User?            @relation(fields: [user_id], references: [id])
-  customer    Customer?        @relation(fields: [customer_id], references: [id])
-  tax         Tax?             @relation(fields: [tax_id], references: [id])
-  workspace   Workspace?       @relation(fields: [workspace_id], references: [id])
-
-  amount   Float?
-  currency String?
-
-  items           Items[]
-  itemType        ItemType?      @relation(fields: [itemType_id], references: [id])
-  PurchaseItems   PurchaseItems? @relation(fields: [purchaseItemsId], references: [id])
-  purchaseItemsId String?
-
-  @@map("invoices")
-}
-
 model LogTime {
   id         String    @id @default(cuid())
   created_at DateTime  @default(now())
@@ -305,11 +269,88 @@ model LogTime {
   owner_id     String?
   item_id      String?
 
-  User        User?      @relation(fields: [user_id], references: [id])
-  Workspace   Workspace? @relation(fields: [workspace_id], references: [id])
-  Items       Items?     @relation(fields: [item_id], references: [id])
+  User      User?      @relation(fields: [user_id], references: [id])
+  Workspace Workspace? @relation(fields: [workspace_id], references: [id])
+  Items     Items?     @relation(fields: [item_id], references: [id])
 
   @@map("log_time") // This is where the table will be mapped
+}
+
+// Invoice Model
+model Invoice {
+  id                  Int      @id @default(autoincrement())
+  account_type_id     String?
+  customer_id         String?
+  billing_type_id     String?
+  invoice_category_id String?
+  invoice_number      String
+  issueAt             DateTime
+  dueAt               DateTime
+  item_category_id    String?
+  subTotal            Float
+  totalDiscount       Float
+  totalTax            Float
+  totalPrice          Float
+  status              String
+
+  owner_id     String?
+  workspace_id String?
+  user_id      String?
+
+  User      User?      @relation(fields: [user_id], references: [id])
+  Workspace Workspace? @relation(fields: [workspace_id], references: [id])
+
+  // Relations (assuming customer, billing type, and item category have models)
+  Account_type     AccountType?     @relation(fields: [account_type_id], references: [id])
+  Customer         Customer?        @relation(fields: [customer_id], references: [id])
+  Billing_category BillCategory?    @relation(fields: [billing_type_id], references: [id])
+  Item_category    ItemCategory?    @relation(fields: [item_category_id], references: [id])
+  Invoice_category InvoiceCategory? @relation(fields: [invoice_category_id], references: [id])
+  Item             Items[]
+  InvoiceItem      InvoiceItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("invoices")
+}
+
+// InvoiceItem Model 
+model InvoiceItem {
+  id             Int     @id @default(autoincrement())
+  name           String?
+  sku            String?
+  image          String?
+  invoice_id     Int?
+  item_type_id   String?
+  item_id        String?
+  quantity       Int
+  price          Float
+  discount       Float
+  tax_id         String?
+  total          Float?
+  description    String?
+  customer_id    String?
+  purchase_price Float?
+  sale_price     Float?
+
+  owner_id     String?
+  workspace_id String?
+  user_id      String?
+
+  User      User?      @relation(fields: [user_id], references: [id])
+  Workspace Workspace? @relation(fields: [workspace_id], references: [id])
+
+  // Relations (assuming itemType and tax have models)
+  Item_type ItemType? @relation(fields: [item_type_id], references: [id])
+  Tax       Tax?      @relation(fields: [tax_id], references: [id])
+  Item     Items?    @relation(fields: [item_id], references: [id])
+  Invoice   Invoice?  @relation(fields: [invoice_id], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("invoice_items")
 }
 
 model Items {
@@ -354,7 +395,8 @@ model Items {
   AccountType     AccountType?    @relation(fields: [account_type_id], references: [id])
   account_type_id String?
   PurchaseItems   PurchaseItems[]
-  LogTime         LogTime[] 
+  LogTime         LogTime[]
+  InvoiceItem         InvoiceItem[]
 
   @@map("items")
 }
@@ -373,11 +415,11 @@ model Purchase {
   billing_type_id String?
   category_id     String?
   purchase_no     String  @unique // <-- auto-generated like PUR0000001 (see service)
-  subTotal        Float?   @default(0)
+  subTotal        Float?  @default(0)
   tax_id          String?
-  total           Float?   @default(0)
-  paid            Float?   @default(0)
-  due             Float?   @default(0) 
+  total           Float?  @default(0)
+  paid            Float?  @default(0)
+  due             Float?  @default(0)
 
   // Multitenancy / audit
   owner_id     String?
@@ -439,7 +481,6 @@ model PurchaseItems {
   itemCategory ItemCategory? @relation(fields: [itemCategory_id], references: [id])
   vendor       Vendor[]
   itemType     ItemType?     @relation(fields: [itemType_id], references: [id])
-  invoice      Invoice[]
 
   unit_price  Float? @default(0)
   total_price Float? @default(0)
@@ -521,6 +562,7 @@ model ItemCategory {
   Items         Items[]
   Purchase      Purchase[]
   PurchaseItems PurchaseItems[]
+  Invoice       Invoice[]
 }
 
 model InvoiceCategory {
@@ -554,6 +596,7 @@ model BillCategory {
   updatedAt DateTime   @default(now()) @updatedAt
   Bill      Bill[]
   Purchase  Purchase[]
+  Invoice   Invoice[]
 }
 
 model Tax {
@@ -569,10 +612,10 @@ model Tax {
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @default(now()) @updatedAt
   Items         Items[]
-  Invoice       Invoice[]
   Bill          Bill[]
   Purchase      Purchase[]
   PurchaseItems PurchaseItems[]
+  InvoiceItem   InvoiceItem[]
 }
 
 model Unit {
@@ -604,9 +647,9 @@ model ItemType {
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @default(now()) @updatedAt
   items         Items[]
-  Invoice       Invoice[]
   Vendor        Vendor[]
   PurchaseItems PurchaseItems[]
+  Invoice_Item  InvoiceItem[]
 }
 
 model AccountType {
@@ -626,6 +669,7 @@ model AccountType {
   Purchase      Purchase[]
   items         Items[]
   PurchaseItems PurchaseItems[]
+  Invoice       Invoice[]
 }
 
 // ###############################################################################################################################

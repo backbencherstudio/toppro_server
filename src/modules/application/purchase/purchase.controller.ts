@@ -26,7 +26,7 @@ export class PurchaseController {
     const {
       owner_id: ownerId,
       workspace_id: workspaceId,
-      sub: userId,
+      id: userId,
     } = req.user;
     return this.purchaseService.create(dto, ownerId, workspaceId, userId);
   }
@@ -36,14 +36,14 @@ export class PurchaseController {
     const {
       owner_id: ownerId,
       workspace_id: workspaceId,
-      sub: userId,
+      id: userId,
     } = req.user;
     return this.purchaseService.findAll(ownerId, workspaceId, userId);
   }
 
 @Get(':id')
 async findOne(@Param('id') id: string, @Req() req: any) {
-  const { owner_id: ownerId, workspace_id: workspaceId, sub: userId } = req.user;
+  const { owner_id: ownerId, workspace_id: workspaceId, id: userId } = req.user;
   const purchase = await this.purchaseService.findOne(id, ownerId, workspaceId, userId);
 
   // Calculate the updated summary after fetching the purchase details
@@ -73,7 +73,7 @@ async findOne(@Param('id') id: string, @Req() req: any) {
     const {
       owner_id: ownerId,
       workspace_id: workspaceId,
-      sub: userId,
+      id: userId,
     } = req.user;
     return this.purchaseService.update(id, dto, ownerId, workspaceId, userId);
   }
@@ -88,7 +88,7 @@ async findOne(@Param('id') id: string, @Req() req: any) {
     const {
       owner_id: ownerId,
       workspace_id: workspaceId,
-      sub: userId,
+      id: userId,
     } = req.user;
     return this.purchaseService.updateStatus(
       id,
@@ -108,7 +108,7 @@ async findOne(@Param('id') id: string, @Req() req: any) {
     const {
       owner_id: ownerId,
       workspace_id: workspaceId,
-      sub: userId,
+      id: userId,
     } = req.user;
     return this.purchaseService.deletePurchaseItems(
       purchaseId,
@@ -124,7 +124,7 @@ async findOne(@Param('id') id: string, @Req() req: any) {
     const {
       owner_id: ownerId,
       workspace_id: workspaceId,
-      sub: userId,
+      id: userId,
     } = req.user;
     return this.purchaseService.softDelete(id, ownerId, workspaceId, userId);
   }
@@ -141,7 +141,7 @@ async findOne(@Param('id') id: string, @Req() req: any) {
     const {
       owner_id: ownerId,
       workspace_id: workspaceId,
-      sub: userId,
+      id: userId,
     } = req.user;
     // console.log(" startDate, endDate, vendor",startDate, endDate, vendor, req.user);
     return this.purchaseService.getPurchaseReport(
