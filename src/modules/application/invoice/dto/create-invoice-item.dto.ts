@@ -1,13 +1,47 @@
+import { IsInt, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+
 export class CreateInvoiceItemDto {
-  item_id: string;  // Item ID
-  quantity: number;
-  price: number;
-  discount: number;
-  item_type_id?: string;
-  tax_id?: string;
-  itemCategory_id?: string;
-  unit_id?: string;
-  name?: string;
-  sku?: string;
-  description?: string;
+
+  @IsString() 
+  item_id: string;
+
+
+  @IsOptional() 
+  @IsString() 
+  name?: string; 
+
+  @IsOptional() 
+  @IsString() 
+  sku?: string; 
+
+  @IsOptional() 
+  @IsString() 
+  unit_id?: string; 
+
+  @IsOptional() 
+  @IsString() 
+  itemCategory_id?: string; 
+
+  @IsOptional() 
+  @IsString() 
+  item_type_id?: string; 
+
+  @IsOptional() 
+  @IsString() 
+  tax_id?: string; 
+
+  @IsInt() 
+  @Min(1) 
+  quantity: number; 
+
+  @IsNumber() 
+  purchase_price: number; 
+
+  @IsNumber() 
+  discount: number; 
+
+
+  @IsOptional() 
+  @IsString() 
+  description?: string; 
 }
