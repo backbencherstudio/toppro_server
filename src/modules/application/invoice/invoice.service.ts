@@ -36,6 +36,7 @@ export class InvoiceService {
         unit_id: true,
         tax_id: true,
         itemCategory_id: true,
+        customer: true,  // Select the customer relation instead of customer_id
         itemType_id: true,
         sale_price: true,
         purchase_price: true,
@@ -47,8 +48,7 @@ export class InvoiceService {
     if (missing.length) {
       throw new BadRequestException({
         code: 'ITEM_NOT_FOUND_IN_SCOPE',
-        message:
-          'Some items are not found in this workspace/owner scope or are deleted.',
+        message: 'Some items are not found in this workspace/owner scope or are deleted.',
         missingIds: missing,
       });
     }
@@ -58,14 +58,12 @@ export class InvoiceService {
     const resolved = await Promise.all(
       items.map(async (raw) => {
         const base = baseMap.get(raw.item_id)!;
-
         console.log('base', base);
 
         const quantity = Number(raw.quantity ?? 1);
-        const price = Number(
-          raw.purchase_price ?? base.purchase_price ?? base.sale_price ?? 0,
-        );
+        const price = Number(raw.purchase_price ?? base.purchase_price ?? base.sale_price ?? 0);
         const discount = Number(raw.discount ?? 0);
+        // const customer_id = raw.customer_id ?? base.customer?.id ?? null; // Access the customer relation correctly
 
         const item_type_id = raw.item_type_id ?? base.itemType_id ?? null;
         const tax_id = raw.tax_id ?? base.tax_id ?? null;
@@ -85,6 +83,7 @@ export class InvoiceService {
           item_type_id,
           tax_id,
           itemCategoryId,
+          // customer_id,  // Ensure customer_id is captured correctly
           unit_id,
           name,
           sku,
@@ -116,15 +115,11 @@ export class InvoiceService {
       grandTotal += total;
 
       return {
-        item: { connect: { id: r.item_id } },
-        ...(r.item_type_id
-          ? { itemType: { connect: { id: r.item_type_id } } }
-          : {}),
-        ...(r.tax_id ? { tax: { connect: { id: r.tax_id } } } : {}),
-        ...(r.itemCategoryId
-          ? { itemCategory: { connect: { id: r.itemCategoryId } } }
-          : {}),
-        ...(r.unit_id ? { unit: { connect: { id: r.unit_id } } } : {}),
+        Item: { connect: { id: r.item_id } }, // Corrected to `Item`
+        ItemType: { connect: { id: r.item_type_id } }, // Corrected to `ItemType`
+        Tax: { connect: { id: r.tax_id } }, // Corrected to `Tax`
+        ItemCategory: { connect: { id: r.itemCategoryId } }, // Corrected to `ItemCategory`
+        Unit: { connect: { id: r.unit_id } }, // Corrected to `Unit`
         quantity: r.quantity,
         purchase_price: r.price,
         discount: r.discount,
@@ -132,11 +127,12 @@ export class InvoiceService {
         description: r.description ?? undefined,
         name: r.name ?? undefined,
         sku: r.sku ?? undefined,
-        unit_price: r.price,
-        total_price: total,
+        // sale_price: r.sale_price ?? undefined,
+        // Customer: { connect: { id: r.customer_id } },
+        price: r.price ?? undefined,
         owner_id: ownerId || userId,
-        workspace_id: workspaceId,
-        ...(userId ? { user: { connect: { id: userId } } } : {}),
+        Workspace: { connect: { id: workspaceId } },
+        ...(userId ? { User: { connect: { id: userId } } } : {}),
       };
     });
 
@@ -144,63 +140,60 @@ export class InvoiceService {
   }
 
   // Function to create an invoice
-async create(
-  dto: CreateInvoiceDto,
-  ownerId: string,
-  workspaceId: string,
-  userId: string
-) {
-  console.log(dto);
-  if (!dto.items?.length) {
-    throw new BadRequestException('At least one item is required');
-  }
+  async create(
+    dto: CreateInvoiceDto,
+    ownerId: string,
+    workspaceId: string,
+    userId: string
+  ) {
+    if (!dto.items?.length) {
+      throw new BadRequestException('At least one item is required');
+    }
 
-  return this.prisma.$transaction(async (tx) => {
-    const { lineCreates, grandTotal } = await this.resolveLinesAndCompute(
-      tx,
-      dto.items,
-      ownerId,
-      workspaceId,
-      userId
-    );
+    return this.prisma.$transaction(async (tx) => {
+      const { lineCreates, grandTotal } = await this.resolveLinesAndCompute(
+        tx,
+        dto.items,
+        ownerId,
+        workspaceId,
+        userId
+      );
 
-    const invoiceNo = await this.nextInvoiceNo(tx, workspaceId);
+      const invoiceNo = await this.nextInvoiceNo(tx, workspaceId);
 
-    const data: any = {
-      invoice_number: dto.invoice_number ? dto.invoice_number : invoiceNo,
-      issueAt: dto.issueAt ? new Date(dto.issueAt) : undefined,
-      dueAt: dto.dueAt ? new Date(dto.dueAt) : undefined,
-      owner_id: ownerId || userId,
-      Workspace: { connect: { id: workspaceId } },
-      User: { connect: { id: userId } },
-      InvoiceItem: {
-        create: lineCreates,
-      },
-      totalPrice: grandTotal,
-      subTotal: grandTotal,
-      totalDiscount: 0,
-      totalTax: 0,
-      status: 'DRAFT',
-    };
+      const data: any = {
+        invoice_number: dto.invoice_number ? dto.invoice_number : invoiceNo,
+        issueAt: dto.issueAt ? new Date(dto.issueAt) : undefined,
+        dueAt: dto.dueAt ? new Date(dto.dueAt) : undefined,
+        owner_id: ownerId || userId,
+        Workspace: { connect: { id: workspaceId } },
+        User: { connect: { id: userId } },
+        InvoiceItem: {
+          create: lineCreates,
+        },
+        totalPrice: grandTotal,
+        subTotal: grandTotal,
+        totalDiscount: 0,
+        totalTax: 0,
+        status: 'DRAFT',
+      };
 
-    const invoice = await tx.invoice.create({
-      data,
-      include: {
-        InvoiceItem: true,
-      },
+      const invoice = await tx.invoice.create({
+        data,
+        include: {
+          InvoiceItem: true,
+        },
+      });
+
+      return {
+        ...invoice,
+        _summary: {
+          grand_total: Number(grandTotal.toFixed(2)),
+          lines_count: lineCreates.length,
+        },
+      };
     });
-
-    return {
-      ...invoice,
-      _summary: {
-        grand_total: Number(grandTotal.toFixed(2)),
-        lines_count: lineCreates.length,
-      },
-    };
-  });
-}
-
-
+  }
 
   // Helper method to generate the next invoice number
   private async nextInvoiceNo(
