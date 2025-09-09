@@ -69,8 +69,6 @@ model User {
   accounts                  Account[]
   creator_conversations     Conversation[] @relation("creator")
   participant_conversations Conversation[] @relation("participant")
-  receiver_messages         Message[]      @relation("receiver")
-  sender_messages           Message[]      @relation("sender")
   receiver_notifications    Notification[] @relation("receiver")
   sender_notifications      Notification[] @relation("sender")
   roles                     Role[]         @relation("UsersOnRoles")
@@ -764,49 +762,27 @@ enum MessageStatus {
   READ
 }
 
-model Message {
-  id         String    @id @default(cuid())
-  created_at DateTime  @default(now())
-  updated_at DateTime  @default(now())
-  deleted_at DateTime?
 
-  status MessageStatus? @default(PENDING)
-
-  sender_id String?
-  sender    User?   @relation("sender", fields: [sender_id], references: [id])
-
-  receiver_id String?
-  receiver    User?   @relation("receiver", fields: [receiver_id], references: [id])
-
-  conversation_id String?
-  conversation    Conversation? @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
-
-  attachment_id String?
-  attachment    Attachment? @relation(fields: [attachment_id], references: [id])
-
-  message String?
-
-  @@map("messages")
-}
 
 model Attachment {
-  id         String    @id @default(cuid())
-  created_at DateTime  @default(now())
-  updated_at DateTime  @default(now())
-  deleted_at DateTime?
+  id         String   @id @default(uuid())
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 
-  name String?
-  type String?
+  lead_id    String
+  lead       Lead     @relation(fields: [lead_id], references: [id], onDelete: Cascade)
 
-  size     Int?
-  file     String?
-  file_alt String?
+  file_name  String
+  file_url   String  // The URL or path to the uploaded file
+  file_size  Int     // Size of the file (in bytes)
 
-  messages Message[]
-  leads    Lead[]    @relation("LeadAttachments")
-
+  @@index([lead_id])
   @@map("attachments")
+  Lead Lead[] @relation("LeadAttachments")
 }
+
+
+
 
 model Conversation {
   id         String    @id @default(cuid())
@@ -820,7 +796,6 @@ model Conversation {
   creator     User? @relation("creator", fields: [creator_id], references: [id])
   participant User? @relation("participant", fields: [participant_id], references: [id])
 
-  messages Message[]
 
   @@map("conversations")
 }
@@ -1646,6 +1621,7 @@ model Lead {
   @@index([pipeline_id])
   @@index([lead_stage_id])
   @@map("leads")
+  Attachment Attachment[]
 }
 
 model Task {
