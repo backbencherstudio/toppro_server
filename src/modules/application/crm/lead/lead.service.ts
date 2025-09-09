@@ -3,6 +3,7 @@ import { CreateLeadDto } from './dto/create-lead.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { UpdateLeadDto } from './dto/update-lead.dto';
 import { UpdateNotesDto } from './dto/update-notes.dto';
+import { SojebStorage } from 'src/common/lib/Disk/SojebStorage';
 
 @Injectable()
 export class LeadsService {
@@ -295,6 +296,98 @@ export class LeadsService {
       notes: lead.notes,
     };
   }
+
+
+  //Lead files upload....
+
+  async uploadFile(leadId: string, userId: string, file: Express.Multer.File) {
+    // Check if the lead exists
+    const lead = await this.prisma.lead.findUnique({
+      where: { id: leadId },
+    });
+
+    if (!lead) {
+      throw new NotFoundException('Lead not found');
+    }
+
+    // Generate a file name (this example uses a random string + timestamp to avoid collisions)
+    const fileName = `${userId}-${Date.now()}-${file.originalname}`;
+
+    // Upload the file using your storage service
+    await SojebStorage.put(`leads/${fileName}`, file.buffer);
+
+    // Create an attachment record in the database
+    const attachment = await this.prisma.attachment.create({
+      data: {
+        lead_id: leadId,
+        file_name: fileName,
+        file_url: `leads/${fileName}`,  // Assuming you serve files under this path
+        file_size: file.size,
+      },
+    });
+
+    return {
+      success: true,
+      message: 'File uploaded successfully',
+      data: attachment,  // Return the attachment info, including file name and URL
+    };
+  }
+
+  // Inside LeadsService
+  async getFilesForLead(leadId: string) {
+    const files = await this.prisma.attachment.findMany({
+      where: {
+        lead_id: leadId,
+      },
+      select: {
+        id: true,
+        file_name: true,
+        file_url: true,
+        file_size: true,
+      },
+    });
+
+    if (!files || files.length === 0) {
+      throw new NotFoundException(`No files found for lead with ID ${leadId}`);
+    }
+
+    return {
+      success: true,
+      message: 'Files retrieved successfully',
+      files,
+    };
+  }
+
+  // Inside LeadsService
+async removeFileFromLead(leadId: string, fileId: string) {
+  // Find the file by ID and leadId
+  const file = await this.prisma.attachment.findFirst({
+    where: {
+      id: fileId,
+      lead_id: leadId,
+    },
+  });
+
+  if (!file) {
+    throw new NotFoundException(`File with ID ${fileId} not found for lead ${leadId}`);
+  }
+
+  // Remove the file from storage (e.g., delete from your cloud storage or local storage)
+  await SojebStorage.delete(file.file_url);  // Assuming you're using SojebStorage to manage file storage.
+
+  // Remove the file from the database
+  await this.prisma.attachment.delete({
+    where: {
+      id: fileId,
+    },
+  });
+
+  return {
+    success: true,
+    message: `File with ID ${fileId} deleted successfully`,
+  };
+}
+
 
 
 }
