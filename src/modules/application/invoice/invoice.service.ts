@@ -36,7 +36,7 @@ export class InvoiceService {
         unit_id: true,
         tax_id: true,
         itemCategory_id: true,
-        customer: true,  // Select the customer relation instead of customer_id
+        // customer: true,  // Select the customer relation instead of customer_id
         itemType_id: true,
         sale_price: true,
         purchase_price: true,
