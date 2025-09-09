@@ -629,7 +629,14 @@ export class PurchaseService {
 
   // ------- PURCHASE REPORT -------
 
-  async getPurchaseReport(startDate: string, endDate: string, vendor: string, ownerId: string, workspaceId: string, userId: string) {
+  async getPurchaseReport(
+    startDate: string,
+    endDate: string,
+    vendor: string,
+    ownerId: string,
+    workspaceId: string,
+    userId: string,
+  ) {
     const start = new Date(startDate).toISOString();
     const end = new Date(endDate).toISOString();
 
@@ -642,8 +649,7 @@ export class PurchaseService {
           lte: end,
         },
 
-        vendor_id: vendor !== 'all_vendor' ? vendor : undefined, 
-        
+        vendor_id: vendor !== 'all_vendor' ? vendor : undefined,
       },
       select: {
         purchase_date: true,
