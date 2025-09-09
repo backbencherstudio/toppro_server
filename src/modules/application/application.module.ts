@@ -13,7 +13,6 @@ import { DealStageModule } from './crm/crm-setup/deal_stages/deal_stages.module'
 import { WorkspaceModule } from './workspace/workspace.module';
 import { SourcesModule } from './crm/crm-setup/sources/sources.module';
 import { ItemsModule } from './items/items.module';
-import { InvoiceModule } from './invoice/invoice.module';
 import { CategoryModule } from './category/category.module';
 import { PurchaseModule } from './purchase/purchase.module';
 import { TasksModule } from './crm/tasks/tasks.module';
@@ -23,8 +22,9 @@ import { LeadsUserModule } from './crm/lead/leadusers/leadusers.module';
 import { DiscussionModule } from './crm/discussion/discussion.module';
 import { ActivityModule } from './crm/activity/activity.module';
 import { LogTimeModule } from './log-time/log-time.module';
+import { InvoiceModule } from './invoice/invoice.module';
 @Module({
-  imports: [NotificationModule, ContactModule, FaqModule, CustomerModule, VendorModule, LeadModule, DealModule, CrmReportModule, PipelinesModule, LeadStagesModule, DealStageModule, WorkspaceModule, SourcesModule, ItemsModule, InvoiceModule, CategoryModule, PurchaseModule, TasksModule, EmailtextModule, CallModule, LeadsUserModule, DiscussionModule, ActivityModule, LogTimeModule],
+  imports: [NotificationModule, ContactModule, FaqModule, CustomerModule, VendorModule, LeadModule, DealModule, CrmReportModule, PipelinesModule, LeadStagesModule, DealStageModule, WorkspaceModule, SourcesModule, ItemsModule, CategoryModule, PurchaseModule, TasksModule, EmailtextModule, CallModule, LeadsUserModule, DiscussionModule, ActivityModule, LogTimeModule, InvoiceModule],
 
 })
 export class ApplicationModule { }

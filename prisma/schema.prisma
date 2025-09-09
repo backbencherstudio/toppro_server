@@ -103,7 +103,7 @@ model User {
   PurchaseItems            PurchaseItems[]
   Discussion               Discussion[]
   LogTime                  LogTime[]
-  InvoiceItem             InvoiceItem[] 
+  InvoiceItem              InvoiceItem[]
 
   @@map("users")
 }
@@ -145,8 +145,7 @@ model Workspace {
   PurchaseItems   PurchaseItems[]
   Discussion      Discussion[]
   LogTime         LogTime[]
-  InvoiceItem    InvoiceItem[]
-
+  InvoiceItem     InvoiceItem[]
 
   @@map("workspaces")
 }
@@ -278,20 +277,20 @@ model LogTime {
 
 // Invoice Model
 model Invoice {
-  id                  Int      @id @default(autoincrement())
+  id                  Int       @id @default(autoincrement())
   account_type_id     String?
   customer_id         String?
   billing_type_id     String?
   invoice_category_id String?
-  invoice_number      String
-  issueAt             DateTime
-  dueAt               DateTime
+  invoice_number      String?
+  issueAt             DateTime?
+  dueAt               DateTime?
   item_category_id    String?
-  subTotal            Float
-  totalDiscount       Float
-  totalTax            Float
-  totalPrice          Float
-  status              String
+  subTotal            Float?
+  totalDiscount       Float?
+  totalTax            Float?
+  totalPrice          Float?
+  status              String?
 
   owner_id     String?
   workspace_id String?
@@ -317,22 +316,24 @@ model Invoice {
 
 // InvoiceItem Model 
 model InvoiceItem {
-  id             Int     @id @default(autoincrement())
-  name           String?
-  sku            String?
-  image          String?
-  invoice_id     Int?
-  item_type_id   String?
-  item_id        String?
-  quantity       Int
-  price          Float
-  discount       Float
-  tax_id         String?
-  total          Float?
-  description    String?
-  customer_id    String?
-  purchase_price Float?
-  sale_price     Float?
+  id              Int     @id @default(autoincrement())
+  name            String?
+  sku             String?
+  image           String?
+  invoice_id      Int?
+  item_type_id    String?
+  item_id         String?
+  itemCategory_id String?
+  unit_id         String?
+  quantity        Int?
+  price           Float?
+  discount        Float?
+  tax_id          String?
+  total           Float?
+  description     String?
+  customer_id     String?
+  purchase_price  Float?
+  sale_price      Float?
 
   owner_id     String?
   workspace_id String?
@@ -342,13 +343,15 @@ model InvoiceItem {
   Workspace Workspace? @relation(fields: [workspace_id], references: [id])
 
   // Relations (assuming itemType and tax have models)
-  Item_type ItemType? @relation(fields: [item_type_id], references: [id])
-  Tax       Tax?      @relation(fields: [tax_id], references: [id])
-  Item     Items?    @relation(fields: [item_id], references: [id])
-  Invoice   Invoice?  @relation(fields: [invoice_id], references: [id])
+  Item        Items?        @relation(fields: [item_id], references: [id])
+  ItemType     ItemType?     @relation(fields: [item_type_id], references: [id]) 
+  Tax          Tax?          @relation(fields: [tax_id], references: [id])
+  ItemCategory ItemCategory? @relation(fields: [itemCategory_id], references: [id])
+  Unit         Unit?         @relation(fields: [unit_id], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  Invoice   Invoice? @relation(fields: [invoice_id], references: [id])
 
   @@map("invoice_items")
 }
@@ -396,7 +399,7 @@ model Items {
   account_type_id String?
   PurchaseItems   PurchaseItems[]
   LogTime         LogTime[]
-  InvoiceItem         InvoiceItem[]
+  InvoiceItem     InvoiceItem[]
 
   @@map("items")
 }
@@ -563,6 +566,7 @@ model ItemCategory {
   Purchase      Purchase[]
   PurchaseItems PurchaseItems[]
   Invoice       Invoice[]
+  InvoiceItem   InvoiceItem[]
 }
 
 model InvoiceCategory {
@@ -631,6 +635,7 @@ model Unit {
   updatedAt     DateTime        @default(now()) @updatedAt
   Items         Items[]
   PurchaseItems PurchaseItems[]
+  InvoiceItem   InvoiceItem[]
 }
 
 model ItemType {
