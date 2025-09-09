@@ -20,7 +20,7 @@ export class AuthService {
     private jwtService: JwtService,
     private prisma: PrismaService,
     private mailService: MailService,
-  ) {}
+  ) { }
 
   async me(email: string) {
     try {
@@ -284,7 +284,7 @@ export class AuthService {
       }
 
       // Step 6: Generate JWT tokens (access and refresh tokens)
-      const payload = { email: user.email, id: user.id, owner_id:user.owner_id, workspace_id:user.workspace_id };
+      const payload = { email: user.email, id: user.id, owner_id: user.owner_id, workspace_id: user.workspace_id, type: user.type };
       const accessToken = this.jwtService.sign(payload, { expiresIn: '30d' });
       // const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
 

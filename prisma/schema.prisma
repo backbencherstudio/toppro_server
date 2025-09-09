@@ -267,7 +267,7 @@ model Invoice {
   total         Float?    @default(0)
   paid          Float?    @default(0)
   due           Float?    @default(0)
-  issued_amount Float?    @default(0)
+  // issued_amount Float?    @default(0)
   status        String?   @default("draft") // draft, sent, paid, overdue, cancelled
   owner_id      String?
   workspace_id  String?
@@ -373,6 +373,11 @@ model Purchase {
   billing_type_id String?
   category_id     String?
   purchase_no     String  @unique // <-- auto-generated like PUR0000001 (see service)
+  subTotal        Float?   @default(0)
+  tax_id          String?
+  total           Float?   @default(0)
+  paid            Float?   @default(0)
+  due             Float?   @default(0) 
 
   // Multitenancy / audit
   owner_id     String?
