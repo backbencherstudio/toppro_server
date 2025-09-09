@@ -83,7 +83,7 @@ export class InvoiceService {
           item_type_id,
           tax_id,
           itemCategoryId,
-          // customer_id,  // Ensure customer_id is captured correctly
+          // customer_id,
           unit_id,
           name,
           sku,
