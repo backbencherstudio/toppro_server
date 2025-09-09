@@ -23,7 +23,6 @@ export class CreateLeadDto {
     // userIds?: string[];
 
     @IsArray()
-    @ArrayUnique() // no duplicates
     @IsOptional()  // can be empty; owner will always be added anyway
     users?: string[];
 

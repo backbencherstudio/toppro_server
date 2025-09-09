@@ -1,12 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateEmailTextDto } from './dto/create-emailtext.dto';
+import { ActivityService } from '../activity/activity.service';
 
 @Injectable()
 export class EmailTextService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, private activityService: ActivityService) { }
 
-   private timeAgo(date: Date): string {
+  private timeAgo(date: Date): string {
     const now = new Date();
     const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
@@ -51,7 +52,7 @@ export class EmailTextService {
     }
 
     // ✅ Create email text
-    return this.prisma.emailText.create({
+    const emailText = await this.prisma.emailText.create({
       data: {
         lead_id: dto.lead_id,
         mail_to: dto.mail_to,
@@ -66,9 +67,27 @@ export class EmailTextService {
         created_at: true,
       },
     });
+    // 2️⃣ Get owner name (for message)
+    const owner = await this.prisma.user.findUnique({
+      where: { id: ownerId },
+      select: { name: true },
+    });
+
+
+    // 3️⃣ Create activity via ActivityService
+    await this.activityService.createActivity(
+      workspaceId,
+      ownerId,
+      dto.lead_id,
+      'email',
+      `${owner?.name || 'Someone'} created a new Lead Email`,
+    );
+
+    return emailText;
+
   }
 
-async getAllByLead(leadId: string, ownerId: string, workspaceId: string) {
+  async getAllByLead(leadId: string, ownerId: string, workspaceId: string) {
     // ✅ Verify lead exists
     const lead = await this.prisma.lead.findFirst({
       where: {
