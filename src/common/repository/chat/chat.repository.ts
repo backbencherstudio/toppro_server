@@ -1,7 +1,8 @@
 // import { PrismaClient, MessageStatus } from '@prisma/client';
 
 // const prisma = new PrismaClient();
-//  class ChatRepository {
+
+// export class ChatRepository {
 //   /**
 //    * Update message status
 //    * @returns

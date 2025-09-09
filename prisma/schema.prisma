@@ -331,7 +331,7 @@ model InvoiceItem {
   description     String?
   customer_id     String?
   purchase_price  Float?
-  sale_price      Float?
+  sale_price      Float?  @default(0)
 
   owner_id     String?
   workspace_id String?
@@ -341,15 +341,16 @@ model InvoiceItem {
   Workspace Workspace? @relation(fields: [workspace_id], references: [id])
 
   // Relations (assuming itemType and tax have models)
-  Item        Items?        @relation(fields: [item_id], references: [id])
-  ItemType     ItemType?     @relation(fields: [item_type_id], references: [id]) 
+  Item         Items?        @relation(fields: [item_id], references: [id])
+  ItemType     ItemType?     @relation(fields: [item_type_id], references: [id])
   Tax          Tax?          @relation(fields: [tax_id], references: [id])
   ItemCategory ItemCategory? @relation(fields: [itemCategory_id], references: [id])
   Unit         Unit?         @relation(fields: [unit_id], references: [id])
+  Customer     Customer?     @relation(fields: [customer_id], references: [id])
+  Invoice      Invoice?      @relation(fields: [invoice_id], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  Invoice   Invoice? @relation(fields: [invoice_id], references: [id])
 
   @@map("invoice_items")
 }
@@ -398,6 +399,7 @@ model Items {
   PurchaseItems   PurchaseItems[]
   LogTime         LogTime[]
   InvoiceItem     InvoiceItem[]
+  customer        Customer[]
 
   @@map("items")
 }
@@ -767,27 +769,22 @@ enum MessageStatus {
   READ
 }
 
-
-
 model Attachment {
   id         String   @id @default(uuid())
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
-  lead_id    String
-  lead       Lead     @relation(fields: [lead_id], references: [id], onDelete: Cascade)
+  lead_id String
+  lead    Lead   @relation(fields: [lead_id], references: [id], onDelete: Cascade)
 
-  file_name  String
-  file_url   String  // The URL or path to the uploaded file
-  file_size  Int     // Size of the file (in bytes)
+  file_name String
+  file_url  String // The URL or path to the uploaded file
+  file_size Int // Size of the file (in bytes)
+  Lead      Lead[] @relation("LeadAttachments")
 
   @@index([lead_id])
   @@map("attachments")
-  Lead Lead[] @relation("LeadAttachments")
 }
-
-
-
 
 model Conversation {
   id         String    @id @default(cuid())
@@ -800,7 +797,6 @@ model Conversation {
 
   creator     User? @relation("creator", fields: [creator_id], references: [id])
   participant User? @relation("participant", fields: [participant_id], references: [id])
-
 
   @@map("conversations")
 }
@@ -1401,9 +1397,11 @@ model Customer {
   workspace_id String
 
   // relations
-  owner     User      @relation(fields: [owner_id], references: [id], onDelete: Cascade)
-  workspace Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
-  invoice   Invoice[]
+  owner        User          @relation(fields: [owner_id], references: [id], onDelete: Cascade)
+  workspace    Workspace     @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  invoice      Invoice[]
+  item         Items[]
+  invoice_item InvoiceItem[]
 }
 
 model Vendor {
@@ -1621,12 +1619,12 @@ model Lead {
   emails          EmailText[]
   PurchaseItems   PurchaseItems? @relation(fields: [purchaseItemsId], references: [id])
   purchaseItemsId String?
+  Attachment      Attachment[]
 
   @@index([workspace_id, owner_id])
   @@index([pipeline_id])
   @@index([lead_stage_id])
   @@map("leads")
-  Attachment Attachment[]
 }
 
 model Task {
