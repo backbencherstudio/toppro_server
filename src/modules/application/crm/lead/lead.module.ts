@@ -3,6 +3,7 @@ import { LeadsController } from './lead.controller';
 import { LeadsService } from './lead.service';
 import { LeadsUserModule } from './leadusers/leadusers.module';
 import { LeadsourcesModule } from './leadsources/leadsources.module';
+import { LeadProductsModule } from './lead-products/lead-products.module';
 
 
 
@@ -10,6 +11,6 @@ import { LeadsourcesModule } from './leadsources/leadsources.module';
 @Module({
   controllers: [LeadsController],
   providers: [LeadsService],
-  imports: [LeadsUserModule, LeadsourcesModule],
+  imports: [LeadsUserModule, LeadsourcesModule, LeadProductsModule],
 })
 export class LeadModule {}
