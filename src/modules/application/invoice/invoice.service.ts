@@ -9,13 +9,13 @@ import { CreateInvoiceDto } from './dto/create-invoice.dto';
 export class InvoiceService {
   constructor(private prisma: PrismaService) {}
 
-  // Helper function to calculate totals and resolve line items
   private async resolveLinesAndCompute(
     tx: Prisma.TransactionClient,
     items: Array<any>,
     ownerId: string,
     workspaceId: string,
     userId?: string,
+    customerId?: string
   ): Promise<{ lineCreates: any[]; grandTotal: number }> {
     if (!items?.length) return { lineCreates: [], grandTotal: 0 };
 
@@ -36,7 +36,6 @@ export class InvoiceService {
         unit_id: true,
         tax_id: true,
         itemCategory_id: true,
-        // customer: true,  // Select the customer relation instead of customer_id
         itemType_id: true,
         sale_price: true,
         purchase_price: true,
@@ -48,7 +47,8 @@ export class InvoiceService {
     if (missing.length) {
       throw new BadRequestException({
         code: 'ITEM_NOT_FOUND_IN_SCOPE',
-        message: 'Some items are not found in this workspace/owner scope or are deleted.',
+        message:
+          'Some items are not found in this workspace/owner scope or are deleted.',
         missingIds: missing,
       });
     }
@@ -58,10 +58,12 @@ export class InvoiceService {
     const resolved = await Promise.all(
       items.map(async (raw) => {
         const base = baseMap.get(raw.item_id)!;
-        console.log('base', base);
+        // console.log('base', base);
 
         const quantity = Number(raw.quantity ?? 1);
-        const price = Number(raw.purchase_price ?? base.purchase_price ?? base.sale_price ?? 0);
+        const price = Number(
+          raw.purchase_price ?? base.purchase_price ?? base.sale_price ?? 0,
+        );
         const discount = Number(raw.discount ?? 0);
         // const customer_id = raw.customer_id ?? base.customer?.id ?? null; // Access the customer relation correctly
 
@@ -128,7 +130,7 @@ export class InvoiceService {
         name: r.name ?? undefined,
         sku: r.sku ?? undefined,
         // sale_price: r.sale_price ?? undefined,
-        // Customer: { connect: { id: r.customer_id } },
+        Customer: { connect: { id: customerId } },
         price: r.price ?? undefined,
         owner_id: ownerId || userId,
         Workspace: { connect: { id: workspaceId } },
@@ -144,7 +146,7 @@ export class InvoiceService {
     dto: CreateInvoiceDto,
     ownerId: string,
     workspaceId: string,
-    userId: string
+    userId: string,
   ) {
     if (!dto.items?.length) {
       throw new BadRequestException('At least one item is required');
@@ -156,15 +158,15 @@ export class InvoiceService {
         dto.items,
         ownerId,
         workspaceId,
-        userId
+        userId,
+        dto.customer_id
       );
 
-      const invoiceNo = await this.nextInvoiceNo(tx, workspaceId);
-
       const data: any = {
-        invoice_number: dto.invoice_number ? dto.invoice_number : invoiceNo,
+        invoice_number: dto.invoice_number ? dto.invoice_number : undefined,
         issueAt: dto.issueAt ? new Date(dto.issueAt) : undefined,
         dueAt: dto.dueAt ? new Date(dto.dueAt) : undefined,
+        Customer: { connect: { id: dto.customer_id } },
         owner_id: ownerId || userId,
         Workspace: { connect: { id: workspaceId } },
         User: { connect: { id: userId } },
@@ -196,18 +198,4 @@ export class InvoiceService {
   }
 
   // Helper method to generate the next invoice number
-  private async nextInvoiceNo(
-    tx: Prisma.TransactionClient,
-    workspaceId: string,
-  ): Promise<string> {
-    const lastInvoice = await tx.invoice.findFirst({
-      where: { workspace_id: workspaceId },
-      orderBy: { createdAt: 'desc' },
-      select: { invoice_number: true },
-    });
-    const nextNumber = lastInvoice
-      ? parseInt(lastInvoice.invoice_number) + 1
-      : 1;
-    return nextNumber.toString();
-  }
 }
