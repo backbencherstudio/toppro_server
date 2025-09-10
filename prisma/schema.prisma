@@ -275,7 +275,7 @@ model LogTime {
 
 // Invoice Model
 model Invoice {
-  id                  String     @id @default(cuid())
+  id                  String    @id @default(cuid())
   account_type_id     String?
   customer_id         String?
   billing_type_id     String?
@@ -306,15 +306,16 @@ model Invoice {
   Item             Items[]
   InvoiceItem      InvoiceItem[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  deleted_at DateTime?
 
   @@map("invoices")
 }
 
 // InvoiceItem Model 
 model InvoiceItem {
-  id              String     @id @default(cuid())
+  id              String  @id @default(cuid())
   name            String?
   sku             String?
   image           String?
@@ -349,8 +350,9 @@ model InvoiceItem {
   Customer     Customer?     @relation(fields: [customer_id], references: [id])
   Invoice      Invoice?      @relation(fields: [invoice_id], references: [id])
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  deleted_at DateTime?
 
   @@map("invoice_items")
 }

@@ -42,6 +42,7 @@ export class PurchaseService {
     ownerId: string,
     workspaceId: string,
     userId?: string,
+    vendorId?: string
   ): Promise<{ lineCreates: any[]; grandTotal: number }> {
     if (!items?.length) return { lineCreates: [], grandTotal: 0 };
 
@@ -107,6 +108,7 @@ export class PurchaseService {
         const discount = Number(raw.discount ?? 0);
 
         const item_type_id = raw.item_type_id ?? base.itemType_id ?? null;
+        const vendor_id = vendorId ?? null;
         const tax_id = raw.tax_id ?? base.tax_id ?? null;
         const itemCategoryId =
           raw.itemCategory_id ?? base.itemCategory_id ?? null;
@@ -123,6 +125,7 @@ export class PurchaseService {
           discount,
           item_type_id,
           tax_id,
+          vendor_id,
           itemCategoryId,
           unit_id,
           name,
@@ -178,6 +181,7 @@ export class PurchaseService {
         unit_price: r.price,
         total_price: total,
         owner_id: ownerId,
+        Vendor: { connect: { id: vendorId } },
         workspace: { connect: { id: workspaceId } },
         ...(userId ? { user: { connect: { id: userId } } } : {}),
       };
@@ -206,6 +210,7 @@ export class PurchaseService {
         ownerId,
         workspaceId,
         userId,
+        dto.vendor_id
       );
 
       const purchaseNo = await this.nextPurchaseNo(tx, workspaceId);
