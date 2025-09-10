@@ -1,20 +1,20 @@
-import { Controller, Post, Body, Get, Param, Put, Delete, UseGuards, ForbiddenException, Req, Res } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, Put, Delete, UseGuards, ForbiddenException, Req, Res, Query } from '@nestjs/common';
 import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 import { HelpDeskCategoryService } from './helpdesk-category.service';
 
 
 @Controller('help-desk-category')
 export class HelpDeskCategoryController {
-  constructor(private readonly helpDeskCategoryService: HelpDeskCategoryService) {}
+  constructor(private readonly helpDeskCategoryService: HelpDeskCategoryService) { }
 
   // Only Admin (SUPERADMIN or OWNER) can create categories
   @Post()
   @UseGuards(JwtAuthGuard)
   async create(
     @Body() { name, color }: { name: string; color: string },
-    @Req() req: any,  // Access the request object
+    @Req() req: any,  
   ) {
-    const user = req.user;  // user data from JWT token
+    const user = req.user;
     if (user.type !== 'SUPERADMIN') {
       throw new ForbiddenException('You do not have permission to create a HelpDesk Category');
     }
@@ -28,9 +28,9 @@ export class HelpDeskCategoryController {
   async update(
     @Param('id') id: string,
     @Body() { name, color }: { name: string; color: string },
-    @Req() req: any,  // Access the request object
+    @Req() req: any,  
   ) {
-    const user = req.user;  // user data from JWT token
+    const user = req.user;
     if (user.type !== 'SUPERADMIN') {
       throw new ForbiddenException('You do not have permission to update the HelpDesk Category');
     }
@@ -43,9 +43,9 @@ export class HelpDeskCategoryController {
   @UseGuards(JwtAuthGuard)
   async delete(
     @Param('id') id: string,
-    @Req() req: any,  // Access the request object
+    @Req() req: any,  
   ) {
-    const user = req.user;  // user data from JWT token
+    const user = req.user;
     if (user.type !== 'SUPERADMIN') {
       throw new ForbiddenException('You do not have permission to delete the HelpDesk Category');
     }
@@ -54,10 +54,15 @@ export class HelpDeskCategoryController {
   }
 
   // Any user (SUPERADMIN, OWNER, or USER) can get all categories
+
   @Get()
   @UseGuards(JwtAuthGuard)
-  async getAll(@Req() req: any) {
-    const user = req.user;  // user data from JWT token
-    return this.helpDeskCategoryService.getHelpDeskCategories(user.id);
+  async getAll(
+    @Req() req: any,  
+    @Query('page') page = '1',  
+    @Query('limit') limit = '10',
+  ) {
+    const user = req.user;
+    return this.helpDeskCategoryService.getHelpDeskCategories(user.id, Number(page), Number(limit));
   }
 }
