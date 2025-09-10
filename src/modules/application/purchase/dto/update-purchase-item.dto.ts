@@ -38,8 +38,10 @@ export class UpdatePurchaseItemDto {
   @Min(1)
   quantity: number;
 
+  @IsOptional()
   @Type(() => Number)
   @IsNumber()
+  @Min(0)
   purchase_price: number;
 
   @Type(() => Number)
