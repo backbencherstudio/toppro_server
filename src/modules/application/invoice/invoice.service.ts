@@ -1,10 +1,14 @@
 // src/modules/application/invoice/invoice.service.ts
 
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { UpdateInvoiceDto } from 'src/modules/application/invoice/dto/update-invoice.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateInvoiceDto } from './dto/create-invoice.dto';
-import { UpdateInvoiceDto } from 'src/modules/application/invoice/dto/update-invoice.dto';
 
 @Injectable()
 export class InvoiceService {
@@ -16,7 +20,7 @@ export class InvoiceService {
     ownerId: string,
     workspaceId: string,
     userId?: string,
-    customerId?: string
+    customerId?: string,
   ): Promise<{ lineCreates: any[]; grandTotal: number }> {
     if (!items?.length) return { lineCreates: [], grandTotal: 0 };
 
@@ -56,88 +60,82 @@ export class InvoiceService {
 
     const baseMap = new Map(baseItems.map((b) => [b.id, b]));
 
-    const resolved = await Promise.all(
-      items.map(async (raw) => {
-        const base = baseMap.get(raw.item_id)!;
-        // console.log('base', base);
+    let grandTotal = 0;
+    const lineCreates = [];
 
-        const quantity = Number(raw.quantity ?? 1);
-        const price = Number(
-          raw.purchase_price ?? base.purchase_price ?? base.sale_price ?? 0,
-        );
-        const discount = Number(raw.discount ?? 0);
-        // const customer_id = raw.customer_id ?? base.customer?.id ?? null; // Access the customer relation correctly
+    for (const raw of items) {
+      const base = baseMap.get(raw.item_id)!;
 
-        const item_type_id = raw.item_type_id ?? base.itemType_id ?? null;
-        const tax_id = raw.tax_id ?? base.tax_id ?? null;
-        const itemCategoryId =
-          raw.itemCategory_id ?? base.itemCategory_id ?? null;
-        const unit_id = raw.unit_id ?? base.unit_id ?? null;
+      const quantity = Number(raw.quantity ?? 1);
+      let price = Number(
+        raw.purchase_price ?? base.purchase_price ?? base.sale_price ?? 0,
+      );
+      if (price < 0) price = 0;
 
-        const name = raw.name ?? base.name ?? null;
-        const sku = raw.sku ?? base.sku ?? null;
-        const description = raw.description ?? base.description ?? null;
+      const discount = Number(raw.discount ?? 0);
 
-        return {
-          item_id: raw.item_id,
+      const item_type_id = raw.item_type_id ?? base.itemType_id ?? null;
+      const tax_id = raw.tax_id ?? base.tax_id ?? null;
+      const itemCategoryId =
+        raw.itemCategory_id ?? base.itemCategory_id ?? null;
+      const unit_id = raw.unit_id ?? base.unit_id ?? null;
+
+      const name = raw.name ?? base.name ?? null;
+      const sku = raw.sku ?? base.sku ?? null;
+      const description = raw.description ?? base.description ?? null;
+
+      // If line_id exists, update the existing item
+      if (raw.line_id) {
+        await tx.invoiceItem.update({
+          where: { id: raw.line_id },
+          data: {
+            quantity,
+            price,
+            discount,
+            total: quantity * price - discount, // Recalculate total
+            description,
+            name,
+            sku,
+          },
+        });
+      } else {
+        // If no line_id, create a new invoice item
+        const newLine: any = {
+          Item: { connect: { id: raw.item_id } }, // Connect to the item
+          ItemType: { connect: { id: item_type_id } }, // Connect to the ItemType
+          Tax: { connect: { id: tax_id } }, // Connect to the Tax
+          Unit: { connect: { id: unit_id } }, // Connect to the Unit
           quantity,
-          price,
+          purchase_price: price,
           discount,
-          item_type_id,
-          tax_id,
-          itemCategoryId,
-          // customer_id,  // Ensure customer_id is captured correctly
-          unit_id,
+          description,
           name,
           sku,
-          description,
+          Customer: { connect: { id: customerId } }, // Connect to the Customer
+          price: raw.price ?? undefined,
+          owner_id: ownerId || userId,
+          Workspace: { connect: { id: workspaceId } },
+          ...(userId ? { User: { connect: { id: userId } } } : {}),
         };
-      }),
-    );
 
-    const taxIds = [
-      ...new Set(resolved.map((r) => r.tax_id).filter(Boolean)),
-    ] as string[];
-    const taxPct = new Map<string, number>();
-    if (taxIds.length) {
-      const taxes = await tx.tax.findMany({
-        where: { id: { in: taxIds } },
-        select: { id: true, rate: true },
-      });
-      taxes.forEach((t) => taxPct.set(t.id, Number(t.rate ?? 0)));
-    }
+        // Only connect ItemCategory if it is not undefined
+        if (itemCategoryId) {
+          newLine.ItemCategory = { connect: { id: itemCategoryId } };
+        }
 
-    let grandTotal = 0;
-    const lineCreates = resolved.map((r) => {
-      const subtotal = r.quantity * r.price;
-      const afterDiscount = subtotal - r.discount;
-      const pct = r.tax_id ? Number(taxPct.get(r.tax_id) ?? 0) : 0;
-      const taxAmount = afterDiscount * (pct / 100);
+        lineCreates.push(newLine);
+      }
+
+      const subtotal = quantity * price;
+      const afterDiscount = subtotal - discount;
+      const taxPct = Number(
+        (await tx.tax.findUnique({ where: { id: tax_id } })) ?? 0,
+      );
+      const taxAmount = afterDiscount * (taxPct / 100);
       const total = afterDiscount + taxAmount;
 
       grandTotal += total;
-
-      return {
-        Item: { connect: { id: r.item_id } }, // Corrected to `Item`
-        ItemType: { connect: { id: r.item_type_id } }, // Corrected to `ItemType`
-        Tax: { connect: { id: r.tax_id } }, // Corrected to `Tax`
-        ItemCategory: { connect: { id: r.itemCategoryId } }, // Corrected to `ItemCategory`
-        Unit: { connect: { id: r.unit_id } }, // Corrected to `Unit`
-        quantity: r.quantity,
-        purchase_price: r.price,
-        discount: r.discount,
-        total,
-        description: r.description ?? undefined,
-        name: r.name ?? undefined,
-        sku: r.sku ?? undefined,
-        // sale_price: r.sale_price ?? undefined,
-        Customer: { connect: { id: customerId } },
-        price: r.price ?? undefined,
-        owner_id: ownerId || userId,
-        Workspace: { connect: { id: workspaceId } },
-        ...(userId ? { User: { connect: { id: userId } } } : {}),
-      };
-    });
+    }
 
     return { lineCreates, grandTotal };
   }
@@ -160,8 +158,11 @@ export class InvoiceService {
         ownerId,
         workspaceId,
         userId,
-        dto.customer_id
+        dto.customer_id,
+        // dto.item_category_id
       );
+
+      console.log('dto.item_category_id:>>', dto.item_category_id);
 
       const data: any = {
         invoice_number: dto.invoice_number ? dto.invoice_number : undefined,
@@ -198,8 +199,255 @@ export class InvoiceService {
     });
   }
 
+  // --------- UPDATE ------------
 
+  // Main function to update the invoice
+  async update(
+    id: string,
+    dto: UpdateInvoiceDto,
+    ownerId: string,
+    workspaceId: string,
+    userId: string,
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      // 1️⃣ Fetch the invoice with active invoiceItems (deleted_at = null)
+      const existing = await tx.invoice.findFirst({
+        where: {
+          id,
+          deleted_at: null,
+          owner_id: ownerId || userId,
+          Workspace: { id: workspaceId },
+        },
+        include: {
+          InvoiceItem: { where: { deleted_at: null } },
+        },
+      });
 
+      if (!existing) throw new NotFoundException('Invoice not found');
 
+      const existingLineIds = new Set(existing.InvoiceItem.map((l) => l.id));
 
+      // 2️⃣ Update the invoice header (relations and fields)
+      const headerData: any = {};
+      const rel: [keyof UpdateInvoiceDto, string][] = [
+        ['account_type_id', 'Account_type'],
+        ['customer_id', 'Customer'],
+        ['billing_type_id', 'Billing_category'],
+        ['invoice_category_id', 'Invoice_category'],
+        ['item_category_id', 'Item_category'],
+        ['status', 'InvoiceStatus'],
+      ];
+
+      for (const [field, relation] of rel) {
+        if (dto[field] === undefined) continue;
+        if (dto[field] === null) headerData[relation] = { disconnect: true };
+        else headerData[relation] = { connect: { id: dto[field] as string } };
+      }
+
+      if (dto.issueAt !== undefined) {
+        headerData.issueAt = dto.issueAt ? new Date(dto.issueAt) : null;
+      }
+
+      if (dto.dueAt !== undefined) {
+        headerData.dueAt = dto.dueAt ? new Date(dto.dueAt) : null;
+      }
+
+      if (Object.keys(headerData).length) {
+        await tx.invoice.update({
+          where: { id },
+          data: {
+            ...headerData,
+            owner_id: ownerId || userId,
+            Workspace: { connect: { id: workspaceId } },
+            ...(userId ? { User: { connect: { id: userId } } } : {}),
+          },
+        });
+      }
+
+      // 3️⃣ Soft-delete lines (set deleted_at) if requested
+      if (dto.delete_line_ids?.length) {
+        const invalid = dto.delete_line_ids.filter(
+          (lid) => !existingLineIds.has(lid),
+        );
+        if (invalid.length) {
+          throw new BadRequestException(
+            `Some line_ids do not belong to this invoice: ${invalid.join(', ')}`,
+          );
+        }
+
+        await tx.invoiceItem.updateMany({
+          where: { id: { in: dto.delete_line_ids } },
+          data: { deleted_at: new Date() },
+        });
+      }
+
+      // 4️⃣ Create or update invoiceItems using resolveLinesAndCompute
+      const { lineCreates, grandTotal } = await this.resolveLinesAndCompute(
+        tx,
+        dto.items ?? [],
+        ownerId,
+        workspaceId,
+        userId,
+        dto.customer_id,
+      );
+
+      // 5️⃣ Permanently delete previously soft-deleted invoiceItems
+      await tx.invoiceItem.deleteMany({
+        where: { invoice_id: id, deleted_at: { not: null } },
+      });
+
+      // 6️⃣ Return updated invoice with active items
+      return tx.invoice.update({
+        where: { id },
+        data: {
+          InvoiceItem: {
+            create: lineCreates,
+          },
+          totalPrice: grandTotal,
+        },
+        include: {
+          InvoiceItem: {
+            where: { deleted_at: null },
+          },
+        },
+      });
+    });
+  }
+
+  // Helper method to resolve lines and compute total
+
+  async updateStatus(
+    id: string,
+    status: string,
+    ownerId: string,
+    workspaceId: string,
+    userId: string,
+  ) {
+    // Find the invoice by ID and ensure it exists
+    const invoice = await this.prisma.invoice.findUnique({
+      where: {
+        id,
+        owner_id: ownerId || userId,
+        workspace_id: workspaceId,
+      },
+    });
+
+    if (!invoice) {
+      throw new NotFoundException('Invoice not found');
+    }
+
+    if (invoice.status === 'PAID') {
+      throw new BadRequestException('Invoice already paid');
+    }
+
+    if (invoice.status === 'SENT') {
+      throw new BadRequestException('Invoice already sent');
+    }
+
+    if (invoice.status.toUpperCase() !== 'SENT') {
+      throw new BadRequestException('Status must be SENT');
+    }
+
+    // Update only the status field
+    const updatedInvoice = await this.prisma.invoice.update({
+      where: { id },
+      data: { status },
+    });
+
+    return {
+      success: true,
+      message: 'Invoice Sent  successfully',
+      data: updatedInvoice,
+    };
+  }
+
+  async deleteInvoiceItems(
+    invoiceId: string,
+    itemId: string,
+    ownerId: string,
+    workspaceId: string,
+    userId?: string,
+  ) {
+    // console.log("params::>>", invoiceId, itemId, ownerId, workspaceId, userId);
+    // Verify the invoice exists
+    const invoice = await this.prisma.invoice.findUnique({
+      where: {
+        id: invoiceId, // Ensure you are using the `id` field here
+      },
+    });
+
+    if (!invoice) {
+      throw new BadRequestException('Invoice not found');
+    }
+
+    // Fetch the items to see if they exist before updating
+    const existingItems = await this.prisma.invoiceItem.findMany({
+      where: {
+        id: itemId,
+        owner_id: ownerId || userId,
+        workspace_id: workspaceId,
+      },
+    });
+
+    if (existingItems.length === 0) {
+      throw new BadRequestException('No matching invoice items found');
+    }
+
+    // Update only the deleted_at field with the current date
+    const updatedItems = await this.prisma.invoiceItem.updateMany({
+      where: {
+        id: itemId,
+        owner_id: ownerId,
+        workspace_id: workspaceId,
+      },
+      data: { deleted_at: new Date() },
+    });
+
+    // console.log('updatedItems ::>>', updatedItems);
+
+    // Return the response with success message and updated data
+    return {
+      success: true,
+      message: `Deleted ${updatedItems.count} invoice item(s) successfully.`,
+      updatedFields: updatedItems,
+    };
+  }
+
+  async softDelete(
+    id: string,
+    ownerId: string,
+    workspaceId: string,
+    userId?: string,
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      const existing = await tx.invoice.findFirst({
+        where: {
+          id,
+          deleted_at: null,
+          owner_id: ownerId || userId,
+          workspace_id: workspaceId,
+        },
+        include: { InvoiceItem: { select: { id: true } } }, // Ensure you have this relationship correctly defined
+      });
+
+      if (!existing) throw new NotFoundException('Invoice not found');
+
+      const now = new Date();
+
+      await tx.invoice.update({
+        where: { id },
+        data: { deleted_at: now },
+      });
+
+      const ids = existing.InvoiceItem.map((l) => l.id);
+      if (ids.length) {
+        await tx.invoiceItem.updateMany({
+          where: { id: { in: ids } },
+          data: { deleted_at: now },
+        });
+      }
+
+      return { success: true };
+    });
+  }
 }

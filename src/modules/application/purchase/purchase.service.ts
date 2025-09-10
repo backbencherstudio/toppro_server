@@ -681,4 +681,5 @@ export class PurchaseService {
 
     return dailyReport;
   }
+  
 }
