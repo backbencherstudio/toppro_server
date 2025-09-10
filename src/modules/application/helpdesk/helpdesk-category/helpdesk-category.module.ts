@@ -1,9 +1,10 @@
 import { Module } from '@nestjs/common';
-import { HelpdeskCategoryService } from './helpdesk-category.service';
-import { HelpdeskCategoryController } from './helpdesk-category.controller';
+import { HelpDeskCategoryController } from './helpdesk-category.controller';
+import { HelpDeskCategoryService } from './helpdesk-category.service';
+
 
 @Module({
-  controllers: [HelpdeskCategoryController],
-  providers: [HelpdeskCategoryService],
+  controllers: [HelpDeskCategoryController],
+  providers: [HelpDeskCategoryService],
 })
-export class HelpdeskCategoryModule {}
+export class HelpDeskCategoryModule {}
