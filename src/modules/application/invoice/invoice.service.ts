@@ -1,9 +1,10 @@
 // src/modules/application/invoice/invoice.service.ts
 
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateInvoiceDto } from './dto/create-invoice.dto';
+import { UpdateInvoiceDto } from 'src/modules/application/invoice/dto/update-invoice.dto';
 
 @Injectable()
 export class InvoiceService {
@@ -141,7 +142,7 @@ export class InvoiceService {
     return { lineCreates, grandTotal };
   }
 
-  // Function to create an invoice
+  // ------- CREATE -------
   async create(
     dto: CreateInvoiceDto,
     ownerId: string,
@@ -197,5 +198,8 @@ export class InvoiceService {
     });
   }
 
-  // Helper method to generate the next invoice number
+
+
+
+
 }
