@@ -4,10 +4,11 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { UpdateLeadDto } from './dto/update-lead.dto';
 import { UpdateNotesDto } from './dto/update-notes.dto';
 import { SojebStorage } from 'src/common/lib/Disk/SojebStorage';
+import { ActivityService } from '../activity/activity.service';
 
 @Injectable()
 export class LeadsService {
-  constructor(private prisma: PrismaService) { }
+  constructor(private prisma: PrismaService, private activityService: ActivityService) { }
 
 
   async createLead(dto: CreateLeadDto, ownerId: string, workspaceId: string,) {
@@ -300,7 +301,7 @@ export class LeadsService {
 
   //Lead files upload....
 
-  async uploadFile(leadId: string, userId: string, file: Express.Multer.File) {
+  async uploadFile(leadId: string, ownerId: string, workspaceId: string, userId: string, file: Express.Multer.File) {
     // Check if the lead exists
     const lead = await this.prisma.lead.findUnique({
       where: { id: leadId },
@@ -325,6 +326,21 @@ export class LeadsService {
         file_size: file.size,
       },
     });
+
+    const owner = await this.prisma.user.findUnique({
+      where: { id: ownerId },
+      select: { name: true },
+    });
+
+
+    // 3️⃣ Create activity via ActivityService
+    await this.activityService.createActivity(
+      workspaceId,
+      ownerId,
+      leadId,
+      'File upload',
+      `${owner?.name || 'Someone'} uploaded new file ${file.originalname}`,
+    );
 
     return {
       success: true,
@@ -359,34 +375,34 @@ export class LeadsService {
   }
 
   // Inside LeadsService
-async removeFileFromLead(leadId: string, fileId: string) {
-  // Find the file by ID and leadId
-  const file = await this.prisma.attachment.findFirst({
-    where: {
-      id: fileId,
-      lead_id: leadId,
-    },
-  });
+  async removeFileFromLead(leadId: string, fileId: string) {
+    // Find the file by ID and leadId
+    const file = await this.prisma.attachment.findFirst({
+      where: {
+        id: fileId,
+        lead_id: leadId,
+      },
+    });
 
-  if (!file) {
-    throw new NotFoundException(`File with ID ${fileId} not found for lead ${leadId}`);
+    if (!file) {
+      throw new NotFoundException(`File with ID ${fileId} not found for lead ${leadId}`);
+    }
+
+    // Remove the file from storage (e.g., delete from your cloud storage or local storage)
+    await SojebStorage.delete(file.file_url);  // Assuming you're using SojebStorage to manage file storage.
+
+    // Remove the file from the database
+    await this.prisma.attachment.delete({
+      where: {
+        id: fileId,
+      },
+    });
+
+    return {
+      success: true,
+      message: `File with ID ${fileId} deleted successfully`,
+    };
   }
-
-  // Remove the file from storage (e.g., delete from your cloud storage or local storage)
-  await SojebStorage.delete(file.file_url);  // Assuming you're using SojebStorage to manage file storage.
-
-  // Remove the file from the database
-  await this.prisma.attachment.delete({
-    where: {
-      id: fileId,
-    },
-  });
-
-  return {
-    success: true,
-    message: `File with ID ${fileId} deleted successfully`,
-  };
-}
 
 
 
