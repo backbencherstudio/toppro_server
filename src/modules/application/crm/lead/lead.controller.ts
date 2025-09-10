@@ -93,8 +93,10 @@ export class LeadsController {
     @UploadedFile() file: Express.Multer.File,  // Extract file from form-data
     @Req() req: any  // Access request object to get userId from JWT
   ) {
+    const ownerId = req.user.id;  // Extract from JWT token
+    const workspaceId = req.user.workspace_id;
     const userId = req.user.id;  // Get user ID from JWT payload (assuming JWT contains user info)
-    return this.leadsService.uploadFile(leadId, userId, file);  // Call uploadFile in service
+    return this.leadsService.uploadFile(leadId, ownerId, workspaceId, userId, file);  // Call uploadFile in service
   }
 
   // Inside LeadsController
