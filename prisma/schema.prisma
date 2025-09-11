@@ -834,7 +834,6 @@ model Attachment {
 
   @@index([lead_id])
   @@map("attachments")
-  TicketDescription TicketDescription[]
 }
 
 model Conversation {
@@ -1797,7 +1796,6 @@ model HelpDeskCategory {
   HelpDeskTickets HelpDeskTicket[] @relation("CategoryTickets")
 
   @@map("help_desk_categories")
-  
   HelpDeskTicket HelpDeskTicket[]
 }
 
@@ -1814,29 +1812,39 @@ model HelpDeskTicket {
   descriptionId String? @unique
   ticketId      String         @unique // Unique ticket ID
   notes         String?        @db.Text
-  description   TicketDescription? @relation(fields: [descriptionId], references: [id])
-  category      HelpDeskCategory  @relation(fields: [categoryId], references: [id])
-  customer      User              @relation("CustomerTickets", fields: [customerId], references: [id])
-  creator       User              @relation("CreatorTickets", fields: [createdBy], references: [id])
-
-  TicketDescription TicketDescription[] @relation("TicketDescriptionToHelpDeskTicket")
-  HelpDeskCategory HelpDeskCategory[] @relation("CategoryTickets")
+  description    TicketDescriptionWithAttachment? @relation(fields: [descriptionId], references: [id])
+  category       HelpDeskCategory    @relation(fields: [categoryId], references: [id])
+  customer       User                @relation("CustomerTickets", fields: [customerId], references: [id])
+  creator        User                @relation("CreatorTickets", fields: [createdBy], references: [id])
 
   @@map("help_desk_tickets")
+  TicketDescriptionWithAttachment TicketDescriptionWithAttachment[] @relation("TicketDescriptionWithAttachmentToHelpDeskTicket")
+  HelpDeskCategory HelpDeskCategory[] @relation("CategoryTickets")
 }
 
 
-model TicketDescription {
-  id          String        @id @default(uuid())
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  description String        
-  attachment  Attachment[]
+model TicketDescriptionWithAttachment {
+  id          String            @id @default(uuid())
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  description String            // The text description of the ticket
+  attachments DescriptionAttachment[] // Multiple attachments per description
 
-  helpDeskTicket    HelpDeskTicket @relation("TicketDescriptionToHelpDeskTicket", fields: [id], references: [descriptionId])
-  HelpDeskTicket HelpDeskTicket[]
+  helpDeskTicket    HelpDeskTicket @relation("TicketDescriptionWithAttachmentToHelpDeskTicket", fields: [id], references: [descriptionId])
+  HelpDeskTicket HelpDeskTicket[] // Relation to HelpDeskTicket
 
-  @@map("ticket_descriptions")
+  @@map("ticket_descriptions_with_attachments")
+}
+
+model DescriptionAttachment {
+  id            String   @id @default(uuid())
+  file_name     String
+  file_url      String
+  file_size     Int
+  descriptionId String  // Foreign key to TicketDescriptionWithAttachment
+  description   TicketDescriptionWithAttachment @relation(fields: [descriptionId], references: [id])
+
+  @@map("description_attachments")
 }
 
 
