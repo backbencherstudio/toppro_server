@@ -199,6 +199,34 @@ export class InvoiceService {
     });
   }
 
+
+  async findAll(ownerId: string, workspaceId: string, userId?: string) {
+  return this.prisma.invoice.findMany({
+    where: {
+      owner_id: ownerId || userId,
+      workspace_id: workspaceId,
+      deleted_at: null, // exclude soft deleted invoices
+    },
+    select: {
+      id: true,
+      invoice_number: true,
+      issueAt: true,
+      dueAt: true,
+      totalPrice: true,
+      status: true,
+      Account_type: {
+        select: {
+          name: true, // account type name
+        },
+      },
+    },
+    orderBy: {
+      createdAt: 'desc', // latest first
+    },
+  });
+}
+
+
   // --------- UPDATE ------------
 
   // Main function to update the invoice

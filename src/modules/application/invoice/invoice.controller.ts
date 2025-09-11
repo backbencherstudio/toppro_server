@@ -4,6 +4,7 @@ import {
   Body,
   Controller,
   Delete,
+  Get,
   Param,
   Patch,
   Post,
@@ -29,6 +30,17 @@ export class InvoiceController {
       id: userId,
     } = req.user;
     return this.invoiceService.create(dto, ownerId, workspaceId, userId);
+  }
+
+  // get all invoices
+  @Get("all")
+  async findAll(@Req() req: any) {
+    const {
+      owner_id: ownerId,
+      workspace_id: workspaceId,
+      id: userId,
+    } = req.user;
+    return this.invoiceService.findAll(ownerId, workspaceId, userId);
   }
 
   // Update an invoice

@@ -102,9 +102,10 @@ model User {
   Discussion               Discussion[]
   LogTime                  LogTime[]
   InvoiceItem              InvoiceItem[]
+  HelpDeskCategory         HelpDeskCategory[]
+  stock                    Stock[]
 
   @@map("users")
-  HelpDeskCategory HelpDeskCategory[]
 }
 
 model Workspace {
@@ -145,6 +146,7 @@ model Workspace {
   Discussion      Discussion[]
   LogTime         LogTime[]
   InvoiceItem     InvoiceItem[]
+  stock           Stock[]
 
   @@map("workspaces")
 }
@@ -285,15 +287,18 @@ model Invoice {
   issueAt             DateTime?
   dueAt               DateTime?
   item_category_id    String?
-  subTotal            Float?
-  totalDiscount       Float?
-  totalTax            Float?
-  totalPrice          Float?
-  status              String?
+  subTotal            Float? //sub total
+  totalDiscount       Float? //total discount
+  totalTax            Float? //total tax
+  totalPrice          Float? //amount
+  paid                Float?    @default(0)
+  due                 Float?    @default(0)
+  status              String?   @default("DRAFT")
 
   owner_id     String?
   workspace_id String?
   user_id      String?
+  stock_id     String?
 
   User      User?      @relation(fields: [user_id], references: [id])
   Workspace Workspace? @relation(fields: [workspace_id], references: [id])
@@ -304,6 +309,7 @@ model Invoice {
   Billing_category BillCategory?    @relation(fields: [billing_type_id], references: [id])
   Item_category    ItemCategory?    @relation(fields: [item_category_id], references: [id])
   Invoice_category InvoiceCategory? @relation(fields: [invoice_category_id], references: [id])
+  stock            Stock?            @relation(fields: [stock_id], references: [id])
   Item             Items[]
   InvoiceItem      InvoiceItem[]
 
@@ -325,19 +331,20 @@ model InvoiceItem {
   item_id         String?
   itemCategory_id String?
   unit_id         String?
-  quantity        Int?
-  price           Float?
-  discount        Float?
+  quantity        Int?    @default(1)
+  price           Float?  @default(0)
+  discount        Float?  @default(0)
   tax_id          String?
-  total           Float?
+  total           Float?  @default(0) //Amount
   description     String?
   customer_id     String?
-  purchase_price  Float?
-  sale_price      Float?  @default(0)
+  purchase_price  Float? // get item
+  sale_price      Float? // get item 
 
   owner_id     String?
   workspace_id String?
   user_id      String?
+  stock_id     String?
 
   User      User?      @relation(fields: [user_id], references: [id])
   Workspace Workspace? @relation(fields: [workspace_id], references: [id])
@@ -350,6 +357,7 @@ model InvoiceItem {
   Unit         Unit?         @relation(fields: [unit_id], references: [id])
   Customer     Customer?     @relation(fields: [customer_id], references: [id])
   Invoice      Invoice?      @relation(fields: [invoice_id], references: [id])
+  stock        Stock?         @relation(fields: [stock_id], references: [id])
 
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
@@ -403,6 +411,7 @@ model Items {
   LogTime         LogTime[]
   InvoiceItem     InvoiceItem[]
   customer        Customer[]
+  stock           Stock[]
 
   @@map("items")
 }
@@ -431,8 +440,10 @@ model Purchase {
   owner_id     String?
   workspace_id String?
   user_id      String?
+  stock_id     String?
 
   // Relations (headers)
+  stock       Stock?         @relation(fields: [stock_id], references: [id])
   AccountType AccountType?  @relation(fields: [account_type_id], references: [id])
   Vendor      Vendor?       @relation(fields: [vendor_id], references: [id])
   BillingType BillCategory? @relation(fields: [billing_type_id], references: [id])
@@ -478,6 +489,7 @@ model PurchaseItems {
   user_id         String?
   account_type_id String?
   purchase_id     String?
+  stock_id        String?
 
   user      User?      @relation(fields: [user_id], references: [id])
   workspace Workspace? @relation(fields: [workspace_id], references: [id])
@@ -494,8 +506,39 @@ model PurchaseItems {
   leads        Lead[]
   Purchase     Purchase[]
   Account_type AccountType? @relation(fields: [account_type_id], references: [id])
+  stock        Stock?        @relation(fields: [stock_id], references: [id])
 
   @@map("Purchase_items")
+}
+
+model Stock {
+  id         String    @id @default(cuid())
+  created_at DateTime  @default(now())
+  updated_at DateTime  @default(now()) @updatedAt
+  deleted_at DateTime?
+
+  product_name String
+  sku          String
+  quantity     Int
+  image        String?
+
+  item_id      String? @unique
+  owner_id     String?
+  workspace_id String?
+  user_id      String?
+
+  user      User?      @relation(fields: [user_id], references: [id])
+  workspace Workspace? @relation(fields: [workspace_id], references: [id])
+
+  Items Items? @relation(fields: [item_id], references: [id])
+
+  purchaseItems PurchaseItems[]
+  InvoiceItem   InvoiceItem[]
+  invoice       Invoice[]
+
+  Purchase Purchase[]
+
+  @@map("stock")
 }
 
 enum Status {
@@ -1734,22 +1777,20 @@ model Activity {
 //    ############################# CRM Setup ##End## #########################################################################
 // ###############################################################################################################################
 
-
-
 // ###############################################################################################################################
 //    ############################# Help Desk ##Start## #########################################################################
 // ###############################################################################################################################
 
 model HelpDeskCategory {
-  id     String   @id @default(cuid())
-  name   String   @db.VarChar(255)
-  color  String   @db.VarChar(7) // Color in HEX format (e.g., #FF5733)
+  id    String @id @default(cuid())
+  name  String @db.VarChar(255)
+  color String @db.VarChar(7) // Color in HEX format (e.g., #FF5733)
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
   created_by String
-  user      User     @relation(fields: [created_by], references: [id])
+  user       User   @relation(fields: [created_by], references: [id])
 
   @@map("help_desk_categories")
 }
