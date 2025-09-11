@@ -42,7 +42,7 @@ export class PurchaseService {
     ownerId: string,
     workspaceId: string,
     userId?: string,
-    vendorId?: string
+    vendorId?: string,
   ): Promise<{ lineCreates: any[]; grandTotal: number }> {
     if (!items?.length) return { lineCreates: [], grandTotal: 0 };
 
@@ -181,7 +181,7 @@ export class PurchaseService {
         unit_price: r.price,
         total_price: total,
         owner_id: ownerId,
-        Vendor: { connect: { id: vendorId } },
+        vendor_id: vendorId,
         workspace: { connect: { id: workspaceId } },
         ...(userId ? { user: { connect: { id: userId } } } : {}),
       };
@@ -192,7 +192,6 @@ export class PurchaseService {
     return { lineCreates, grandTotal };
   }
 
-  // ------- CREATE -------
   async create(
     dto: CreatePurchaseDto, // snake_case payload
     ownerId: string,
@@ -210,8 +209,10 @@ export class PurchaseService {
         ownerId,
         workspaceId,
         userId,
-        dto.vendor_id
+        dto.vendor_id,
       );
+
+      console.log('dto.vendor_id', dto.vendor_id);
 
       const purchaseNo = await this.nextPurchaseNo(tx, workspaceId);
 
@@ -251,6 +252,38 @@ export class PurchaseService {
           purchaseItems: true,
         },
       });
+
+      // Update stock quantities for each purchased item
+      for (const item of dto.items) {
+        // Find the stock for the current item
+        const stock = await tx.stock.findUnique({
+          where: { item_id: item.item_id },
+        });
+
+        if (stock) {
+          // If stock exists, update the quantity by adding the purchased quantity
+          await tx.stock.update({
+            where: { item_id: item.item_id },
+            data: {
+              quantity: stock.quantity + item.quantity, // Add purchased quantity to stock
+            },
+          });
+        } else {
+          // If stock does not exist for this item, create a new stock entry
+          await tx.stock.create({
+            data: {
+              item_id: item.item_id,
+              quantity: item.quantity, // Set the quantity to purchased quantity
+              product_name: item.name, // Assuming `name` is available in the item
+              sku: item.sku, // Assuming `sku` is available in the item
+              deleted_at: null,
+              owner_id: ownerId || userId,
+              workspace_id: workspaceId,
+              user_id: userId,
+            },
+          });
+        }
+      }
 
       return {
         ...purchase,
@@ -350,7 +383,8 @@ export class PurchaseService {
     };
   }
 
-  // ------- UPDATE (header patch + replace lines if provided) -------
+  // ------- UPDATE (header patch + replace lines if provided) -------}
+
   async update(
     id: string,
     dto: UpdatePurchaseDto,
@@ -475,6 +509,7 @@ export class PurchaseService {
                 `line_id ${raw.line_id} does not belong to this purchase`,
               );
             }
+
             updatePromises.push(
               tx.purchaseItems.update({
                 where: { id: raw.line_id },
@@ -483,6 +518,34 @@ export class PurchaseService {
             );
           } else {
             creates.push(lineData);
+          }
+
+          // Update stock quantity if item exists
+          const stock = await tx.stock.findUnique({
+            where: { item_id: raw.item_id },
+          });
+
+          if (stock) {
+            await tx.stock.update({
+              where: { id: stock.id },
+              data: {
+                quantity: stock.quantity + raw.quantity, // Add purchased quantity to stock
+              },
+            });
+          } else {
+            // If stock doesn't exist, create a new stock entry
+            await tx.stock.create({
+              data: {
+                item_id: raw.item_id,
+                quantity: raw.quantity,
+                product_name: base.name,
+                sku: base.sku,
+                owner_id: ownerId,
+                workspace_id: workspaceId,
+                user_id: userId,
+                deleted_at: null,
+              },
+            });
           }
         }
 
@@ -556,6 +619,8 @@ export class PurchaseService {
       },
     });
 
+    console.log('purchase', purchase);
+
     if (!purchase) {
       throw new BadRequestException('Purchase not found');
     }
@@ -567,18 +632,26 @@ export class PurchaseService {
         owner_id: ownerId || userId,
         workspace_id: workspaceId,
       },
+      include: {
+        item: true, // Make sure to include the related item to access item_id
+      },
     });
-
-    console.log('Found items for update:', existingItems);
 
     if (existingItems.length === 0) {
       throw new BadRequestException('No matching purchase items found');
     }
 
+    // Get the quantity of the item being deleted
+    const itemToDelete = existingItems[0]; // Access the first item in the array
+    const quantityToDelete = itemToDelete.quantity;
+
+    console.log('existingItems', existingItems);
+    console.log('quantityToDelete', quantityToDelete);
+    console.log('itemToDelete', itemToDelete);
+
     // Update only the deleted_at field with the current date
     const updatedItems = await this.prisma.purchaseItems.updateMany({
       where: {
-        purchase_id: purchaseId,
         id: itemId,
         owner_id: ownerId,
         workspace_id: workspaceId,
@@ -586,15 +659,38 @@ export class PurchaseService {
       data: { deleted_at: new Date() },
     });
 
+    console.log('updatedItems', updatedItems);
+
+    // Now, update the stock quantity: subtract the deleted quantity from the stock
+    const stock = await this.prisma.stock.findUnique({
+      where: { item_id: itemToDelete.item[0].id }, // Access item_id via the related `item`
+    });
+
+    // console.log('stock', stock);
+
+    if (stock) {
+      // Decrease the stock quantity by the quantity of the deleted item
+      await this.prisma.stock.update({
+        where: { id: stock.id },
+        data: {
+          quantity: stock.quantity - quantityToDelete,
+        },
+      });
+    } else {
+      // If stock does not exist, throw an error or handle as per your logic
+      throw new BadRequestException('Stock not found for this item');
+    }
+
     // Return the response with success message and updated data
     return {
       success: true,
-      message: `Deleted ${updatedItems.count} purchase item(s) successfully.`,
+      message: `Deleted ${updatedItems.count} purchase item(s) successfully and updated stock quantity.`,
       updatedFields: updatedItems,
     };
   }
 
   // ------- SOFT DELETE -------
+  // Correcting the update function
   async softDelete(
     id: string,
     ownerId: string,
@@ -602,6 +698,7 @@ export class PurchaseService {
     userId?: string,
   ) {
     return this.prisma.$transaction(async (tx) => {
+      // Fetch the purchase with active purchaseItems (deleted_at = null)
       const existing = await tx.purchase.findFirst({
         where: {
           id,
@@ -609,21 +706,59 @@ export class PurchaseService {
           owner_id: ownerId || userId,
           workspace: { id: workspaceId },
         },
-        include: { purchaseItems: { select: { id: true } } },
+        include: {
+          purchaseItems: {
+            // Include the purchaseItems relation
+            select: {
+              id: true,
+              quantity: true, // Selecting quantity of items
+              item: { select: { id: true } }, // Include item_id from the related Items model
+            },
+          },
+        },
       });
+
       if (!existing) throw new NotFoundException('Purchase not found');
 
       const now = new Date();
 
+      // Soft-delete the purchase itself
       await tx.purchase.update({
         where: { id },
         data: { deleted_at: now },
       });
 
-      const ids = existing.purchaseItems.map((l) => l.id);
-      if (ids.length) {
-        await tx.purchaseItems.updateMany({
-          where: { id: { in: ids } },
+      // Loop through purchaseItems and update stock quantities
+      for (const item of existing.purchaseItems) {
+        // Check if item exists in the purchaseItems array (ensure it's not an array of empty values)
+        if (item && item.item && item.item.length > 0) {
+          // Get item_id from the first element of the item array
+          const itemId = item.item[0].id;
+
+          // Fetch the corresponding stock for this item
+          const stock = await tx.stock.findUnique({
+            where: { item_id: itemId }, // Reference the item_id properly
+          });
+
+          if (stock) {
+            // Decrease the stock quantity by the quantity of the deleted item
+            await tx.stock.update({
+              where: { id: stock.id },
+              data: {
+                quantity: stock.quantity - item.quantity, // Decrement stock quantity
+              },
+            });
+          } else {
+            // If stock doesn't exist for the item, throw an error or handle as required
+            throw new BadRequestException(
+              'Stock not found for item: ' + itemId,
+            );
+          }
+        }
+
+        // Soft-delete the purchase item
+        await tx.purchaseItems.update({
+          where: { id: item.id },
           data: { deleted_at: now },
         });
       }
@@ -681,5 +816,4 @@ export class PurchaseService {
 
     return dailyReport;
   }
-  
 }

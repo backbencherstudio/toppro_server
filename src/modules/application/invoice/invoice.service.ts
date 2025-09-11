@@ -21,8 +21,21 @@ export class InvoiceService {
     workspaceId: string,
     userId?: string,
     customerId?: string,
-  ): Promise<{ lineCreates: any[]; grandTotal: number }> {
-    if (!items?.length) return { lineCreates: [], grandTotal: 0 };
+  ): Promise<{
+    lineCreates: any[];
+    grandTotal: number;
+    subTotal: number; // done
+    totalDiscount: number;
+    totalTax: number;
+  }> {
+    if (!items?.length)
+      return {
+        lineCreates: [],
+        grandTotal: 0,
+        subTotal: 0,
+        totalDiscount: 0,
+        totalTax: 0,
+      };
 
     const requestedIds = [...new Set(items.map((i) => i.item_id))];
 
@@ -47,6 +60,8 @@ export class InvoiceService {
       },
     });
 
+    // console.log('baseItems', baseItems);
+
     const found = new Set(baseItems.map((b) => b.id));
     const missing = requestedIds.filter((id) => !found.has(id));
     if (missing.length) {
@@ -61,18 +76,23 @@ export class InvoiceService {
     const baseMap = new Map(baseItems.map((b) => [b.id, b]));
 
     let grandTotal = 0;
+    let subTotal = 0;
+    let totalDiscount = 0;
+    let totalTax = 0;
     const lineCreates = [];
 
     for (const raw of items) {
       const base = baseMap.get(raw.item_id)!;
 
       const quantity = Number(raw.quantity ?? 1);
-      let price = Number(
-        raw.purchase_price ?? base.purchase_price ?? base.sale_price ?? 0,
-      );
+      let price = Number(raw.price ? raw.price : base.sale_price);
       if (price < 0) price = 0;
 
       const discount = Number(raw.discount ?? 0);
+      const sale_price = Number(raw.sale_price ?? base.sale_price ?? 0);
+      const purchase_price = Number(
+        raw.purchase_price ?? base.purchase_price ?? 0,
+      );
 
       const item_type_id = raw.item_type_id ?? base.itemType_id ?? null;
       const tax_id = raw.tax_id ?? base.tax_id ?? null;
@@ -101,18 +121,19 @@ export class InvoiceService {
       } else {
         // If no line_id, create a new invoice item
         const newLine: any = {
-          Item: { connect: { id: raw.item_id } }, // Connect to the item
-          ItemType: { connect: { id: item_type_id } }, // Connect to the ItemType
-          Tax: { connect: { id: tax_id } }, // Connect to the Tax
-          Unit: { connect: { id: unit_id } }, // Connect to the Unit
+          Item: { connect: { id: raw.item_id } },
+          ItemType: { connect: { id: item_type_id } },
           quantity,
-          purchase_price: price,
+          price: raw.price ?? 0,
+          Tax: { connect: { id: tax_id } },
+          Unit: { connect: { id: unit_id } },
           discount,
+          purchase_price,
+          sale_price,
           description,
           name,
           sku,
-          Customer: { connect: { id: customerId } }, // Connect to the Customer
-          price: raw.price ?? undefined,
+          Customer: { connect: { id: customerId } },
           owner_id: ownerId || userId,
           Workspace: { connect: { id: workspaceId } },
           ...(userId ? { User: { connect: { id: userId } } } : {}),
@@ -129,15 +150,31 @@ export class InvoiceService {
       const subtotal = quantity * price;
       const afterDiscount = subtotal - discount;
       const taxPct = Number(
-        (await tx.tax.findUnique({ where: { id: tax_id } })) ?? 0,
+        (await tx.tax.findUnique({ where: { id: tax_id } }))?.rate ?? 0,
       );
       const taxAmount = afterDiscount * (taxPct / 100);
       const total = afterDiscount + taxAmount;
 
+      // Accumulate grand totals, subTotal, discount, and tax
       grandTotal += total;
+      subTotal += subtotal;
+      totalDiscount += discount;
+      totalTax += taxAmount;
+
+      // console.log(
+      //   'calculation::>>',
+      //   quantity,
+      //   price,
+      //   discount,
+      //   subtotal,
+      //   afterDiscount,
+      //   taxPct,
+      //   taxAmount,
+      //   total,
+      // );
     }
 
-    return { lineCreates, grandTotal };
+    return { lineCreates, grandTotal, subTotal, totalDiscount, totalTax };
   }
 
   // ------- CREATE -------
@@ -152,22 +189,27 @@ export class InvoiceService {
     }
 
     return this.prisma.$transaction(async (tx) => {
-      const { lineCreates, grandTotal } = await this.resolveLinesAndCompute(
-        tx,
-        dto.items,
-        ownerId,
-        workspaceId,
-        userId,
-        dto.customer_id,
-        // dto.item_category_id
-      );
+      const { lineCreates, grandTotal, subTotal, totalDiscount, totalTax } =
+        await this.resolveLinesAndCompute(
+          tx,
+          dto.items,
+          ownerId,
+          workspaceId,
+          userId,
+          dto.customer_id,
+          // dto.item_category_id
+        );
 
-      console.log('dto.item_category_id:>>', dto.item_category_id);
+      // console.log('dto.item_category_id:>>', dto.item_category_id);
 
       const data: any = {
         invoice_number: dto.invoice_number ? dto.invoice_number : undefined,
         issueAt: dto.issueAt ? new Date(dto.issueAt) : undefined,
         dueAt: dto.dueAt ? new Date(dto.dueAt) : undefined,
+        Billing_category: { connect: { id: dto.billing_type_id } },
+        Item_category: { connect: { id: dto.item_category_id } },
+        Invoice_category: { connect: { id: dto.invoice_category_id } },
+        Account_type: { connect: { id: dto.account_type_id } },
         Customer: { connect: { id: dto.customer_id } },
         owner_id: ownerId || userId,
         Workspace: { connect: { id: workspaceId } },
@@ -176,9 +218,11 @@ export class InvoiceService {
           create: lineCreates,
         },
         totalPrice: grandTotal,
-        subTotal: grandTotal,
-        totalDiscount: 0,
-        totalTax: 0,
+        subTotal: subTotal,
+        totalDiscount: totalDiscount,
+        totalTax: totalTax,
+        due: grandTotal,
+        paid: 0,
         status: 'DRAFT',
       };
 
@@ -188,6 +232,34 @@ export class InvoiceService {
           InvoiceItem: true,
         },
       });
+
+
+      // Update stock quantity (-) mainus
+      for (const item of invoice.InvoiceItem) {
+        const stock = await tx.stock.findUnique({
+          where: { item_id: item.item_id },
+        });
+
+        if (stock) {
+          await tx.stock.update({
+            where: { id: stock.id },
+            data: {
+              quantity: stock.quantity - item.quantity,
+            },
+          });
+
+          await tx.invoiceItem.update({
+            where: { id: item.id },
+            data: {
+              stock_id: stock.id,
+            },
+          });
+        } else {
+          throw new BadRequestException(
+            'Stock not found for item: ' + item.item_id,
+          );
+        }
+      }
 
       return {
         ...invoice,
@@ -199,33 +271,31 @@ export class InvoiceService {
     });
   }
 
-
   async findAll(ownerId: string, workspaceId: string, userId?: string) {
-  return this.prisma.invoice.findMany({
-    where: {
-      owner_id: ownerId || userId,
-      workspace_id: workspaceId,
-      deleted_at: null, // exclude soft deleted invoices
-    },
-    select: {
-      id: true,
-      invoice_number: true,
-      issueAt: true,
-      dueAt: true,
-      totalPrice: true,
-      status: true,
-      Account_type: {
-        select: {
-          name: true, // account type name
+    return this.prisma.invoice.findMany({
+      where: {
+        owner_id: ownerId || userId,
+        workspace_id: workspaceId,
+        deleted_at: null, // exclude soft deleted invoices
+      },
+      select: {
+        id: true,
+        invoice_number: true,
+        issueAt: true,
+        dueAt: true,
+        totalPrice: true,
+        status: true,
+        Account_type: {
+          select: {
+            name: true, // account type name
+          },
         },
       },
-    },
-    orderBy: {
-      createdAt: 'desc', // latest first
-    },
-  });
-}
-
+      orderBy: {
+        createdAt: 'desc', // latest first
+      },
+    });
+  }
 
   // --------- UPDATE ------------
 

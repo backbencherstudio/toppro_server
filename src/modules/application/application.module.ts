@@ -24,8 +24,9 @@ import { ActivityModule } from './crm/activity/activity.module';
 import { LogTimeModule } from './log-time/log-time.module';
 import { InvoiceModule } from './invoice/invoice.module';
 import { HelpDeskCategoryModule } from './helpdesk/helpdesk-category/helpdesk-category.module';
+import { StockModule } from './stock/stock.module';
 @Module({
-  imports: [NotificationModule, ContactModule, FaqModule, CustomerModule, VendorModule, LeadModule, DealModule, CrmReportModule, PipelinesModule, LeadStagesModule, DealStageModule, WorkspaceModule, SourcesModule, ItemsModule, CategoryModule, PurchaseModule, TasksModule, EmailtextModule, CallModule, LeadsUserModule, DiscussionModule, ActivityModule, LogTimeModule, InvoiceModule, HelpDeskCategoryModule],
+  imports: [NotificationModule, ContactModule, FaqModule, CustomerModule, VendorModule, LeadModule, DealModule, CrmReportModule, PipelinesModule, LeadStagesModule, DealStageModule, WorkspaceModule, SourcesModule, ItemsModule, CategoryModule, PurchaseModule, TasksModule, EmailtextModule, CallModule, LeadsUserModule, DiscussionModule, ActivityModule, LogTimeModule, InvoiceModule, HelpDeskCategoryModule, StockModule],
 
 })
 export class ApplicationModule { }
