@@ -24,9 +24,15 @@ import { ActivityModule } from './crm/activity/activity.module';
 import { LogTimeModule } from './log-time/log-time.module';
 import { InvoiceModule } from './invoice/invoice.module';
 import { HelpDeskCategoryModule } from './helpdesk/helpdesk-category/helpdesk-category.module';
+<<<<<<< HEAD
 import { StockModule } from './stock/stock.module';
 @Module({
   imports: [NotificationModule, ContactModule, FaqModule, CustomerModule, VendorModule, LeadModule, DealModule, CrmReportModule, PipelinesModule, LeadStagesModule, DealStageModule, WorkspaceModule, SourcesModule, ItemsModule, CategoryModule, PurchaseModule, TasksModule, EmailtextModule, CallModule, LeadsUserModule, DiscussionModule, ActivityModule, LogTimeModule, InvoiceModule, HelpDeskCategoryModule, StockModule],
+=======
+import { HelpDeskTicketModule } from './helpdesk/helpdesk-ticket/helpdesk-ticket.module';
+@Module({
+  imports: [NotificationModule, ContactModule, FaqModule, CustomerModule, VendorModule, LeadModule, DealModule, CrmReportModule, PipelinesModule, LeadStagesModule, DealStageModule, WorkspaceModule, SourcesModule, ItemsModule, CategoryModule, PurchaseModule, TasksModule, EmailtextModule, CallModule, LeadsUserModule, DiscussionModule, ActivityModule, LogTimeModule, InvoiceModule, HelpDeskCategoryModule, HelpDeskTicketModule],
+>>>>>>> 8050cb1685893e29e8b8d493c46345084fe8d08c
 
 })
 export class ApplicationModule { }
