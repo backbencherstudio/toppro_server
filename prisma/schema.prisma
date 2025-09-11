@@ -105,7 +105,11 @@ model User {
   HelpDeskCategory         HelpDeskCategory[]
   stock                    Stock[]
 
+  // Customer relation to HelpDeskTicket
+  HelpDeskTicketCustomer HelpDeskTicket[] @relation("CustomerTickets")
+  HelpDeskTicketCreator HelpDeskTicket[] @relation("CreatorTickets")
   @@map("users")
+
 }
 
 model Workspace {
@@ -830,6 +834,7 @@ model Attachment {
 
   @@index([lead_id])
   @@map("attachments")
+  TicketDescription TicketDescription[]
 }
 
 model Conversation {
@@ -1785,12 +1790,63 @@ model HelpDeskCategory {
   id    String @id @default(cuid())
   name  String @db.VarChar(255)
   color String @db.VarChar(7) // Color in HEX format (e.g., #FF5733)
-
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
-
   created_by String
   user       User   @relation(fields: [created_by], references: [id])
+  HelpDeskTickets HelpDeskTicket[] @relation("CategoryTickets")
 
   @@map("help_desk_categories")
+  
+  HelpDeskTicket HelpDeskTicket[]
 }
+
+model HelpDeskTicket {
+  id            String         @id @default(cuid())
+  customerId    String
+  email         String
+  categoryId    String
+  status        T_status
+  subject       String
+  createdBy     String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  descriptionId String? @unique
+  ticketId      String         @unique // Unique ticket ID
+  notes         String?        @db.Text
+  description   TicketDescription? @relation(fields: [descriptionId], references: [id])
+  category      HelpDeskCategory  @relation(fields: [categoryId], references: [id])
+  customer      User              @relation("CustomerTickets", fields: [customerId], references: [id])
+  creator       User              @relation("CreatorTickets", fields: [createdBy], references: [id])
+
+  TicketDescription TicketDescription[] @relation("TicketDescriptionToHelpDeskTicket")
+  HelpDeskCategory HelpDeskCategory[] @relation("CategoryTickets")
+
+  @@map("help_desk_tickets")
+}
+
+
+model TicketDescription {
+  id          String        @id @default(uuid())
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  description String        
+  attachment  Attachment[]
+
+  helpDeskTicket    HelpDeskTicket @relation("TicketDescriptionToHelpDeskTicket", fields: [id], references: [descriptionId])
+  HelpDeskTicket HelpDeskTicket[]
+
+  @@map("ticket_descriptions")
+}
+
+
+enum T_status {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+// ###############################################################################################################################
+//    ############################# Help Desk ##end## #########################################################################
+// ###############################################################################################################################
