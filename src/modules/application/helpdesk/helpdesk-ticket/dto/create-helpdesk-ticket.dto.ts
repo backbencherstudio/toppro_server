@@ -24,4 +24,7 @@ export class CreateTicketDto {
   @IsEmail()
   email?: string;  // Customer's email, required for SUPERADMIN
 
-  }
+  @IsOptional() // Required for SUPERADMIN, ignored for OWNER (taken from JWT)
+  @IsString()
+  workspaceId?: string;
+}

@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';  // Prisma service to interact with the DB
 import { T_status, UserType } from '@prisma/client';  // Enums for ticket status
 import { UploadService } from './upload.service';  // Upload service to handle file uploads
@@ -20,21 +20,22 @@ export class HelpDeskTicketService {
     description: string,  // Description of the ticket
     files: Express.Multer.File[] | null,  // Files attached to the ticket
     customerId?: string,  // Optional: Customer ID (Required only for Admin)
-    email?: string  // Optional: Customer email (Required only for Admin)
+    email?: string,  // Optional: Customer email (Required only for Admin)
+    workspaceId?: string // Optional for Admin; OWNER workspace derived from JWT
   ) {
     let customerEmail: string | null = null;
     let customerUserId: string | null = null;
 
     // **Admin (SUPERADMIN)** Logic:
     if (userType === 'SUPERADMIN') {
-      if (!customerId || !email) {
-        throw new BadRequestException('Customer ID and Email are required for admin');
+      if (!customerId || !email || !workspaceId) {
+        throw new BadRequestException('Customer ID, Email and workspaceId are required for admin');
       }
 
       // Fetch customer based on the provided customerId
       const customer = await this.prisma.user.findUnique({
         where: { id: customerId },
-        select: { email: true, type: true },
+        select: { email: true, type: true, workspace_id: true },
       });
 
       if (!customer) {
@@ -43,6 +44,11 @@ export class HelpDeskTicketService {
 
       if (customer.type !== 'OWNER') {
         throw new BadRequestException('Only users with type "OWNER" can be assigned as a customer');
+      }
+
+      // Validate workspace belongs to the owner
+      if (customer.workspace_id !== workspaceId) {
+        throw new BadRequestException('workspaceId does not belong to the specified owner');
       }
 
       customerUserId = customerId;
@@ -54,17 +60,27 @@ export class HelpDeskTicketService {
       customerUserId = req.user.id;  // Owner's userId will be the customer
       // Use email directly from JWT payload if present to avoid extra DB read
       customerEmail = req.user.email;
-      if (!customerEmail) {
-        // fallback to DB if token doesn't have email
+      let ownerWorkspaceId = req.user.workspace_id;
+
+      if (!customerEmail || !ownerWorkspaceId) {
+        // fallback to DB if token doesn't have email/workspace
         const owner = await this.prisma.user.findUnique({
           where: { id: req.user.id },
-          select: { email: true },
+          select: { email: true, workspace_id: true },
         });
         if (!owner) {
           throw new NotFoundException('Owner not found');
         }
-        customerEmail = owner.email;
+        customerEmail = customerEmail || owner.email;
+        ownerWorkspaceId = ownerWorkspaceId || owner.workspace_id;
       }
+
+      if (!ownerWorkspaceId) {
+        throw new BadRequestException('Owner does not have a workspace assigned');
+      }
+
+      // OWNER must use their own workspace (ignore any provided workspaceId)
+      workspaceId = ownerWorkspaceId;
     }
 
     // Generate a random ticketId (string) before using it in the uploadFiles function
@@ -113,11 +129,53 @@ export class HelpDeskTicketService {
         subject,
         createdBy: req.user.id,       // The user who created the ticket (from JWT)
         descriptionId: ticketDescription.id,  // Link to the description
-        ticketId,  // Set the generated ticketId (as string)
+        ticketId,  
+        workspaceId: workspaceId!,    // validated/derived workspace id
       },
     });
 
     return newTicket;
+  }
+
+  // list tickets based on role
+  async getHelpDeskTickets(req: any, userType: UserType) {
+    if (userType === 'SUPERADMIN') {
+      // Admin sees all tickets
+      return this.prisma.helpDeskTicket.findMany({
+        orderBy: { createdAt: 'desc' },
+      });
+    }
+
+    if (userType === 'OWNER') {
+      const ownerId = req.user.id;
+      // get workspaceId from JWT or DB
+      let workspaceId = req.user.workspace_id as string | null;
+      if (!workspaceId) {
+        const owner = await this.prisma.user.findUnique({
+          where: { id: ownerId },
+          select: { workspace_id: true },
+        });
+        workspaceId = owner?.workspace_id || null;
+      }
+      if (!workspaceId) {
+        throw new ForbiddenException('Owner does not have a workspace assigned');
+      }
+
+      // Owner sees tickets in their workspace where they are creator or customer
+      return this.prisma.helpDeskTicket.findMany({
+        where: {
+          workspaceId: workspaceId,
+          OR: [
+            { createdBy: ownerId },
+            { customerId: ownerId },
+          ],
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+    }
+
+    // default: restrict
+    throw new ForbiddenException('Unauthorized');
   }
 
   // Generate a random 5-digit ticket ID (minimum 5 digits) as a string

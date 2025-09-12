@@ -151,6 +151,7 @@ model Workspace {
   LogTime         LogTime[]
   InvoiceItem     InvoiceItem[]
   stock           Stock[]
+  HelpDeskTickets HelpDeskTicket[]
 
   @@map("workspaces")
 }
@@ -1817,6 +1818,8 @@ model HelpDeskTicket {
   customer       User                @relation("CustomerTickets", fields: [customerId], references: [id])
   creator        User                @relation("CreatorTickets", fields: [createdBy], references: [id])
 
+  workspaceId String?
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id])
   
   @@map("help_desk_tickets")
 }
