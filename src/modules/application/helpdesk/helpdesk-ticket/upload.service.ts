@@ -1,5 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service'; // Prisma service to access DB
+import { Injectable } from '@nestjs/common';
 import { Express } from 'express';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -7,51 +6,34 @@ import { SojebStorage } from 'src/common/lib/Disk/SojebStorage';
 
 @Injectable()
 export class UploadService {
-  constructor(private readonly prisma: PrismaService) {}
-
-  // File upload logic (modified to handle multiple files)
+  // File upload logic (handle multiple files). This only uploads files and returns metadata.
   async uploadFilesToDescription(
-    ticketId: string,
+    ticketId: string, // unused here but kept for signature compatibility
     createdBy: string,
     workspaceId: string,
     userId: string,
-    files: Express.Multer.File[] // Accept multiple files
-  ) {
-    // Ensure that the directory for file storage exists
+    files: Express.Multer.File[]
+  ): Promise<{ file_name: string; file_url: string; file_size: number }[]> {
+    // Ensure that the directory for file storage exists (for local fallback, if needed)
     const uploadDir = path.join(__dirname, '../uploads');
     if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir); // Create directory if it doesn't exist
+      fs.mkdirSync(uploadDir, { recursive: true });
     }
 
-    // Initialize an array to store attachment data
-    const fileDetails: any[] = [];
+    const fileDetails: { file_name: string; file_url: string; file_size: number }[] = [];
 
-    // Loop through the files and upload each one
     for (const file of files) {
-      // Generate a unique file name
       const fileName = `${userId}-${Date.now()}-${file.originalname}`;
-
-      // Upload the file using your storage service (e.g., SojebStorage)
       await SojebStorage.put(`helpdesk-tickets/${fileName}`, file.buffer);
 
-      // Store file details in the fileDetails array
       fileDetails.push({
         file_name: fileName,
-        file_url: `helpdesk-tickets/${fileName}`,  // Path of the file
+        file_url: `helpdesk-tickets/${fileName}`,
         file_size: file.size,
       });
     }
 
-    // Create a new attachment record in the database for each file
-    const attachments = await this.prisma.descriptionAttachment.createMany({
-      data: fileDetails.map((file) => ({
-        file_name: file.file_name,
-        file_url: file.file_url,
-        file_size: file.file_size,
-        descriptionId: ticketId, // Link this attachment to the ticket description
-      })),
-    });
-
-    return attachments;
+    // Return metadata; DB insert will be handled via nested create by the caller
+    return fileDetails;
   }
 }

@@ -2,7 +2,7 @@ import { IStorage } from './iStorage';
 import * as fs from 'fs/promises';
 import * as fsSync from 'fs';
 import { DiskOption } from '../Option';
-import path from 'path';
+import * as path from 'path';
 
 /**
  * LocalAdapter for local file storage

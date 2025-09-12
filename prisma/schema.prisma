@@ -1818,7 +1818,6 @@ model HelpDeskTicket {
   creator        User                @relation("CreatorTickets", fields: [createdBy], references: [id])
 
   
-  TicketDescriptionWithAttachment TicketDescriptionWithAttachment[] @relation("TicketDescriptionWithAttachmentToHelpDeskTicket")
   @@map("help_desk_tickets")
 }
 
@@ -1830,8 +1829,7 @@ model TicketDescriptionWithAttachment {
   description String            // The text description of the ticket
   attachments DescriptionAttachment[] // Multiple attachments per description
 
-  helpDeskTicket    HelpDeskTicket @relation("TicketDescriptionWithAttachmentToHelpDeskTicket", fields: [id], references: [descriptionId])
-  HelpDeskTicket HelpDeskTicket[] // Relation to HelpDeskTicket
+  ticket HelpDeskTicket?
 
   @@map("ticket_descriptions_with_attachments")
 }
