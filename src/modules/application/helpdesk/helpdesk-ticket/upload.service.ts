@@ -1,20 +1,20 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';  // Prisma service to access DB
+import { PrismaService } from 'src/prisma/prisma.service'; // Prisma service to access DB
 import { Express } from 'express';
 import * as path from 'path';
 import * as fs from 'fs';
-import { SojebStorage } from 'src/common/lib/Disk/SojebStorage'; // Assuming you have a custom storage service
+import { SojebStorage } from 'src/common/lib/Disk/SojebStorage';
 
 @Injectable()
 export class UploadService {
   constructor(private readonly prisma: PrismaService) {}
 
-  // File upload logic for HelpDeskTicket (similar to your old code for Lead)
+  // File upload logic (modified to handle multiple files)
   async uploadFilesToDescription(
-    ticketDescriptionId: string,  // Link to the description
-    createdBy: string,            // User who created the ticket
-    workspaceId: string,         // Workspace ID of the user
-    userId: string,              // User ID (typically the one creating the ticket)
+    ticketId: string,
+    createdBy: string,
+    workspaceId: string,
+    userId: string,
     files: Express.Multer.File[] // Accept multiple files
   ) {
     // Ensure that the directory for file storage exists
@@ -39,15 +39,19 @@ export class UploadService {
         file_name: fileName,
         file_url: `helpdesk-tickets/${fileName}`,  // Path of the file
         file_size: file.size,
-        descriptionId: ticketDescriptionId, // Link this attachment to the ticket description
       });
     }
 
     // Create a new attachment record in the database for each file
     const attachments = await this.prisma.descriptionAttachment.createMany({
-      data: fileDetails,  // Insert all the file details at once
+      data: fileDetails.map((file) => ({
+        file_name: file.file_name,
+        file_url: file.file_url,
+        file_size: file.file_size,
+        descriptionId: ticketId, // Link this attachment to the ticket description
+      })),
     });
 
-    return attachments; // Return file details (attachments)
+    return attachments;
   }
 }

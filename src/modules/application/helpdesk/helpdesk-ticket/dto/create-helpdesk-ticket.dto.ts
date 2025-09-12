@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsOptional, IsEnum, IsEmail, IsUUID, IsObject, IsArray } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsEnum, IsEmail } from 'class-validator';
 import { T_status } from '@prisma/client';  // Enum for ticket status
 import { Type } from 'class-transformer';
 
@@ -19,7 +19,6 @@ export class CreateTicketDto {
   description: string;  // Description of the HelpDeskTicket
 
   @IsOptional()  // Optional for admins only
-  @IsUUID()
   customerId?: string;  // Customer's user ID, required for SUPERADMIN
 
   @IsOptional()  // Optional for admins only
@@ -29,6 +28,5 @@ export class CreateTicketDto {
   // Constructor to type transform any incoming data
   @Type(() => String)
   @IsString()
-  @IsNotEmpty()
   createdBy: string;  // Created by (user ID) from JWT
 }

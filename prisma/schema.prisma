@@ -46,7 +46,7 @@ model User {
 
   super_id     String?
   owner_id     String?
-  workspace_id String? // Relation to Workspace
+  workspace_id String? 
 
   workspace Workspace? @relation(fields: [workspace_id], references: [id])
 
@@ -102,10 +102,10 @@ model User {
   Discussion               Discussion[]
   LogTime                  LogTime[]
   InvoiceItem              InvoiceItem[]
-  HelpDeskCategory         HelpDeskCategory[]
   stock                    Stock[]
 
   // Customer relation to HelpDeskTicket
+  HelpDeskCategory         HelpDeskCategory[]
   HelpDeskTicketCustomer HelpDeskTicket[] @relation("CustomerTickets")
   HelpDeskTicketCreator HelpDeskTicket[] @relation("CreatorTickets")
   @@map("users")
@@ -1796,7 +1796,6 @@ model HelpDeskCategory {
   HelpDeskTickets HelpDeskTicket[] @relation("CategoryTickets")
 
   @@map("help_desk_categories")
-  HelpDeskTicket HelpDeskTicket[]
 }
 
 model HelpDeskTicket {
@@ -1812,19 +1811,20 @@ model HelpDeskTicket {
   descriptionId String? @unique
   ticketId      String         @unique // Unique ticket ID
   notes         String?        @db.Text
+
   description    TicketDescriptionWithAttachment? @relation(fields: [descriptionId], references: [id])
-  category       HelpDeskCategory    @relation(fields: [categoryId], references: [id])
+  category       HelpDeskCategory  @relation("CategoryTickets", fields: [categoryId], references: [id]) 
   customer       User                @relation("CustomerTickets", fields: [customerId], references: [id])
   creator        User                @relation("CreatorTickets", fields: [createdBy], references: [id])
 
-  @@map("help_desk_tickets")
+  
   TicketDescriptionWithAttachment TicketDescriptionWithAttachment[] @relation("TicketDescriptionWithAttachmentToHelpDeskTicket")
-  HelpDeskCategory HelpDeskCategory[] @relation("CategoryTickets")
+  @@map("help_desk_tickets")
 }
 
 
 model TicketDescriptionWithAttachment {
-  id          String            @id @default(uuid())
+  id          String            @id @default(cuid())
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
   description String            // The text description of the ticket
@@ -1837,7 +1837,7 @@ model TicketDescriptionWithAttachment {
 }
 
 model DescriptionAttachment {
-  id            String   @id @default(uuid())
+  id            String   @id @default(cuid())
   file_name     String
   file_url      String
   file_size     Int
