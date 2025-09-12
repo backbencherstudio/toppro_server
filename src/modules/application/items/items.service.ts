@@ -18,9 +18,6 @@ export class ItemsService {
     owner_id: string,
     workspace_id: string,
   ) {
-
-    console.log('Creating item...', dto, user_id, owner_id, workspace_id);
-    // Clean up "null" strings → real nulls, so relations don’t break
     const cleaned = {
       ...dto,
       tax_id: nullify(dto.tax_id),
@@ -41,7 +38,26 @@ export class ItemsService {
       },
     });
 
-    return { success: true, message: 'Item created successfully!', item };
+    const stock = await this.prisma.stock.create({
+    data: {
+      item_id: item.id,  // Link the stock to the newly created item
+      quantity: dto.quantity || 0,  // Use provided quantity or default to 0
+      deleted_at: null,  // Ensure it is not marked as deleted
+      product_name: item.name,  // Use the product name from the item
+      sku: item.sku,  // Use the SKU from the item
+      image: item.image,  // Use the image from the item
+      owner_id: owner_id || user_id,
+      workspace_id: workspace_id,
+      user_id: user_id,
+    },
+  });
+
+    return {
+      success: true,
+      message: 'Item created successfully!',
+      data: item,
+      stock: stock,
+    };
   }
 
   async findAll(workspace_id: string) {
@@ -84,6 +100,24 @@ export class ItemsService {
       where: { id },
       data: cleaned,
     });
+
+      // Now, update the stock associated with the item
+  const stock = await this.prisma.stock.findUnique({
+    where: { item_id: id }, // Link to the item using its ID
+  });
+
+  // If stock exists, update its information as well
+  if (stock) {
+    await this.prisma.stock.update({
+      where: { item_id: id },
+      data: {
+        product_name: item.name, // Update product name in stock
+        sku: item.sku, // Update SKU in stock
+        image: item.image, // Update image in stock
+        quantity: item.quantity, // Update quantity in stock (or whatever you wish to update)
+      },
+    });
+  }
 
     return { success: true, message: 'Item updated', item };
   }
