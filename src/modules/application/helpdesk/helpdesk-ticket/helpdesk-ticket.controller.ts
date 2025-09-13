@@ -73,34 +73,5 @@ export class HelpDeskTicketController {
     return this.helpDeskTicketService.deleteHelpDeskTicket(req, userType as UserType, id);
   }
 
-
-  // ➤ Add description with attachments to a ticket
-  @Post(':ticketId/description')
-  @UseGuards(JwtAuthGuard)
-  @UseInterceptors(FilesInterceptor('files'))
-  async addDescription(
-    @Param('ticketId') ticketId: string,
-    @Body('description') description: string,
-    @UploadedFiles() files: Express.Multer.File[],
-    @Req() req: any,
-  ) {
-    return this.helpDeskTicketService.addDescriptionWithAttachments(
-      ticketId,
-      description,
-      files,
-      req.user.id,
-      req.user.type,
-    );
-  }
-
-  // ➤ Get ticket with all descriptions & attachments
-  @Get(':ticketId/description')
-  @UseGuards(JwtAuthGuard)
-  async getTicketDescriptions(@Param('ticketId') ticketId: string, @Req() req: any) {
-    return this.helpDeskTicketService.getTicketWithDescriptions(
-      ticketId,
-      req.user.id,
-      req.user.type,
-    );
-  }
+  
 }
