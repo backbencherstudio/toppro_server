@@ -7,6 +7,7 @@ import { ConfigModule } from '@nestjs/config';
 
 // internal imports
 import { BullModule } from '@nestjs/bullmq';
+import { JwtModule } from '@nestjs/jwt';
 import { AbilityModule } from './ability/ability.module';
 import { AiChatbotModule } from './aichatbot/ai-chatbot.module';
 import { AppController } from './app.controller';
@@ -60,11 +61,13 @@ import { UserModule } from './user/user.module';
     WebsiteInfoModule,
     PermissionModule,
     RolesModule,
+    JwtModule
     // InvoiceModule,
     
   ],
   controllers: [AppController],
   providers: [AppService],
+  // exports: [],
 })
 export class AppModule {
   configure(consumer: MiddlewareConsumer) {
