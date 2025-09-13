@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { UserType } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
+import { UpdateUserDto } from 'src/modules/auth/dto/update-user.dto';
 import { DateHelper } from '../../../common/helper/date.helper';
 import { UserRepository } from '../../../common/repository/user/user.repository';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from 'src/modules/auth/dto/update-user.dto';
-import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UserService {
@@ -45,7 +45,6 @@ export class UserService {
         avatar: true,
         name: true,
         email: true,
-        roles: true,
         type: true,
         status: true,
       },
@@ -62,7 +61,6 @@ export class UserService {
           avatar: true,
           name: true,
           email: true,
-          roles: true,
           type: true,
           status: true,
         },
@@ -86,7 +84,7 @@ export class UserService {
       }
       await this.prisma.user.update({
         where: { id: id },
-        data: { approved_at: DateHelper.now() },
+        data: { status: 1, approved_at: DateHelper.now() },
       });
       return {
         success: true,

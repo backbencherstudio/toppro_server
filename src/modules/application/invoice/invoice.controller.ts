@@ -9,7 +9,7 @@ import {
   Patch,
   Post,
   Req,
-  UseGuards,
+  UseGuards
 } from '@nestjs/common';
 import { Status } from '@prisma/client';
 import { InvoiceService } from 'src/modules/application/invoice/invoice.service';
@@ -33,7 +33,7 @@ export class InvoiceController {
   }
 
   // get all invoices
-  @Get("all")
+  @Get('all')
   async findAll(@Req() req: any) {
     const {
       owner_id: ownerId,
@@ -41,6 +41,18 @@ export class InvoiceController {
       id: userId,
     } = req.user;
     return this.invoiceService.findAll(ownerId, workspaceId, userId);
+  }
+
+  // invoice single view
+  @Get(':id')
+  async findOne(@Param('id') id: string, @Req() req: any) {
+    const {
+      id: userId,
+      owner_id: ownerId,
+      workspace_id: workspaceId,
+    } = req.user;
+
+    return await this.invoiceService.findOne(id, ownerId, workspaceId, userId);
   }
 
   // Update an invoice

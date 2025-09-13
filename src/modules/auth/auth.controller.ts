@@ -36,7 +36,7 @@ export class AuthController {
   @Get('me')
   async me(@Req() req) {
     try {
-      const {email} = req.user;
+      const { email } = req.user;
       console.log('Authenticated user ID:', req.user);
 
       const response = await this.authService.me(email);
@@ -53,8 +53,19 @@ export class AuthController {
   // register a user
   @ApiOperation({ summary: 'Register a user' })
   @Post('register')
-  // @UseGuards(JwtAuthGuard)
-  async create(@Body() data: CreateUserDto) {
+  @UseGuards(JwtAuthGuard)
+  async create(
+    @Body() data: CreateUserDto,
+    @Req()
+    req: Request & {
+      user: {
+        id: string;
+        owner_id?: string;
+        workspace_id?: string;
+      };
+    },
+  ) {
+    const { id, owner_id, workspace_id } = req.user;
     try {
       const {
         name,
@@ -66,13 +77,12 @@ export class AuthController {
         password,
         type,
         status,
-        owner_id,
-        super_id,
-        workspace_id,
+        // owner_id,
+        // super_id,
+        // workspace_id,
         workspace_name,
         roleId,
       } = data;
-
 
       // Validate input fields
       if (!name) {
@@ -96,7 +106,7 @@ export class AuthController {
           first_name,
           last_name,
           email,
-          super_id,
+          super_id: id,
           phone_number,
           address,
           password,
@@ -118,8 +128,8 @@ export class AuthController {
         // After OWNER creation, create the workspace using owner_id and super_id
         const workspace = await this.authService.createWorkspace({
           ownerName: name,
-          owner_id: ownerResponse.data?.id || '',
-          super_id: super_id,
+          owner_id: ownerResponse.data?.id || owner_id,
+          super_id: id,
           workspace_name: workspace_name || `${name}'s Workspace`,
         });
 
@@ -142,7 +152,7 @@ export class AuthController {
 
       // USER case
       if (type === 'USER') {
-        if (!owner_id || !workspace_id) {
+        if (!id || !workspace_id) {
           throw new HttpException(
             'owner_id, and workspace_id are required for USER type',
             HttpStatus.BAD_REQUEST,
@@ -160,8 +170,7 @@ export class AuthController {
           password,
           type,
           status: status ? status : 0, // Always 0 for USER
-          owner_id,
-          super_id,
+          owner_id: id,
           workspace_id,
           roleId,
         });

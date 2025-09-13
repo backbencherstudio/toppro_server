@@ -12,12 +12,4 @@ export class CreateWorkspaceDto {
   @IsOptional()
   @IsString()
   description?: string;
-
-  @IsOptional()
-  @IsString()
-  super_id?: string;
-
-  @IsNotEmpty()
-  @IsString()
-  owner_id: string;
 }
