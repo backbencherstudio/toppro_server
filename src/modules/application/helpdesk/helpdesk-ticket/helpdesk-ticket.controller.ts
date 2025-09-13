@@ -1,43 +1,77 @@
-import { Controller, Post, Body, Req, UseGuards, UseInterceptors, UploadedFiles, Get } from '@nestjs/common';
-import { FilesInterceptor } from '@nestjs/platform-express';  // File upload interceptor for multiple files
-import { HelpDeskTicketService } from './helpdesk-ticket.service';  // Service to handle ticket logic
-import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';  // JWT guard to authenticate the user
-import { CreateTicketDto } from './dto/create-helpdesk-ticket.dto';  // DTO for request validation
+import { Controller, Post, Put, Delete, Query, Param, Body, Req, UseGuards, UseInterceptors, UploadedFiles, Get } from '@nestjs/common';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import { HelpDeskTicketService } from './helpdesk-ticket.service';
+import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
+import { CreateTicketDto } from './dto/create-helpdesk-ticket.dto';
+import { UpdateHelpdeskTicketDto } from './dto/update-helpdesk-ticket.dto';
+import { UserType } from '@prisma/client';
 
 @Controller('helpdesk-ticket')
 export class HelpDeskTicketController {
   constructor(private readonly helpDeskTicketService: HelpDeskTicketService) { }
 
   @Post('create')
-  @UseGuards(JwtAuthGuard)  // Use JWT guard to authenticate the request
-  @UseInterceptors(FilesInterceptor('files', 10))  // Handle multiple file uploads
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(FilesInterceptor('files', 10))
   async createTicket(
-    @Req() req: any,  // Get the user details from the JWT token (userId, userType)
-    @Body() createTicketDto: CreateTicketDto,  // DTO for validation
-    @UploadedFiles() files: Express.Multer.File[]  // Extract multiple files from form-data
+    @Req() req: any,
+    @Body() createTicketDto: CreateTicketDto,
+    @UploadedFiles() files: Express.Multer.File[]
   ) {
-    const { type: userType } = req.user;  // Get user type from JWT
+    const { type: userType } = req.user;
 
     const { categoryId, status, subject, description, customerId, email, workspaceId } = createTicketDto;
 
     return this.helpDeskTicketService.createHelpDeskTicket(
-      req,            // Pass the full request so service can access req.user
-      userType,       // User type (from JWT)
+      req,
+      userType,
       categoryId,
       status,
       subject,
       description,
-      files,          // Pass the uploaded files (multiple)
-      customerId,     // Optional for Admin
-      email,          // Optional for Admin
-      workspaceId     // Optional for Admin; OWNER will be derived from JWT
+      files,
+      customerId,
+      email,
+      workspaceId,
     );
   }
 
   @UseGuards(JwtAuthGuard)
   @Get()
-  async getTickets(@Req() req: any) {
+  async getTickets(@Req() req: any,
+    @Query('page') page = '1',
+    @Query('limit') limit = '10',
+    @Query('status') status?: string,
+    @Query('search') search?: string,
+  ) {
     const { type: userType } = req.user;
-    return this.helpDeskTicketService.getHelpDeskTickets(req, userType);
+    return this.helpDeskTicketService.getHelpDeskTickets(req, userType, Number(page), Number(limit), status,
+      search);
   }
+
+  @Put(':Id/update')
+  @UseGuards(JwtAuthGuard)
+  async updateTicket(
+    @Param('Id') Id: string,
+    @Req() req: any,
+    @Body() updateDto: UpdateHelpdeskTicketDto,
+  ) {
+    const { type: userType } = req.user; // Extract SUPERADMIN or OWNER from JWT
+
+    return this.helpDeskTicketService.updateHelpDeskTicket(
+      req,
+      userType,
+      Id,
+      updateDto,
+    );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete(':id')
+  async deleteTicket(@Param('id') id: string, @Req() req: any) {
+    const { type: userType } = req.user;
+    return this.helpDeskTicketService.deleteHelpDeskTicket(req, userType as UserType, id);
+  }
+
+  
 }

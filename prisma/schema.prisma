@@ -1813,7 +1813,8 @@ model HelpDeskTicket {
   ticketId      String         @unique // Unique ticket ID
   notes         String?        @db.Text
 
-  description    TicketDescriptionWithAttachment? @relation(fields: [descriptionId], references: [id])
+  // description    TicketDescriptionWithAttachment? @relation(fields: [descriptionId], references: [id])
+  descriptions  TicketDescriptionWithAttachment[]
   category       HelpDeskCategory  @relation("CategoryTickets", fields: [categoryId], references: [id]) 
   customer       User                @relation("CustomerTickets", fields: [customerId], references: [id])
   creator        User                @relation("CreatorTickets", fields: [createdBy], references: [id])
@@ -1832,7 +1833,9 @@ model TicketDescriptionWithAttachment {
   description String            // The text description of the ticket
   attachments DescriptionAttachment[] // Multiple attachments per description
 
-  ticket HelpDeskTicket?
+  // ticket HelpDeskTicket?
+  ticketId    String
+  ticket      HelpDeskTicket        @relation(fields: [ticketId], references: [id])
 
   @@map("ticket_descriptions_with_attachments")
 }
