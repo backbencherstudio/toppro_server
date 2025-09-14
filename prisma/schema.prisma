@@ -381,7 +381,6 @@ model Items {
   name            String?
   sku             String?
   tax_id          String?
-  itemCategory_id String?
   description     String?
   sale_price      Float?     @default(0)
   purchase_price  Float?     @default(0)
@@ -389,6 +388,7 @@ model Items {
   quantity        Int?       @default(1)
   image           String?
   vendor_id       String?
+  itemCategory_id String?
   itemType_id     String?
   discount        Float?     @default(0)
   total           Float?     @default(0)
@@ -547,11 +547,14 @@ model Stock {
 }
 
 enum Status {
-  PENDING
+  DRAFT
   SENT
+  UNPAID
+  PAID
+  PARTIALLY_PAID
+  PENDING
   DELIVERED
   READ
-  DRAFT
 }
 
 // ###############################################################################################################################
