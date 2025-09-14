@@ -270,13 +270,43 @@ export class InvoiceService {
     });
   }
 
-  async findAll(ownerId: string, workspaceId: string, userId?: string) {
+  async findAll(
+    ownerId: string,
+    workspaceId: string,
+    userId: string,
+    issueDate?: string,
+    customer?: string,
+    status?: string,
+    accountType?: string,
+    page: number = 1,
+    limit: number = 10,
+  ) {
+    // Build the filters
+    const filters: any = {
+      owner_id: ownerId || userId,
+      workspace_id: workspaceId,
+      deleted_at: null,
+    };
+
+    if (issueDate) {
+      filters.issueAt = new Date(issueDate);
+    }
+
+    if (customer) {
+      filters.customer_id = customer;
+    }
+
+    if (status) {
+      filters.status = status;
+    }
+
+    if (accountType) {
+      filters.account_type_id = accountType;
+    }
+
+    // Fetch invoices with pagination and filters
     const invoices = await this.prisma.invoice.findMany({
-      where: {
-        owner_id: ownerId || userId,
-        workspace_id: workspaceId,
-        deleted_at: null,
-      },
+      where: filters,
       include: {
         Account_type: {
           select: { name: true },
@@ -285,6 +315,13 @@ export class InvoiceService {
       orderBy: {
         createdAt: 'desc',
       },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+
+    // Count total records for pagination
+    const totalRecords = await this.prisma.invoice.count({
+      where: filters,
     });
 
     const formatted = invoices.map((invoice) => ({
@@ -302,6 +339,11 @@ export class InvoiceService {
       success: true,
       message: 'Invoices fetched successfully',
       data: formatted,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(totalRecords / limit),
+        totalRecords,
+      },
     };
   }
 
@@ -439,143 +481,143 @@ export class InvoiceService {
   // --------- UPDATE ------------
 
   // Main function to update the invoice
-async update(
-  id: string,
-  dto: UpdateInvoiceDto,
-  ownerId: string,
-  workspaceId: string,
-  userId: string,
-) {
-  return this.prisma.$transaction(async (tx) => {
-    // 1️⃣ Fetch the invoice with active invoiceItems (deleted_at = null)
-    const existing = await tx.invoice.findFirst({
-      where: {
-        id,
-        deleted_at: null,
-        owner_id: ownerId || userId,
-        Workspace: { id: workspaceId },
-      },
-      include: {
-        InvoiceItem: { where: { deleted_at: null } },
-      },
-    });
-
-    if (!existing) throw new NotFoundException('Invoice not found');
-
-    const existingLineIds = new Set(existing.InvoiceItem.map((l) => l.id));
-
-    // 2️⃣ Update the invoice header (relations and fields)
-    const headerData: any = {};
-    const rel: [keyof UpdateInvoiceDto, string][] = [
-      ['account_type_id', 'Account_type'],
-      ['customer_id', 'Customer'],
-      ['billing_type_id', 'Billing_category'],
-      ['invoice_category_id', 'Invoice_category'],
-      ['item_category_id', 'Item_category'],
-      ['status', 'InvoiceStatus'],
-    ];
-
-    for (const [field, relation] of rel) {
-      if (dto[field] === undefined) continue;
-      if (dto[field] === null) headerData[relation] = { disconnect: true };
-      else headerData[relation] = { connect: { id: dto[field] as string } };
-    }
-
-    if (dto.issueAt !== undefined) {
-      headerData.issueAt = dto.issueAt ? new Date(dto.issueAt) : null;
-    }
-
-    if (dto.dueAt !== undefined) {
-      headerData.dueAt = dto.dueAt ? new Date(dto.dueAt) : null;
-    }
-
-    if (Object.keys(headerData).length) {
-      await tx.invoice.update({
-        where: { id },
-        data: {
-          ...headerData,
+  async update(
+    id: string,
+    dto: UpdateInvoiceDto,
+    ownerId: string,
+    workspaceId: string,
+    userId: string,
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      // 1️⃣ Fetch the invoice with active invoiceItems (deleted_at = null)
+      const existing = await tx.invoice.findFirst({
+        where: {
+          id,
+          deleted_at: null,
           owner_id: ownerId || userId,
-          Workspace: { connect: { id: workspaceId } },
-          ...(userId ? { User: { connect: { id: userId } } } : {}),
+          Workspace: { id: workspaceId },
+        },
+        include: {
+          InvoiceItem: { where: { deleted_at: null } },
         },
       });
-    }
 
-    // 3️⃣ Soft-delete lines (set deleted_at) if requested
-    if (dto.delete_line_ids?.length) {
-      const invalid = dto.delete_line_ids.filter(
-        (lid) => !existingLineIds.has(lid),
-      );
-      if (invalid.length) {
-        throw new BadRequestException(
-          `Some line_ids do not belong to this invoice: ${invalid.join(', ')}`,
-        );
+      if (!existing) throw new NotFoundException('Invoice not found');
+
+      const existingLineIds = new Set(existing.InvoiceItem.map((l) => l.id));
+
+      // 2️⃣ Update the invoice header (relations and fields)
+      const headerData: any = {};
+      const rel: [keyof UpdateInvoiceDto, string][] = [
+        ['account_type_id', 'Account_type'],
+        ['customer_id', 'Customer'],
+        ['billing_type_id', 'Billing_category'],
+        ['invoice_category_id', 'Invoice_category'],
+        ['item_category_id', 'Item_category'],
+        ['status', 'InvoiceStatus'],
+      ];
+
+      for (const [field, relation] of rel) {
+        if (dto[field] === undefined) continue;
+        if (dto[field] === null) headerData[relation] = { disconnect: true };
+        else headerData[relation] = { connect: { id: dto[field] as string } };
       }
 
-      // Decrease stock for the deleted invoice items
-      for (const lineId of dto.delete_line_ids) {
-        const itemToDelete = existing.InvoiceItem.find((item) => item.id === lineId);
-        if (itemToDelete) {
-          const stock = await tx.stock.findUnique({
-            where: { item_id: itemToDelete.item_id },
-          });
-          if (stock) {
-            await tx.stock.update({
-              where: { id: stock.id },
-              data: {
-                quantity: stock.quantity + itemToDelete.quantity, // Revert the quantity
-              },
-            });
-          }
-        }
+      if (dto.issueAt !== undefined) {
+        headerData.issueAt = dto.issueAt ? new Date(dto.issueAt) : null;
       }
 
-      // Mark invoice items as deleted
-      await tx.invoiceItem.updateMany({
-        where: { id: { in: dto.delete_line_ids } },
-        data: { deleted_at: new Date() },
-      });
-    }
+      if (dto.dueAt !== undefined) {
+        headerData.dueAt = dto.dueAt ? new Date(dto.dueAt) : null;
+      }
 
-    // 4️⃣ Create or update invoiceItems using resolveLinesAndCompute
-    const { lineCreates, grandTotal } = await this.resolveLinesAndCompute(
-      tx,
-      dto.items ?? [],
-      ownerId,
-      workspaceId,
-      userId,
-      dto.customer_id,
-    );
-
-    // 5️⃣ Permanently delete previously soft-deleted invoiceItems
-    await tx.invoiceItem.deleteMany({
-      where: { invoice_id: id, deleted_at: { not: null } },
-    });
-
-    // 6️⃣ Update stock for new or updated invoice items
-    for (const line of lineCreates) {
-      const stock = await tx.stock.findUnique({
-        where: { item_id: line.Item.connect.id },
-      });
-      if (stock) {
-        await tx.stock.update({
-          where: { id: stock.id },
+      if (Object.keys(headerData).length) {
+        await tx.invoice.update({
+          where: { id },
           data: {
-            quantity: stock.quantity - line.quantity, // Deduct the quantity
+            ...headerData,
+            owner_id: ownerId || userId,
+            Workspace: { connect: { id: workspaceId } },
+            ...(userId ? { User: { connect: { id: userId } } } : {}),
           },
         });
       }
-    }
 
-    // 7️⃣ Return success message
-    return {
-      success: true,
-      message: 'Invoice updated successfully',
-    };
-  });
-}
+      // 3️⃣ Soft-delete lines (set deleted_at) if requested
+      if (dto.delete_line_ids?.length) {
+        const invalid = dto.delete_line_ids.filter(
+          (lid) => !existingLineIds.has(lid),
+        );
+        if (invalid.length) {
+          throw new BadRequestException(
+            `Some line_ids do not belong to this invoice: ${invalid.join(', ')}`,
+          );
+        }
 
+        // Decrease stock for the deleted invoice items
+        for (const lineId of dto.delete_line_ids) {
+          const itemToDelete = existing.InvoiceItem.find(
+            (item) => item.id === lineId,
+          );
+          if (itemToDelete) {
+            const stock = await tx.stock.findUnique({
+              where: { item_id: itemToDelete.item_id },
+            });
+            if (stock) {
+              await tx.stock.update({
+                where: { id: stock.id },
+                data: {
+                  quantity: stock.quantity + itemToDelete.quantity, // Revert the quantity
+                },
+              });
+            }
+          }
+        }
 
+        // Mark invoice items as deleted
+        await tx.invoiceItem.updateMany({
+          where: { id: { in: dto.delete_line_ids } },
+          data: { deleted_at: new Date() },
+        });
+      }
+
+      // 4️⃣ Create or update invoiceItems using resolveLinesAndCompute
+      const { lineCreates, grandTotal } = await this.resolveLinesAndCompute(
+        tx,
+        dto.items ?? [],
+        ownerId,
+        workspaceId,
+        userId,
+        dto.customer_id,
+      );
+
+      // 5️⃣ Permanently delete previously soft-deleted invoiceItems
+      await tx.invoiceItem.deleteMany({
+        where: { invoice_id: id, deleted_at: { not: null } },
+      });
+
+      // 6️⃣ Update stock for new or updated invoice items
+      for (const line of lineCreates) {
+        const stock = await tx.stock.findUnique({
+          where: { item_id: line.Item.connect.id },
+        });
+        if (stock) {
+          await tx.stock.update({
+            where: { id: stock.id },
+            data: {
+              quantity: stock.quantity - line.quantity, // Deduct the quantity
+            },
+          });
+        }
+      }
+
+      // 7️⃣ Return success message
+      return {
+        success: true,
+        message: 'Invoice updated successfully',
+      };
+    });
+  }
 
   // Helper method to resolve lines and compute total
 
@@ -624,137 +666,139 @@ async update(
     };
   }
 
-async deleteInvoiceItems(
-  invoiceId: string,
-  itemId: string,
-  ownerId: string,
-  workspaceId: string,
-  userId?: string,
-) {
-  // Verify the invoice exists
-  const invoice = await this.prisma.invoice.findUnique({
-    where: {
-      id: invoiceId, // Ensure you are using the `id` field here
-    },
-  });
-
-  if (!invoice) {
-    throw new BadRequestException('Invoice not found');
-  }
-
-  // Fetch the items to see if they exist before updating
-  const existingItems = await this.prisma.invoiceItem.findMany({
-    where: {
-      id: itemId,
-      owner_id: ownerId || userId,
-      workspace_id: workspaceId,
-    },
-  });
-
-  if (existingItems.length === 0) {
-    throw new BadRequestException('No matching invoice items found');
-  }
-
-  // Get the quantity of the item being deleted
-  const itemToDelete = existingItems[0];
-  const quantityToDelete = itemToDelete.quantity;
-
-  // Update only the deleted_at field with the current date
-  const updatedItems = await this.prisma.invoiceItem.updateMany({
-    where: {
-      id: itemId,
-      owner_id: ownerId,
-      workspace_id: workspaceId,
-    },
-    data: { deleted_at: new Date() },
-  });
-
-  // Update stock: Increase the quantity by the quantity of the deleted item
-  const stock = await this.prisma.stock.findUnique({
-    where: { item_id: itemToDelete.item_id },
-  });
-
-  if (stock) {
-    // Increase the stock quantity by the quantity of the deleted invoice item
-    await this.prisma.stock.update({
-      where: { id: stock.id },
-      data: {
-        quantity: stock.quantity + quantityToDelete,
+  async deleteInvoiceItems(
+    invoiceId: string,
+    itemId: string,
+    ownerId: string,
+    workspaceId: string,
+    userId?: string,
+  ) {
+    // Verify the invoice exists
+    const invoice = await this.prisma.invoice.findUnique({
+      where: {
+        id: invoiceId, // Ensure you are using the `id` field here
       },
     });
-  } else {
-    throw new BadRequestException('Stock not found for this item');
-  }
 
-  // Return the response with success message and updated data
-  return {
-    success: true,
-    message: `Deleted ${updatedItems.count} invoice item(s) successfully and updated stock quantity.`,
-    updatedFields: updatedItems,
-  };
-}
+    if (!invoice) {
+      throw new BadRequestException('Invoice not found');
+    }
 
-
-async softDelete(
-  id: string,
-  ownerId: string,
-  workspaceId: string,
-  userId?: string,
-) {
-  return this.prisma.$transaction(async (tx) => {
-    // 1️ Fetch the invoice with its active invoiceItems (deleted_at = null)
-    const existing = await tx.invoice.findFirst({
+    // Fetch the items to see if they exist before updating
+    const existingItems = await this.prisma.invoiceItem.findMany({
       where: {
-        id,
-        deleted_at: null,
+        id: itemId,
         owner_id: ownerId || userId,
         workspace_id: workspaceId,
       },
-      include: {
-        InvoiceItem: {
-          select: { id: true, item_id: true, quantity: true }, // Including item_id and quantity for stock update
-        },
-      },
     });
 
-    if (!existing) throw new NotFoundException('Invoice not found');
-
-    const now = new Date();
-
-    // 2️⃣ Mark the invoice as deleted
-    await tx.invoice.update({
-      where: { id },
-      data: { deleted_at: now },
-    });
-
-    // 3️⃣ Process each invoice item and update stock quantity
-    for (const invoiceItem of existing.InvoiceItem) {
-      // Fetch the stock related to the item
-      const stock = await tx.stock.findUnique({
-        where: { item_id: invoiceItem.item_id },
-      });
-
-      if (stock) {
-        // Increase the stock quantity by the quantity of the deleted invoice item
-        await tx.stock.update({
-          where: { id: stock.id },
-          data: {
-            quantity: stock.quantity + invoiceItem.quantity, // Adding back the quantity
-          },
-        });
-      } else {
-        throw new BadRequestException('Stock not found for this item');
-      }
-
-      // Mark the invoice item as deleted
-      await tx.invoiceItem.updateMany({
-        where: { id: invoiceItem.id },
-        data: { deleted_at: now },
-      });
+    if (existingItems.length === 0) {
+      throw new BadRequestException('No matching invoice items found');
     }
 
-    return { success: true, message: 'Invoice and associated items have been soft deleted and stock updated.' };
-  });
-}
+    // Get the quantity of the item being deleted
+    const itemToDelete = existingItems[0];
+    const quantityToDelete = itemToDelete.quantity;
 
+    // Update only the deleted_at field with the current date
+    const updatedItems = await this.prisma.invoiceItem.updateMany({
+      where: {
+        id: itemId,
+        owner_id: ownerId,
+        workspace_id: workspaceId,
+      },
+      data: { deleted_at: new Date() },
+    });
+
+    // Update stock: Increase the quantity by the quantity of the deleted item
+    const stock = await this.prisma.stock.findUnique({
+      where: { item_id: itemToDelete.item_id },
+    });
+
+    if (stock) {
+      // Increase the stock quantity by the quantity of the deleted invoice item
+      await this.prisma.stock.update({
+        where: { id: stock.id },
+        data: {
+          quantity: stock.quantity + quantityToDelete,
+        },
+      });
+    } else {
+      throw new BadRequestException('Stock not found for this item');
+    }
+
+    // Return the response with success message and updated data
+    return {
+      success: true,
+      message: `Deleted ${updatedItems.count} invoice item(s) successfully and updated stock quantity.`,
+      updatedFields: updatedItems,
+    };
+  }
+
+  async softDelete(
+    id: string,
+    ownerId: string,
+    workspaceId: string,
+    userId?: string,
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      // 1️ Fetch the invoice with its active invoiceItems (deleted_at = null)
+      const existing = await tx.invoice.findFirst({
+        where: {
+          id,
+          deleted_at: null,
+          owner_id: ownerId || userId,
+          workspace_id: workspaceId,
+        },
+        include: {
+          InvoiceItem: {
+            select: { id: true, item_id: true, quantity: true }, // Including item_id and quantity for stock update
+          },
+        },
+      });
+
+      if (!existing) throw new NotFoundException('Invoice not found');
+
+      const now = new Date();
+
+      // 2️⃣ Mark the invoice as deleted
+      await tx.invoice.update({
+        where: { id },
+        data: { deleted_at: now },
+      });
+
+      // 3️⃣ Process each invoice item and update stock quantity
+      for (const invoiceItem of existing.InvoiceItem) {
+        // Fetch the stock related to the item
+        const stock = await tx.stock.findUnique({
+          where: { item_id: invoiceItem.item_id },
+        });
+
+        if (stock) {
+          // Increase the stock quantity by the quantity of the deleted invoice item
+          await tx.stock.update({
+            where: { id: stock.id },
+            data: {
+              quantity: stock.quantity + invoiceItem.quantity, // Adding back the quantity
+            },
+          });
+        } else {
+          throw new BadRequestException('Stock not found for this item');
+        }
+
+        // Mark the invoice item as deleted
+        await tx.invoiceItem.updateMany({
+          where: { id: invoiceItem.id },
+          data: { deleted_at: now },
+        });
+      }
+
+      return {
+        success: true,
+        message:
+          'Invoice and associated items have been soft deleted and stock updated.',
+      };
+    });
+  }
 }

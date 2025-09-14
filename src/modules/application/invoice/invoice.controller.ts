@@ -8,6 +8,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards
 } from '@nestjs/common';
@@ -33,15 +34,39 @@ export class InvoiceController {
   }
 
   // get all invoices
-  @Get('all')
-  async findAll(@Req() req: any) {
-    const {
-      owner_id: ownerId,
-      workspace_id: workspaceId,
-      id: userId,
-    } = req.user;
-    return this.invoiceService.findAll(ownerId, workspaceId, userId);
-  }
+@Get('all')
+async findAll(
+  @Req() req: any,
+  @Query() query: { issueDate?: string; customer?: string; status?: string; accountType?: string, page?: number, limit?: number },
+) {
+  const {
+    owner_id: ownerId,
+    workspace_id: workspaceId,
+    id: userId,
+  } = req.user;
+
+  const {
+    issueDate,
+    customer,
+    status,
+    accountType,
+    page = '1',
+    limit = '10',
+  } = query;
+
+  return this.invoiceService.findAll(
+    ownerId,
+    workspaceId,
+    userId,
+    issueDate,
+    customer,
+    status,
+    accountType,
+    Number(page),
+    Number(limit),
+  );
+}
+
 
   // invoice single view
   @Get(':id')
