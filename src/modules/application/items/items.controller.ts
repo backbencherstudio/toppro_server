@@ -7,6 +7,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -15,12 +16,6 @@ import { CreateItemDto } from './dto/create-item.dto';
 import { UpdateItemDto } from './dto/update-item.dto';
 import { ItemsService } from './items.service';
 
-interface JwtUser {
-  id: string;
-  owner_id: string;
-  workspace_id: string;
-}
-
 @Controller('items')
 @UseGuards(JwtAuthGuard)
 export class ItemsController {
@@ -28,16 +23,37 @@ export class ItemsController {
 
   @Post('create')
   async create(@Body() dto: CreateItemDto, @Req() req: any) {
-    const { id:user_id, owner_id, workspace_id } = req.user;
+    const {
+      id: userId,
+      owner_id: ownerId,
+      workspace_id: workspaceId,
+    } = req.user;
 
-    console.log('ItemsController', user_id, owner_id, workspace_id);
-    return this.itemsService.create(dto, user_id, owner_id, workspace_id);
+    console.log('ItemsController', userId, ownerId, workspaceId);
+    return this.itemsService.create(dto, userId, ownerId, workspaceId);
   }
 
   @Get('all')
-  async getAll(@Req() req: any) {
-    const { workspace_id } = req.user as JwtUser;
-    return this.itemsService.findAll(workspace_id);
+  async getAll(
+    @Req() req: any,
+    @Query('itemType_id') itemTypeId: string,
+    @Query('itemCategory_id') itemCategoryId: string,
+    @Query('search') searchTerm: string, // Accept the search term
+  ) {
+    const {
+      id: userId,
+      owner_id: ownerId,
+      workspace_id: workspaceId,
+    } = req.user;
+
+    return this.itemsService.findAll(
+      userId,
+      ownerId,
+      workspaceId,
+      itemTypeId,
+      itemCategoryId,
+      searchTerm,
+    );
   }
 
   @Patch(':id')
@@ -46,20 +62,20 @@ export class ItemsController {
     @Body() body: Omit<UpdateItemDto, 'id'>,
     @Req() req: any,
   ) {
-    const { workspace_id } = req.user as JwtUser;
+    const { workspace_id } = req.user;
     const dto: UpdateItemDto = { id, ...body };
     return this.itemsService.update(dto, workspace_id);
   }
 
   @Get(':id')
   async getOne(@Param('id') id: string, @Req() req: any) {
-    const { workspace_id } = req.user as JwtUser;
+    const { workspace_id } = req.user;
     return this.itemsService.findOne(id, workspace_id);
   }
 
   @Delete(':id')
   async remove(@Param('id') id: string, @Req() req: any) {
-    const { workspace_id } = req.user as JwtUser;
+    const { workspace_id } = req.user;
     return this.itemsService.remove(id, workspace_id);
   }
 }
