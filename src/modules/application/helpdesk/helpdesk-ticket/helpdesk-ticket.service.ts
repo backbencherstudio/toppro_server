@@ -93,16 +93,11 @@ export class HelpDeskTicketService {
     // Generate a random ticketId (string) before using it in the uploadFiles function
     const ticketId = this.generateRandomTicketId();  // Generate the ticketId before use
 
-    // Create the ticket description (with description and attachment)
-    const ticketDescriptionData: any = {
-      description,
-      attachments: { create: [] as { file_name: string; file_url: string; file_size: number }[] },
-    };
-
-    // Handle multiple attachments
+    // Prepare file uploads if there are attachments
+    let fileUploads = [];
     if (files && files.length > 0) {
       // Upload the files and store their details
-      const fileUploads = await Promise.all(
+      fileUploads = await Promise.all(
         files.map(async (attachment) => {
           const uploaded = await this.uploadService.uploadFilesToDescription(
             ticketId,
@@ -114,19 +109,9 @@ export class HelpDeskTicketService {
           return uploaded[0];
         })
       );
-
-      // Add attachments to be created nested with the description
-      ticketDescriptionData.attachments = {
-        create: fileUploads,
-      };
     }
 
-    // Create the TicketDescriptionWithAttachment
-    const ticketDescription = await this.prisma.ticketDescriptionWithAttachment.create({
-      data: ticketDescriptionData,
-    });
-
-    // Create the HelpDeskTicket and link it to the description and category
+    // Create both the ticket and its description in a single transaction
     const newTicket = await this.prisma.helpDeskTicket.create({
       data: {
         customerId: customerUserId,   // Assigned customer based on user type
@@ -134,11 +119,25 @@ export class HelpDeskTicketService {
         categoryId,
         status,
         subject,
-        createdBy: req.user.id,       // The user who created the ticket (from JWT)
-        descriptionId: ticketDescription.id,  // Link to the description
+        createdBy: req.user.id,      // The user who created the ticket (from JWT)
         ticketId,
-        workspaceId: workspaceId!,    // validated/derived workspace id
+        workspaceId: workspaceId!,   // validated/derived workspace id
+        descriptions: {
+          create: {
+            description,
+            attachments: {
+              create: fileUploads
+            }
+          }
+        }
       },
+      include: {
+        descriptions: {
+          include: {
+            attachments: true
+          }
+        }
+      }
     });
 
     return newTicket;
@@ -371,5 +370,5 @@ export class HelpDeskTicketService {
     return (Math.floor(Math.random() * 90000) + 10000).toString();  // Converts to string
   }
 
-  
+
 }
