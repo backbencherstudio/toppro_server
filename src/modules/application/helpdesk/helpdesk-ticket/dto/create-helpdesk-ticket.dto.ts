@@ -27,4 +27,8 @@ export class CreateTicketDto {
   @IsOptional() // Required for SUPERADMIN, ignored for OWNER (taken from JWT)
   @IsString()
   workspaceId?: string;
+
+  @IsOptional()
+  @IsString()
+  notes?: string;  // Optional notes for the ticket
 }

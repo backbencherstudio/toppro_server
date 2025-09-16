@@ -20,7 +20,7 @@ export class HelpDeskTicketController {
   ) {
     const { type: userType } = req.user;
 
-    const { categoryId, status, subject, description, customerId, email, workspaceId } = createTicketDto;
+    const { categoryId, status, subject, description, customerId, email, workspaceId, notes } = createTicketDto;
 
     return this.helpDeskTicketService.createHelpDeskTicket(
       req,
@@ -33,6 +33,7 @@ export class HelpDeskTicketController {
       customerId,
       email,
       workspaceId,
+      notes
     );
   }
 

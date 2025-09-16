@@ -28,7 +28,8 @@ export class HelpDeskTicketService {
     files: Express.Multer.File[] | null,  // Files attached to the ticket
     customerId?: string,  // Optional: Customer ID (Required only for Admin)
     email?: string,  // Optional: Customer email (Required only for Admin)
-    workspaceId?: string // Optional for Admin; OWNER workspace derived from JWT
+    workspaceId?: string,  // Optional for Admin; OWNER workspace derived from JWT
+    notes?: string  // Optional notes for the ticket
   ) {
     let customerEmail: string | null = null;
     let customerUserId: string | null = null;
@@ -129,7 +130,8 @@ export class HelpDeskTicketService {
               create: fileUploads
             }
           }
-        }
+        }, 
+        notes: notes || null
       },
       include: {
         descriptions: {
@@ -369,6 +371,7 @@ export class HelpDeskTicketService {
   generateRandomTicketId() {
     return (Math.floor(Math.random() * 90000) + 10000).toString();  // Converts to string
   }
+
 
 
 }
