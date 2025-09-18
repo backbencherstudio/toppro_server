@@ -1880,6 +1880,29 @@ model ModulePrice {
   logo       String
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+  comboPlans ComboPlan[]
+}
+
+enum PlanType {
+  Paid
+  Free
+}
+
+model ComboPlan {
+  id                 String       @id @default(cuid())
+  name               String
+  planType           PlanType
+  numberOfUsers      Int
+  numberOfWorkspaces Int
+  pricePerMonth      Int         
+  pricePerYear       Int         
+  trialEnabled       Boolean      @default(false)
+  trialDays          Int?             
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  modules            ModulePrice[]
+  isEnabled          Boolean      @default(true)
+  @@map("combo_plans")
 }
 
 

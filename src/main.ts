@@ -23,7 +23,7 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api');
   app.enableCors();
-    // ✅ Helmet with CSP to allow external images
+  // ✅ Helmet with CSP to allow external images
   app.use(
     helmet({
       contentSecurityPolicy: {
@@ -46,7 +46,10 @@ async function bootstrap() {
     index: false,
     prefix: '/storage',
   });
-  app.useGlobalPipes(new ValidationPipe());
+  app.useGlobalPipes(new ValidationPipe({
+    transform: true,
+    transformOptions: { enableImplicitConversion: true },
+  }));
   app.useGlobalFilters(new CustomExceptionFilter());
 
   // storage setup
