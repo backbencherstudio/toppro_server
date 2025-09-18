@@ -5,7 +5,7 @@ import { ActivityService } from '../activity/activity.service';
 
 @Injectable()
 export class CallService {
-  constructor(private prisma: PrismaService,  private activityService: ActivityService,) { }
+  constructor(private prisma: PrismaService, private activityService: ActivityService,) { }
 
 
   private timeAgo(date: Date): string {
