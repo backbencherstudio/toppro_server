@@ -68,6 +68,7 @@ export class HelpDeskTicketService {
       customerUserId = req.user.id;  // Owner's userId will be the customer
       // Use email directly from JWT payload if present to avoid extra DB read
       customerEmail = req.user.email;
+  
       let ownerWorkspaceId = req.user.workspace_id;
 
       if (!customerEmail || !ownerWorkspaceId) {

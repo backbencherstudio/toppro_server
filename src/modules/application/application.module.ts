@@ -26,8 +26,9 @@ import { InvoiceModule } from './invoice/invoice.module';
 import { HelpDeskCategoryModule } from './helpdesk/helpdesk-category/helpdesk-category.module';
 import { StockModule } from './stock/stock.module';
 import { HelpDeskTicketModule } from './helpdesk/helpdesk-ticket/helpdesk-ticket.module';
+import { SubscriptionSettingsModule } from './subscription/subscription-settings/subscription-settings.module';
 @Module({
-  imports: [NotificationModule, ContactModule, FaqModule, CustomerModule, VendorModule, LeadModule, DealModule, CrmReportModule, PipelinesModule, LeadStagesModule, DealStageModule, WorkspaceModule, SourcesModule, ItemsModule, CategoryModule, PurchaseModule, TasksModule, EmailtextModule, CallModule, LeadsUserModule, DiscussionModule, ActivityModule, LogTimeModule, InvoiceModule, HelpDeskCategoryModule, StockModule, HelpDeskTicketModule],
+  imports: [NotificationModule, ContactModule, FaqModule, CustomerModule, VendorModule, LeadModule, DealModule, CrmReportModule, PipelinesModule, LeadStagesModule, DealStageModule, WorkspaceModule, SourcesModule, ItemsModule, CategoryModule, PurchaseModule, TasksModule, EmailtextModule, CallModule, LeadsUserModule, DiscussionModule, ActivityModule, LogTimeModule, InvoiceModule, HelpDeskCategoryModule, StockModule, HelpDeskTicketModule, SubscriptionSettingsModule],
 
 })
 export class ApplicationModule { }
