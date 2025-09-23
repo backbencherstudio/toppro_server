@@ -46,7 +46,7 @@ model User {
 
   super_id     String?
   owner_id     String?
-  workspace_id String? 
+  workspace_id String?
 
   workspace Workspace? @relation(fields: [workspace_id], references: [id])
 
@@ -105,11 +105,13 @@ model User {
   stock                    Stock[]
 
   // Customer relation to HelpDeskTicket
-  HelpDeskCategory         HelpDeskCategory[]
-  HelpDeskTicketCustomer HelpDeskTicket[] @relation("CustomerTickets")
-  HelpDeskTicketCreator HelpDeskTicket[] @relation("CreatorTickets")
-  @@map("users")
+  HelpDeskCategory       HelpDeskCategory[]
+  HelpDeskTicketCustomer HelpDeskTicket[]   @relation("CustomerTickets")
+  HelpDeskTicketCreator  HelpDeskTicket[]   @relation("CreatorTickets")
 
+  BankAccount BankAccount[]
+
+  @@map("users")
 }
 
 model Workspace {
@@ -152,6 +154,7 @@ model Workspace {
   InvoiceItem     InvoiceItem[]
   stock           Stock[]
   HelpDeskTickets HelpDeskTicket[]
+  BankAccount     BankAccount[]
 
   @@map("workspaces")
 }
@@ -314,7 +317,7 @@ model Invoice {
   Billing_category BillCategory?    @relation(fields: [billing_type_id], references: [id])
   Item_category    ItemCategory?    @relation(fields: [item_category_id], references: [id])
   Invoice_category InvoiceCategory? @relation(fields: [invoice_category_id], references: [id])
-  stock            Stock?            @relation(fields: [stock_id], references: [id])
+  stock            Stock?           @relation(fields: [stock_id], references: [id])
   Item             Items[]
   InvoiceItem      InvoiceItem[]
 
@@ -362,7 +365,7 @@ model InvoiceItem {
   Unit         Unit?         @relation(fields: [unit_id], references: [id])
   Customer     Customer?     @relation(fields: [customer_id], references: [id])
   Invoice      Invoice?      @relation(fields: [invoice_id], references: [id])
-  stock        Stock?         @relation(fields: [stock_id], references: [id])
+  stock        Stock?        @relation(fields: [stock_id], references: [id])
 
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
@@ -448,7 +451,7 @@ model Purchase {
   stock_id     String?
 
   // Relations (headers)
-  stock       Stock?         @relation(fields: [stock_id], references: [id])
+  stock       Stock?        @relation(fields: [stock_id], references: [id])
   AccountType AccountType?  @relation(fields: [account_type_id], references: [id])
   Vendor      Vendor?       @relation(fields: [vendor_id], references: [id])
   BillingType BillCategory? @relation(fields: [billing_type_id], references: [id])
@@ -511,7 +514,7 @@ model PurchaseItems {
   leads        Lead[]
   Purchase     Purchase[]
   Account_type AccountType? @relation(fields: [account_type_id], references: [id])
-  stock        Stock?        @relation(fields: [stock_id], references: [id])
+  stock        Stock?       @relation(fields: [stock_id], references: [id])
 
   @@map("Purchase_items")
 }
@@ -560,6 +563,35 @@ enum Status {
 // ###############################################################################################################################
 //############################# Account Setup ##Start## #########################################################################
 // ###############################################################################################################################
+
+model BankAccount {
+  id         String    @id @default(cuid())
+  created_at DateTime  @default(now())
+  updated_at DateTime  @default(now())
+  deleted_at DateTime?
+
+  bank_type       String?
+  holder_name     String?
+  bank_name       String?
+  account_number  String?
+  opening_balance Float?
+  contact_number  String?
+  bank_branch     String?
+  swift           String?
+  bank_address    String?
+  status          String?
+
+
+  user_id      String?
+  workspace_id String?
+  owner_id     String?
+
+  user      User?      @relation(fields: [user_id], references: [id])
+  workspace Workspace? @relation(fields: [workspace_id], references: [id])
+
+  @@map("bank_accounts")
+}
+
 model Bill {
   id             String    @id @default(cuid())
   created_at     DateTime  @default(now())
@@ -1790,70 +1822,68 @@ model Activity {
 // ###############################################################################################################################
 
 model HelpDeskCategory {
-  id    String @id @default(cuid())
-  name  String @db.VarChar(255)
-  color String @db.VarChar(7) // Color in HEX format (e.g., #FF5733)
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-  created_by String
-  user       User   @relation(fields: [created_by], references: [id])
+  id              String           @id @default(cuid())
+  name            String           @db.VarChar(255)
+  color           String           @db.VarChar(7) // Color in HEX format (e.g., #FF5733)
+  created_at      DateTime         @default(now())
+  updated_at      DateTime         @updatedAt
+  created_by      String
+  user            User             @relation(fields: [created_by], references: [id])
   HelpDeskTickets HelpDeskTicket[] @relation("CategoryTickets")
 
   @@map("help_desk_categories")
 }
 
 model HelpDeskTicket {
-  id            String         @id @default(cuid())
+  id            String   @id @default(cuid())
   customerId    String
   email         String
   categoryId    String
   status        T_status
   subject       String
   createdBy     String
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  descriptionId String? @unique
-  ticketId      String         @unique // Unique ticket ID
-  notes         String?        @db.Text
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  descriptionId String?  @unique
+  ticketId      String   @unique // Unique ticket ID
+  notes         String?  @db.Text
 
   // description    TicketDescriptionWithAttachment? @relation(fields: [descriptionId], references: [id])
-  descriptions  TicketDescriptionWithAttachment[]
-  category       HelpDeskCategory  @relation("CategoryTickets", fields: [categoryId], references: [id], onDelete: Cascade) 
-  customer       User                @relation("CustomerTickets", fields: [customerId], references: [id], onDelete: Cascade)
-  creator        User                @relation("CreatorTickets", fields: [createdBy], references: [id],   onDelete: Cascade)
+  descriptions TicketDescriptionWithAttachment[]
+  category     HelpDeskCategory                  @relation("CategoryTickets", fields: [categoryId], references: [id], onDelete: Cascade)
+  customer     User                              @relation("CustomerTickets", fields: [customerId], references: [id], onDelete: Cascade)
+  creator      User                              @relation("CreatorTickets", fields: [createdBy], references: [id], onDelete: Cascade)
 
   workspaceId String?
   workspace   Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  
+
   @@map("help_desk_tickets")
 }
 
-
 model TicketDescriptionWithAttachment {
-  id          String            @id @default(cuid())
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  description String            // The text description of the ticket
+  id          String                  @id @default(cuid())
+  createdAt   DateTime                @default(now())
+  updatedAt   DateTime                @updatedAt
+  description String // The text description of the ticket
   attachments DescriptionAttachment[] // Multiple attachments per description
 
   // ticket HelpDeskTicket?
-  ticketId    String
-  ticket      HelpDeskTicket        @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  ticketId String
+  ticket   HelpDeskTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
   @@map("ticket_descriptions_with_attachments")
 }
 
 model DescriptionAttachment {
-  id            String   @id @default(cuid())
+  id            String                          @id @default(cuid())
   file_name     String
   file_url      String
   file_size     Int
-  descriptionId String  // Foreign key to TicketDescriptionWithAttachment
+  descriptionId String // Foreign key to TicketDescriptionWithAttachment
   description   TicketDescriptionWithAttachment @relation(fields: [descriptionId], references: [id], onDelete: Cascade)
 
   @@map("description_attachments")
 }
-
 
 enum T_status {
   OPEN
@@ -1866,20 +1896,18 @@ enum T_status {
 //    ############################# Help Desk ##end## #########################################################################
 // ###############################################################################################################################
 
-
-
 // ###############################################################################################################################
 //    ############################# Subscription plan ##start## #########################################################################
 // ###############################################################################################################################
 
 model ModulePrice {
-  id         String   @id @default(cuid())
+  id         String      @id @default(cuid())
   name       String
-  priceMonth Int      
-  priceYear  Int      
+  priceMonth Int
+  priceYear  Int
   logo       String
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
   comboPlans ComboPlan[]
 }
 
@@ -1889,24 +1917,23 @@ enum PlanType {
 }
 
 model ComboPlan {
-  id                 String       @id @default(cuid())
+  id                 String        @id @default(cuid())
   name               String
   planType           PlanType
   numberOfUsers      Int
   numberOfWorkspaces Int
-  pricePerMonth      Int         
-  pricePerYear       Int         
-  trialEnabled       Boolean      @default(false)
-  trialDays          Int?             
-  createdAt          DateTime     @default(now())
-  updatedAt          DateTime     @updatedAt
+  pricePerMonth      Int
+  pricePerYear       Int
+  trialEnabled       Boolean       @default(false)
+  trialDays          Int?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
   modules            ModulePrice[]
-  isEnabled          Boolean      @default(true)
+  isEnabled          Boolean       @default(true)
+
   @@map("combo_plans")
 }
-
 
 // ###############################################################################################################################
 //    ############################# Subscription plan ##End## #########################################################################
 // ###############################################################################################################################
-
