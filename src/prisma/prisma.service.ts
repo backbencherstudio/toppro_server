@@ -14,7 +14,9 @@ export class PrismaService
   extends PrismaClient<Prisma.PrismaClientOptions, 'query'>
   implements OnModuleInit, OnModuleDestroy
 {
+  // [x: string]: any;
   private readonly logger = new Logger(PrismaService.name);
+  // bankAccount: any;
 
   constructor() {
     super({ log: [{ emit: 'event', level: 'query' }] });
