@@ -1911,6 +1911,18 @@ model ModulePrice {
   comboPlans ComboPlan[]
 }
 
+model BasicPackage {
+  id                      String    @id @default(cuid())
+  monthlyBasicPrice       Int       // 55 USD
+  monthlyPricePerUser     Int       // 5 USD
+  monthlyPricePerWorkspace Int      // 10 USD
+  yearlyBasicPrice        Int       // 500 USD
+  yearlyPricePerUser      Int       // 20 USD
+  yearlyPricePerWorkspace Int       // 30 USD
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+}
+
 enum PlanType {
   Paid
   Free
