@@ -14,7 +14,6 @@ export class ComboPlanController {
   create(@Body() createComboPlanDto: CreateComboPlanDto) {
     return this.comboPlanService.create(createComboPlanDto);
   }
-
   @Get()
   findAll() {
     return this.comboPlanService.findall();

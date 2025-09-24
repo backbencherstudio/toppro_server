@@ -31,14 +31,14 @@ export class ModulePriceController {
 
   // Get monthly prices
   @UseGuards(JwtAuthGuard)
-  @Get('monthly')
+  @Get('yearly')
   async getMonthlyPrices() {
     return this.modulePriceService.getPrices('priceYear');
   }
 
   // Get yearly prices
   @UseGuards(JwtAuthGuard)
-  @Get('yearly')
+  @Get('monthly')
   async getYearlyPrices() {
     return this.modulePriceService.getPrices('priceMonth');
   }
