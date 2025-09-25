@@ -105,9 +105,10 @@ export class BasicPlanService {
     users: number,
     workspaces: number,
     billingPeriod: 'monthly' | 'yearly',
-    moduleIds: string[]
+    moduleIds: string[],
+    couponCode?: string
   ) {
-    const [plan, selectedModules] = await Promise.all([
+    const [plan, selectedModules, coupon] = await Promise.all([
       this.prisma.basicPackage.findFirst(),
       this.prisma.modulePrice.findMany({
         where: {
@@ -115,7 +116,10 @@ export class BasicPlanService {
             in: moduleIds
           }
         }
-      })
+      }),
+      couponCode ? this.prisma.coupon.findUnique({
+        where: { code: couponCode }
+      }) : null
     ]);
 
     if (!plan) {
@@ -142,7 +146,46 @@ export class BasicPlanService {
     }));
 
     const modulePrice = moduleDetails.reduce((sum, module) => sum + module.price, 0);
-    const total = basePrice + userPrice + workspacePrice + modulePrice;
+    const subtotal = basePrice + userPrice + workspacePrice + modulePrice;
+
+    // Calculate coupon discount if applicable
+    let discount = 0;
+    let couponMessage = null;
+    let couponError = null;
+
+    if (couponCode) {
+      if (!coupon) {
+        couponError = 'Invalid coupon code';
+      } else {
+        // Validate coupon
+        if (!coupon.isActive) {
+          couponError = 'This coupon is inactive';
+        } else if (coupon.expiryDate && new Date() > coupon.expiryDate) {
+          couponError = 'This coupon has expired';
+        } else if (coupon.usageLimit && coupon.usedCount >= coupon.usageLimit) {
+          couponError = 'This coupon has reached its usage limit';
+        } else if (coupon.minimumSpend && subtotal < coupon.minimumSpend) {
+          couponError = `Minimum spend requirement not met. Minimum spend: $${coupon.minimumSpend}`;
+        } else {
+          // Calculate discount
+          if (coupon.type === 'Percentage') {
+            discount = (subtotal * coupon.discount) / 100;
+            couponMessage = `${coupon.discount}% off`;
+          } else {
+            discount = coupon.discount;
+            couponMessage = `$${coupon.discount} off`;
+          }
+
+          // Check maximum spend if set
+          if (coupon.maximumSpend && discount > coupon.maximumSpend) {
+            discount = coupon.maximumSpend;
+            couponMessage += ` (max discount $${coupon.maximumSpend} applied)`;
+          }
+        }
+      }
+    }
+
+    const total = subtotal - discount;
 
     return {
       calculation: {
@@ -166,7 +209,14 @@ export class BasicPlanService {
           items: moduleDetails,
           total: modulePrice,
           description: 'Selected modules'
-        }
+        },
+        coupon: couponCode ? {
+          code: couponCode,
+          isValid: !couponError,
+          error: couponError,
+          discount: couponError ? 0 : discount,
+          message: couponError ? null : couponMessage
+        } : null
       },
       summary: {
         billingPeriod,
@@ -174,7 +224,10 @@ export class BasicPlanService {
         'Users': `${userPrice}$ (Per User ${isYearly ? plan.yearlyPricePerUser : plan.monthlyPricePerUser}$)`,
         'Workspace': `${workspacePrice}$ (Per Work ${isYearly ? plan.yearlyPricePerWorkspace : plan.monthlyPricePerWorkspace}$)`,
         'Extensions': modulePrice,
-        total,
+        subtotal,
+        'Coupon Status': couponCode ? (couponError || `Applied: ${couponMessage}`) : 'No coupon applied',
+        'Coupon Discount': couponError ? 0 : (discount ? `-${discount}$` : 0),
+        total: couponError ? subtotal : total,
         currency: 'USD',
         interval: isYearly ? '/year' : '/month'
       }

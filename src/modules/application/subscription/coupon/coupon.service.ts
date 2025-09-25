@@ -11,6 +11,7 @@ export class CouponService {
     return this.prisma.coupon.create({
       data: {
         ...createCouponDto,
+        isActive: true, // Always set to true by default
         expiryDate: createCouponDto.expiryDate ? new Date(createCouponDto.expiryDate) : null,
         owner_id: userId
       }
@@ -76,5 +77,18 @@ export class CouponService {
     }
 
     return coupon;
+  }
+
+  async toggleActive(id: string) {
+    // Check if coupon exists and get current status
+    const coupon = await this.findOne(id);
+
+    // Toggle the isActive status
+    return this.prisma.coupon.update({
+      where: { id },
+      data: {
+        isActive: !coupon.isActive
+      }
+    });
   }
 }

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query } from '@nestjs/common';
 import { ComboPlanService } from './combo-plan.service';
 import { CreateComboPlanDto } from './dto/create-combo-plan.dto';
 import { UpdateComboPlanDto } from './dto/update-combo-plan.dto';
@@ -27,6 +27,15 @@ export class ComboPlanController {
   @Get('yearly')
   findYearlyPlans() {
     return this.comboPlanService.findYearlyPlans();
+  }
+
+  @Get(':id/calculate')
+  calculatePrice(
+    @Param('id') id: string,
+    @Query('billingPeriod') billingPeriod: 'monthly' | 'yearly' = 'monthly',
+    @Query('coupon') couponCode?: string
+  ) {
+    return this.comboPlanService.calculatePrice(id, billingPeriod, couponCode);
   }
 
   @UseGuards(JwtAuthGuard, AdminGuard)

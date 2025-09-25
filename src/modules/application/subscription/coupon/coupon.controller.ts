@@ -35,8 +35,13 @@ export class CouponController {
     return this.couponService.remove(id);
   }
 
-  @Post('validate/:code')
-  validateCoupon(@Param('code') code: string) {
+  @Post('validate')
+  validateCoupon(@Body('code') code: string) {
     return this.couponService.validateCoupon(code);
+  }
+
+  @Patch(':id/toggle')
+  toggleActive(@Param('id') id: string) {
+    return this.couponService.toggleActive(id);
   }
 }

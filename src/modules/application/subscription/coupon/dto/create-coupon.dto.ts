@@ -34,7 +34,5 @@ export class CreateCouponDto {
     @IsDateString()
     expiryDate?: string;
 
-    @IsOptional()
-    @IsBoolean()
-    isActive: boolean = true;
+
 }
