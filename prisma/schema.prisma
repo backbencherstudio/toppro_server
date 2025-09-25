@@ -112,6 +112,7 @@ model User {
   BankAccount BankAccount[]
 
   @@map("users")
+  Coupon Coupon[]
 }
 
 model Workspace {
@@ -1948,4 +1949,41 @@ model ComboPlan {
 
 // ###############################################################################################################################
 //    ############################# Subscription plan ##End## #########################################################################
+// ###############################################################################################################################
+
+// ###############################################################################################################################
+//    ############################# Coupon ##Start## #########################################################################
+// ###############################################################################################################################
+
+enum CouponType {
+  Percentage
+  Flat
+}
+
+model Coupon {
+  id              String     @id @default(cuid())
+  name            String
+  code            String     @unique
+  type            CouponType
+  discount        Float      // Amount or percentage based on type
+  minimumSpend    Float?     // Optional minimum spend requirement
+  maximumSpend    Float?     // Optional maximum spend limit
+  usageLimit      Int?       // Total number of times this coupon can be used
+  usagePerUser    Int?       // How many times a single user can use this coupon
+  usedCount       Int        @default(0) // Track how many times the coupon has been used
+  expiryDate      DateTime?  
+  isActive        Boolean    @default(true)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  // Relationships (if needed)
+  owner_id        String
+  owner           User       @relation(fields: [owner_id], references: [id], onDelete: Cascade)
+
+  @@index([owner_id])
+  @@map("coupons")
+}
+
+// ###############################################################################################################################
+//    ############################# Coupon ##End## #########################################################################
 // ###############################################################################################################################

@@ -32,8 +32,9 @@ import { ComboPlanModule } from './subscription/combo-plan/combo-plan.module';
 import { BankaccountModule } from './accounting/bankaccount/bankaccount.module';
 import { ChartofaccountsModule } from './accounting/chartofaccounts/chartofaccounts.module';
 import { BasicPlanModule } from './subscription/basic-plan/basic-plan.module';
+import { CouponModule } from './subscription/coupon/coupon.module';
 @Module({
-  imports: [NotificationModule, ContactModule, FaqModule, CustomerModule, VendorModule, LeadModule, DealModule, CrmReportModule, PipelinesModule, LeadStagesModule, DealStageModule, WorkspaceModule, SourcesModule, ItemsModule, CategoryModule, PurchaseModule, TasksModule, EmailtextModule, CallModule, LeadsUserModule, DiscussionModule, ActivityModule, LogTimeModule, InvoiceModule, HelpDeskCategoryModule, StockModule, HelpDeskTicketModule, SubscriptionSettingsModule, ModulePriceModule, ComboPlanModule, BankaccountModule, ChartofaccountsModule, BasicPlanModule],
+  imports: [NotificationModule, ContactModule, FaqModule, CustomerModule, VendorModule, LeadModule, DealModule, CrmReportModule, PipelinesModule, LeadStagesModule, DealStageModule, WorkspaceModule, SourcesModule, ItemsModule, CategoryModule, PurchaseModule, TasksModule, EmailtextModule, CallModule, LeadsUserModule, DiscussionModule, ActivityModule, LogTimeModule, InvoiceModule, HelpDeskCategoryModule, StockModule, HelpDeskTicketModule, SubscriptionSettingsModule, ModulePriceModule, ComboPlanModule, BankaccountModule, ChartofaccountsModule, BasicPlanModule, CouponModule],
 
 })
 export class ApplicationModule { }
