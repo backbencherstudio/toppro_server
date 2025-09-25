@@ -29,14 +29,16 @@ export class BasicPlanController {
     @Query('users') users: string,
     @Query('workspaces') workspaces: string,
     @Query('billingPeriod') billingPeriod: 'monthly' | 'yearly',
-    @Query('modules') modules: string // comma-separated module IDs
+    @Query('modules') modules: string, // comma-separated module IDs
+    @Query('coupon') couponCode?: string
   ) {
     const moduleIds = modules ? modules.split(',') : [];
     return this.basicPlanService.calculatePrice(
       parseInt(users, 10),
       parseInt(workspaces, 10),
       billingPeriod,
-      moduleIds
+      moduleIds,
+      couponCode
     );
   }
 }

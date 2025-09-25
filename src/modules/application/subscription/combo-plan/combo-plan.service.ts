@@ -50,29 +50,41 @@ export class ComboPlanService {
     });
 
     const updatedComboPlans = comboPlans.map(plan => {
-      const basePrice = billingPeriod === 'yearly' ? plan.pricePerYear : plan.pricePerMonth;
+      // Format modules to only show name and logo
+      const formattedModules = plan.modules.map(module => ({
+        name: module.name,
+        logo: module.logo
+      }));
 
-      // Calculate total module prices based on billing period
-      const modulePrice = plan.modules.reduce((total, module) => {
-        return total + (billingPeriod === 'yearly' ? module.priceYear : module.priceMonth);
-      }, 0);
+      // Remove the modules array from the plan to avoid repeating it
+      const { pricePerMonth, pricePerYear, modules, ...restPlan } = plan;
 
-      // Format modules to only show relevant prices
-      const formattedModules = plan.modules.map(module => {
-        const { priceMonth, priceYear, ...rest } = module;
+      // If billingPeriod is specified, return only that price
+      if (billingPeriod) {
         return {
-          ...rest,
-          price: billingPeriod === 'yearly' ? priceYear : priceMonth
+          ...restPlan,
+          price: billingPeriod === 'yearly' ? pricePerYear : pricePerMonth,
+          billingPeriod,
+          modules: formattedModules,
+          numberOfUsers: plan.numberOfUsers === -1 ? 'unlimited' : plan.numberOfUsers,
+          numberOfWorkspaces: plan.numberOfWorkspaces === -1 ? 'unlimited' : plan.numberOfWorkspaces,
         };
-      });
+      }
 
-      // Remove the irrelevant price field from the plan
-      const { pricePerMonth, pricePerYear, ...restPlan } = plan;
-
+      // If no billingPeriod specified, return both prices
       return {
         ...restPlan,
-        price: basePrice + modulePrice,
-        billingPeriod: billingPeriod || 'monthly',
+        pricing: {
+          monthly: {
+            price: pricePerMonth,
+            interval: '/month'
+          },
+          yearly: {
+            price: pricePerYear,
+            interval: '/year',
+            savings: Math.round((pricePerMonth * 12 - pricePerYear) / (pricePerMonth * 12) * 100)
+          }
+        },
         modules: formattedModules,
         numberOfUsers: plan.numberOfUsers === -1 ? 'unlimited' : plan.numberOfUsers,
         numberOfWorkspaces: plan.numberOfWorkspaces === -1 ? 'unlimited' : plan.numberOfWorkspaces,
@@ -169,6 +181,102 @@ export class ComboPlanService {
     return { message: 'Combo Plan deleted successfully' };
   }
 
+  async calculatePrice(
+    planId: string,
+    billingPeriod: 'monthly' | 'yearly',
+    couponCode?: string
+  ) {
+    // Fetch combo plan with its modules
+    const [plan, coupon] = await Promise.all([
+      this.prisma.comboPlan.findUnique({
+        where: { id: planId },
+        include: { modules: true }
+      }),
+      couponCode ? this.prisma.coupon.findUnique({
+        where: { code: couponCode }
+      }) : null
+    ]);
+
+    if (!plan) {
+      throw new NotFoundException('Combo plan not found');
+    }
+
+    const isYearly = billingPeriod === 'yearly';
+
+    // Get the fixed combo plan price
+    const subtotal = isYearly ? plan.pricePerYear : plan.pricePerMonth;
+
+    // Calculate coupon discount if applicable
+    let discount = 0;
+    let couponMessage = null;
+    let couponError = null;
+
+    if (couponCode) {
+      if (!coupon) {
+        couponError = 'Invalid coupon code';
+      } else {
+        // Validate coupon
+        if (!coupon.isActive) {
+          couponError = 'This coupon is inactive';
+        } else if (coupon.expiryDate && new Date() > coupon.expiryDate) {
+          couponError = 'This coupon has expired';
+        } else if (coupon.usageLimit && coupon.usedCount >= coupon.usageLimit) {
+          couponError = 'This coupon has reached its usage limit';
+        } else if (coupon.minimumSpend && subtotal < coupon.minimumSpend) {
+          couponError = `Minimum spend requirement not met. Minimum spend: $${coupon.minimumSpend}`;
+        } else {
+          // Calculate discount
+          if (coupon.type === 'Percentage') {
+            discount = (subtotal * coupon.discount) / 100;
+            couponMessage = `${coupon.discount}% off`;
+          } else {
+            discount = coupon.discount;
+            couponMessage = `$${coupon.discount} off`;
+          }
+
+          // Check maximum spend if set
+          if (coupon.maximumSpend && discount > coupon.maximumSpend) {
+            discount = coupon.maximumSpend;
+            couponMessage += ` (max discount $${coupon.maximumSpend} applied)`;
+          }
+        }
+      }
+    }
+
+    const total = subtotal - discount;
+
+    return {
+      calculation: {
+        plan: {
+          id: plan.id,
+          name: plan.name,
+          type: plan.planType,
+          numberOfUsers: plan.numberOfUsers === -1 ? 'unlimited' : plan.numberOfUsers,
+          numberOfWorkspaces: plan.numberOfWorkspaces === -1 ? 'unlimited' : plan.numberOfWorkspaces,
+          price: subtotal,
+          description: 'Combo Plan Price'
+        },
+        modules: plan.modules.map(m => ({
+          name: m.name,
+          logo: m.logo
+        })),
+        coupon: couponCode ? {
+          code: couponCode,
+          isValid: !couponError,
+          discount: couponError ? 0 : discount,
+          message: couponError ? null : couponMessage
+        } : null
+      },
+      summary: {
+        billingPeriod,
+        'Plan Price': subtotal,
+        'Coupon Discount': couponError ? 0 : (discount ? `-${discount}$` : 0),
+        total: couponError ? subtotal : total,
+        currency: 'USD',
+        interval: isYearly ? '/year' : '/month'
+      }
+    };
+  }
 }
 
 

@@ -1922,6 +1922,7 @@ model BasicPackage {
   yearlyPricePerWorkspace Int       // 30 USD
   createdAt               DateTime  @default(now())
   updatedAt               DateTime  @updatedAt
+  coupons                 Coupon[]
 }
 
 enum PlanType {
@@ -1943,6 +1944,7 @@ model ComboPlan {
   updatedAt          DateTime      @updatedAt
   modules            ModulePrice[]
   isEnabled          Boolean       @default(true)
+  coupons            Coupon[]     // Relation to applicable coupons
 
   @@map("combo_plans")
 }
@@ -1971,8 +1973,12 @@ model Coupon {
   usageLimit      Int?       // Total number of times this coupon can be used
   usagePerUser    Int?       // How many times a single user can use this coupon
   usedCount       Int        @default(0) // Track how many times the coupon has been used
+  startDate       DateTime?   // When the coupon becomes valid
   expiryDate      DateTime?  
   isActive        Boolean    @default(true)
+  description     String?    // Description of the coupon
+  applicableTo    String[]   // Array of plan types this coupon can be applied to (e.g., ["basic", "combo"])
+  lastUsedAt      DateTime?  // Track when the coupon was last used
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
 
@@ -1980,7 +1986,13 @@ model Coupon {
   owner_id        String
   owner           User       @relation(fields: [owner_id], references: [id], onDelete: Cascade)
 
+  // Relations with plans
+  basicPackage_id String?
+  basicPackage    BasicPackage? @relation(fields: [basicPackage_id], references: [id])
+  comboPlans     ComboPlan[]
+
   @@index([owner_id])
+  @@index([code])
   @@map("coupons")
 }
 
