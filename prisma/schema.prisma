@@ -112,6 +112,7 @@ model User {
   BankAccount    BankAccount[]
   Coupon         Coupon[]
   ChartOfAccount ChartOfAccount[]
+  CompanySettings CompanySettings[]
 
   @@map("users")
 }
@@ -157,9 +158,10 @@ model Workspace {
   stock           Stock[]
   HelpDeskTickets HelpDeskTicket[]
   BankAccount     BankAccount[]
-  ChartOfAccount  ChartOfAccount[]
 
   @@map("workspaces")
+  CompanySettings CompanySettings[]
+  ChartOfAccount ChartOfAccount[]
 }
 
 enum UserType {
@@ -2059,4 +2061,50 @@ model Coupon {
 
 // ###############################################################################################################################
 //    ############################# Coupon ##End## #########################################################################
+// ###############################################################################################################################
+
+// ###############################################################################################################################
+//    ############################# Company Settings ##Start## #########################################################################
+// ###############################################################################################################################
+
+model CompanySettings {
+  id         String    @id @default(cuid())
+  created_at DateTime  @default(now())
+  updated_at DateTime  @default(now())
+  deleted_at DateTime?
+
+  // Company Information
+  company_name                String?
+  company_registration_number String?
+  
+  // Address Information
+  address String?
+  city    String?
+  state   String?
+  country String?
+  zip_code String?
+
+  // Contact Information
+  telephone String?
+  email_from_name String?
+  system_email    String?
+
+  // Tax Information
+  tax_number_enabled Boolean @default(false)
+  tax_number_type    String? // 'VAT' or 'GST'
+  tax_number_value   String?
+
+  // Multitenancy
+  owner_id     String?
+  workspace_id String?
+
+  // Relations
+  owner     User?      @relation(fields: [owner_id], references: [id], onDelete: Cascade)
+  workspace Workspace? @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+
+  @@map("company_settings")
+}
+
+// ###############################################################################################################################
+//    ############################# Company Settings ##End## #########################################################################
 // ###############################################################################################################################
