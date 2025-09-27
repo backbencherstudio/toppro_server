@@ -109,10 +109,11 @@ model User {
   HelpDeskTicketCustomer HelpDeskTicket[]   @relation("CustomerTickets")
   HelpDeskTicketCreator  HelpDeskTicket[]   @relation("CreatorTickets")
 
-  BankAccount BankAccount[]
+  BankAccount    BankAccount[]
+  Coupon         Coupon[]
+  ChartOfAccount ChartOfAccount[]
 
   @@map("users")
-  Coupon Coupon[]
 }
 
 model Workspace {
@@ -156,6 +157,7 @@ model Workspace {
   stock           Stock[]
   HelpDeskTickets HelpDeskTicket[]
   BankAccount     BankAccount[]
+  ChartOfAccount  ChartOfAccount[]
 
   @@map("workspaces")
 }
@@ -550,17 +552,6 @@ model Stock {
   @@map("stock")
 }
 
-enum Status {
-  DRAFT
-  SENT
-  UNPAID
-  PAID
-  PARTIALLY_PAID
-  PENDING
-  DELIVERED
-  READ
-}
-
 // ###############################################################################################################################
 //############################# Account Setup ##Start## #########################################################################
 // ###############################################################################################################################
@@ -571,7 +562,7 @@ model BankAccount {
   updated_at DateTime  @default(now())
   deleted_at DateTime?
 
-  bank_type       String?
+  bank_type       BankType
   holder_name     String?
   bank_name       String?
   account_number  String?
@@ -582,15 +573,72 @@ model BankAccount {
   bank_address    String?
   status          String?
 
+  user_id             String?
+  workspace_id        String?
+  owner_id            String?
+  chart_of_account_id String?
+
+  user           User?           @relation(fields: [user_id], references: [id])
+  workspace      Workspace?      @relation(fields: [workspace_id], references: [id])
+  ChartOfAccount ChartOfAccount? @relation(fields: [chart_of_account_id], references: [id])
+
+  @@map("bank_accounts")
+}
+
+enum BankType {
+  BANK
+  WALLET
+}
+
+enum ParentAccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  INCOME
+  EXPENSE
+}
+
+enum ChildAccountType {
+  CURRENT_ASSET
+  INVENTORY_ASSET
+  NON_CURRENT_ASSET
+  CURRENT_LIABILITIES
+  LONG_TERM_LIABILITIES
+  SHARE_CAPITAL
+  RETAINED_EARNINGS
+  OWNERS_EQUITY
+  SALES_REVENUE
+  OTHER_REVENUE
+  COST_OF_GOODS_SOLD
+  PAYROLL_EXPENSES
+  GENERAL_AND_ADMIN_EXPENSES
+}
+
+model ChartOfAccount {
+  id                  String            @id @default(cuid())
+  code                String            @unique
+  name                String
+  description         String?
+  account_category    ParentAccountType
+  parent_account_name String?
+  child_account_type  ChildAccountType?
+  balance             Decimal?          @default(0.0)
+  status              String?           @default("ACTIVE")
 
   user_id      String?
   workspace_id String?
   owner_id     String?
 
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime? @db.Timestamp(6)
+
   user      User?      @relation(fields: [user_id], references: [id])
   workspace Workspace? @relation(fields: [workspace_id], references: [id])
 
-  @@map("bank_accounts")
+  bank_account BankAccount[]
+
+  @@map("chart_of_accounts")
 }
 
 model Bill {
@@ -627,6 +675,19 @@ model Bill {
   AccountType AccountType? @relation(fields: [accountType_id], references: [id])
 
   @@map("bills")
+}
+
+enum Status {
+  DRAFT
+  SENT
+  UNPAID
+  PAID
+  PARTIALLY_PAID
+  PENDING
+  DELIVERED
+  READ
+  ACTIVE
+  INACTIVE
 }
 
 // ###############################################################################################################################
@@ -1913,16 +1974,16 @@ model ModulePrice {
 }
 
 model BasicPackage {
-  id                      String    @id @default(cuid())
-  monthlyBasicPrice       Int       // 55 USD
-  monthlyPricePerUser     Int       // 5 USD
-  monthlyPricePerWorkspace Int      // 10 USD
-  yearlyBasicPrice        Int       // 500 USD
-  yearlyPricePerUser      Int       // 20 USD
-  yearlyPricePerWorkspace Int       // 30 USD
-  createdAt               DateTime  @default(now())
-  updatedAt               DateTime  @updatedAt
-  coupons                 Coupon[]
+  id                       String   @id @default(cuid())
+  monthlyBasicPrice        Int // 55 USD
+  monthlyPricePerUser      Int // 5 USD
+  monthlyPricePerWorkspace Int // 10 USD
+  yearlyBasicPrice         Int // 500 USD
+  yearlyPricePerUser       Int // 20 USD
+  yearlyPricePerWorkspace  Int // 30 USD
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+  coupons                  Coupon[]
 }
 
 enum PlanType {
@@ -1944,7 +2005,7 @@ model ComboPlan {
   updatedAt          DateTime      @updatedAt
   modules            ModulePrice[]
   isEnabled          Boolean       @default(true)
-  coupons            Coupon[]     // Relation to applicable coupons
+  coupons            Coupon[] // Relation to applicable coupons
 
   @@map("combo_plans")
 }
@@ -1963,33 +2024,33 @@ enum CouponType {
 }
 
 model Coupon {
-  id              String     @id @default(cuid())
-  name            String
-  code            String     @unique
-  type            CouponType
-  discount        Float      // Amount or percentage based on type
-  minimumSpend    Float?     // Optional minimum spend requirement
-  maximumSpend    Float?     // Optional maximum spend limit
-  usageLimit      Int?       // Total number of times this coupon can be used
-  usagePerUser    Int?       // How many times a single user can use this coupon
-  usedCount       Int        @default(0) // Track how many times the coupon has been used
-  startDate       DateTime?   // When the coupon becomes valid
-  expiryDate      DateTime?  
-  isActive        Boolean    @default(true)
-  description     String?    // Description of the coupon
-  applicableTo    String[]   // Array of plan types this coupon can be applied to (e.g., ["basic", "combo"])
-  lastUsedAt      DateTime?  // Track when the coupon was last used
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
+  id           String     @id @default(cuid())
+  name         String
+  code         String     @unique
+  type         CouponType
+  discount     Float // Amount or percentage based on type
+  minimumSpend Float? // Optional minimum spend requirement
+  maximumSpend Float? // Optional maximum spend limit
+  usageLimit   Int? // Total number of times this coupon can be used
+  usagePerUser Int? // How many times a single user can use this coupon
+  usedCount    Int        @default(0) // Track how many times the coupon has been used
+  startDate    DateTime? // When the coupon becomes valid
+  expiryDate   DateTime?
+  isActive     Boolean    @default(true)
+  description  String? // Description of the coupon
+  applicableTo String[] // Array of plan types this coupon can be applied to (e.g., ["basic", "combo"])
+  lastUsedAt   DateTime? // Track when the coupon was last used
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 
   // Relationships (if needed)
-  owner_id        String
-  owner           User       @relation(fields: [owner_id], references: [id], onDelete: Cascade)
+  owner_id String
+  owner    User   @relation(fields: [owner_id], references: [id], onDelete: Cascade)
 
   // Relations with plans
   basicPackage_id String?
   basicPackage    BasicPackage? @relation(fields: [basicPackage_id], references: [id])
-  comboPlans     ComboPlan[]
+  comboPlans      ComboPlan[]
 
   @@index([owner_id])
   @@index([code])
