@@ -3,6 +3,7 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { CreateBankAccountDto } from './dto/create-bankaccount.dto';
 import { UpdateBankAccountDto } from './dto/update-bankaccount.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { BankType, Prisma } from '@prisma/client';
 
 @Injectable()
 export class BankAccountService {
@@ -13,9 +14,8 @@ export class BankAccountService {
     createBankAccountDto: CreateBankAccountDto,
     ownerId: string,
     workspaceId: string,
-    userId: string,
+    userId?: string,
   ) {
-    // Validate that the required parameters are present
     if (!ownerId && !userId) {
       throw new HttpException(
         'Owner ID or User ID must be provided',
@@ -30,15 +30,15 @@ export class BankAccountService {
     }
 
     try {
-      // Create a new bank account
-      const bankAccount = await this.prisma.bankAccount.create({
-        data: {
-          ...createBankAccountDto,
-          owner_id: ownerId || userId,
-          workspace_id: workspaceId,
-          user_id: userId || ownerId,
-        },
-      });
+      const data: Prisma.BankAccountUncheckedCreateInput = {
+        ...createBankAccountDto,
+        owner_id: ownerId || userId, // just a string
+        workspace_id: workspaceId, // must exist if relation enforced
+        user_id: userId || ownerId, // nullable if no user
+        bank_type: createBankAccountDto.bank_type as BankType,
+      };
+
+      const bankAccount = await this.prisma.bankAccount.create({ data });
 
       return {
         success: true,
@@ -58,6 +58,7 @@ export class BankAccountService {
   async update(id: string, updateBankAccountDto: UpdateBankAccountDto) {
     const bankAccount = await this.prisma.bankAccount.update({
       where: { id },
+      //@ts-ignore
       data: updateBankAccountDto,
     });
     return {
@@ -84,7 +85,7 @@ export class BankAccountService {
     const bankAccounts = await this.prisma.bankAccount.findMany();
     return {
       success: true,
-      message: "All bank accounts found successfully",
+      message: 'All bank accounts found successfully',
       data: bankAccounts,
     };
   }

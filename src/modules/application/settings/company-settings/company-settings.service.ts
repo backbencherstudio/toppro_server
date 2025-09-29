@@ -13,9 +13,9 @@ export class CompanySettingsService {
       const companySetting = await this.prisma.companySettings.create({
         data: {
           ...createCompanySettingDto,
-          owner_id: ownerId,
+          owner_id: ownerId || userId,
           workspace_id: workspaceId,
-          user_id: userId,
+          // user_id: userId,
         },
       });
 

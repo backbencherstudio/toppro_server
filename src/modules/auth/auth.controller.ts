@@ -66,7 +66,7 @@ export class AuthController {
     },
   ) {
     const { id, owner_id, workspace_id } = req.user;
-    console.log('user::>>', id, owner_id, workspace_id);
+    // console.log('user::>>', id, owner_id, workspace_id);
     try {
       const {
         name,

@@ -13,4 +13,5 @@ export class UpdateBankAccountDto {
   user_id?: string;
   workspace_id?: string;
   owner_id?: string;
+  chart_of_account_id?: string;
 }

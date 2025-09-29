@@ -564,7 +564,7 @@ model BankAccount {
   updated_at DateTime  @default(now())
   deleted_at DateTime?
 
-  bank_type       BankType
+  bank_type       BankType?
   holder_name     String?
   bank_name       String?
   account_number  String?
