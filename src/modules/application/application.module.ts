@@ -35,7 +35,42 @@ import { BasicPlanModule } from './subscription/basic-plan/basic-plan.module';
 import { CouponModule } from './subscription/coupon/coupon.module';
 import { CompanySettingsModule } from './settings/company-settings/company-settings.module';
 @Module({
-  imports: [NotificationModule, ContactModule, FaqModule, CustomerModule, VendorModule, LeadModule, DealModule, CrmReportModule, PipelinesModule, LeadStagesModule, DealStageModule, WorkspaceModule, SourcesModule, ItemsModule, CategoryModule, PurchaseModule, TasksModule, EmailtextModule, CallModule, LeadsUserModule, DiscussionModule, ActivityModule, LogTimeModule, InvoiceModule, HelpDeskCategoryModule, StockModule, HelpDeskTicketModule, SubscriptionSettingsModule, ModulePriceModule, ComboPlanModule, BankaccountModule, ChartofaccountsModule, BasicPlanModule, CouponModule, CompanySettingsModule],
-
+  imports: [
+    NotificationModule,
+    ContactModule,
+    FaqModule,
+    CustomerModule,
+    VendorModule,
+    LeadModule,
+    DealModule,
+    CrmReportModule,
+    PipelinesModule,
+    LeadStagesModule,
+    DealStageModule,
+    WorkspaceModule,
+    SourcesModule,
+    ItemsModule,
+    CategoryModule,
+    PurchaseModule,
+    TasksModule,
+    EmailtextModule,
+    CallModule,
+    LeadsUserModule,
+    DiscussionModule,
+    ActivityModule,
+    LogTimeModule,
+    InvoiceModule,
+    HelpDeskCategoryModule,
+    StockModule,
+    HelpDeskTicketModule,
+    SubscriptionSettingsModule,
+    ModulePriceModule,
+    ComboPlanModule,
+    BankaccountModule,
+    ChartofaccountsModule,
+    BasicPlanModule,
+    CouponModule,
+    CompanySettingsModule,
+  ],
 })
-export class ApplicationModule { }
+export class ApplicationModule {}
