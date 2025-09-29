@@ -21,13 +21,10 @@ export class BankAccountController {
   constructor(private readonly bankAccountService: BankAccountService) {}
 
   // Create a new bank account
-  @Post()
+ @Post()
   async create(@Body() createBankAccountDto: CreateBankAccountDto, @Req() req) {
-    const {
-      owner_id: ownerId,
-      workspace_id: workspaceId,
-      id: userId,
-    } = req.user;
+    const { owner_id: ownerId, workspace_id: workspaceId, id: userId } = req.user;
+
     return this.bankAccountService.create(
       createBankAccountDto,
       ownerId,

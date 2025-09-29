@@ -4,5 +4,6 @@
     "minimap.background": "#00000000",
     "scrollbar.shadow": "#00000000"
   },
-  "codium.codeCompletion.enable": true
+  "codium.codeCompletion.enable": true,
+  "cSpell.words": ["chartofaccount"]
 }
