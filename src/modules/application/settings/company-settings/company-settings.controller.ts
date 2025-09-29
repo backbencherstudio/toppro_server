@@ -1,110 +1,69 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  Query,
-  UseGuards,
-  Request,
-  HttpCode,
-  HttpStatus
-} from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Post, Body, Param, Patch, Get, UseGuards, Request, Res } from '@nestjs/common';
 import { CompanySettingsService } from './company-settings.service';
 import { CreateCompanySettingDto } from './dto/create-company-setting.dto';
 import { UpdateCompanySettingDto } from './dto/update-company-setting.dto';
-import { CompanySetting } from './entities/company-setting.entity';
+import { CompanySettings } from '@prisma/client';
+import { Response } from 'express';
+import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 
-@ApiTags('Company Settings')
 @Controller('company-settings')
+@UseGuards(JwtAuthGuard) // Ensure the user is authenticated with JWT
 export class CompanySettingsController {
-  constructor(private readonly companySettingsService: CompanySettingsService) { }
+  constructor(private readonly companySettingsService: CompanySettingsService) {}
 
+  // Create company settings under a specific owner and workspace
   @Post()
-  @ApiOperation({ summary: 'Create company settings' })
-  @ApiResponse({ status: 201, description: 'Company settings created successfully', type: CompanySetting })
-  @ApiResponse({ status: 409, description: 'Conflict - Failed to create company settings' })
   async create(
+    @Request() req,
     @Body() createCompanySettingDto: CreateCompanySettingDto,
-    @Request() req: any
-  ): Promise<CompanySetting> {
-    return this.companySettingsService.create(
-      createCompanySettingDto,
-      req.user?.owner_id,
-      req.user?.workspace_id,
-      req.user?.id
-    );
+    @Res() res: Response
+  ): Promise<Response<CompanySettings>> {
+    const { owner_id, workspace_id } = req.user; // Extract from JWT payload
+    try {
+      const result = await this.companySettingsService.create(createCompanySettingDto, owner_id, workspace_id);
+      return res.json(result); // Ensure we return a valid CompanySettings object
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        message: error.message,
+      });
+    }
   }
 
+  // Get company settings by owner and workspace
   @Get()
-  @ApiOperation({ summary: 'Get all company settings' })
-  @ApiResponse({ status: 200, description: 'Company settings retrieved successfully', type: [CompanySetting] })
-  async findAll(
-    @Request() req: any,
-    @Query('workspace_id') workspaceId?: string
-  ): Promise<CompanySetting[]> {
-    return this.companySettingsService.findAll(
-      req.user?.owner_id,
-      workspaceId || req.user?.workspace_id
-    );
+  async getByOwnerAndWorkspace(@Request() req, @Res() res: Response): Promise<Response<CompanySettings | null>> {
+    const { owner_id, workspace_id } = req.user; // Extract from JWT payload
+    try {
+      const result = await this.companySettingsService.getByOwnerAndWorkspace(owner_id, workspace_id);
+      if (!result) {
+        return res.status(404).json({ success: false, message: 'Settings not found' });
+      }
+      return res.json(result); // Ensure we return a valid CompanySettings object
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        message: error.message,
+      });
+    }
   }
 
-  @Get('workspace/:workspaceId')
-  @ApiOperation({ summary: 'Get company settings by workspace' })
-  @ApiResponse({ status: 200, description: 'Company settings retrieved successfully', type: CompanySetting })
-  @ApiResponse({ status: 404, description: 'Company settings not found' })
-  async findByWorkspace(@Param('workspaceId') workspaceId: string): Promise<CompanySetting | null> {
-    return this.companySettingsService.findByWorkspace(workspaceId);
-  }
-
-  @Get(':id')
-  @ApiOperation({ summary: 'Get company settings by ID' })
-  @ApiResponse({ status: 200, description: 'Company settings retrieved successfully', type: CompanySetting })
-  @ApiResponse({ status: 404, description: 'Company settings not found' })
-  async findOne(@Param('id') id: string): Promise<CompanySetting> {
-    return this.companySettingsService.findOne(id);
-  }
-
-  @Patch(':id')
-  @ApiOperation({ summary: 'Update company settings by ID' })
-  @ApiResponse({ status: 200, description: 'Company settings updated successfully', type: CompanySetting })
-  @ApiResponse({ status: 404, description: 'Company settings not found' })
+  // Update company settings for a specific owner and workspace
+  @Patch()
   async update(
-    @Param('id') id: string,
-    @Body() updateCompanySettingDto: UpdateCompanySettingDto
-  ): Promise<CompanySetting> {
-    return this.companySettingsService.update(id, updateCompanySettingDto);
-  }
-
-  @Patch('workspace/:workspaceId')
-  @ApiOperation({ summary: 'Update company settings by workspace' })
-  @ApiResponse({ status: 200, description: 'Company settings updated successfully', type: CompanySetting })
-  @ApiResponse({ status: 201, description: 'Company settings created successfully', type: CompanySetting })
-  async updateByWorkspace(
-    @Param('workspaceId') workspaceId: string,
-    @Body() updateCompanySettingDto: UpdateCompanySettingDto
-  ): Promise<CompanySetting> {
-    return this.companySettingsService.updateByWorkspace(workspaceId, updateCompanySettingDto);
-  }
-
-  @Delete(':id')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Soft delete company settings' })
-  @ApiResponse({ status: 204, description: 'Company settings deleted successfully' })
-  @ApiResponse({ status: 404, description: 'Company settings not found' })
-  async remove(@Param('id') id: string): Promise<void> {
-    return this.companySettingsService.remove(id);
-  }
-
-  @Delete(':id/hard')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Permanently delete company settings' })
-  @ApiResponse({ status: 204, description: 'Company settings permanently deleted' })
-  @ApiResponse({ status: 404, description: 'Company settings not found' })
-  async hardDelete(@Param('id') id: string): Promise<void> {
-    return this.companySettingsService.hardDelete(id);
+    @Request() req,
+    @Body() updateCompanySettingDto: UpdateCompanySettingDto,
+    @Res() res: Response
+  ): Promise<Response<CompanySettings>> {
+    const { owner_id, workspace_id } = req.user; // Extract from JWT payload
+    try {
+      const result = await this.companySettingsService.update(updateCompanySettingDto, owner_id, workspace_id);
+      return res.json(result); // Ensure we return a valid CompanySettings object
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        message: error.message,
+      });
+    }
   }
 }
