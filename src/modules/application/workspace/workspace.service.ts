@@ -37,6 +37,14 @@ export class WorkspaceService {
         },
       });
 
+      await tx.currencySettings.create({
+        data: {
+          owner_id: ownerForWorkspace,
+          workspace_id: ws.id,
+        },
+      }
+    );
+
       return ws;
     });
 
