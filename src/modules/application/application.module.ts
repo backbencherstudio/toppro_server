@@ -34,6 +34,7 @@ import { ChartofaccountsModule } from './accounting/chartofaccounts/chartofaccou
 import { BasicPlanModule } from './subscription/basic-plan/basic-plan.module';
 import { CouponModule } from './subscription/coupon/coupon.module';
 import { CompanySettingsModule } from './settings/company-settings/company-settings.module';
+import { CurrencySettingsModule } from './settings/currency-settings/currency-settings.module';
 @Module({
   imports: [
     NotificationModule,
@@ -71,6 +72,7 @@ import { CompanySettingsModule } from './settings/company-settings/company-setti
     BasicPlanModule,
     CouponModule,
     CompanySettingsModule,
+    CurrencySettingsModule,
   ],
 })
 export class ApplicationModule {}
