@@ -3,22 +3,43 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateWorkspaceDto } from './dto/create-workspace.dto';
 import { UpdateWorkspaceDto } from './dto/update-workspace.dto';
+import appConfig from 'src/config/app.config';
 
 @Injectable()
 export class WorkspaceService {
   constructor(
-    private  jwtService: JwtService,
+    private jwtService: JwtService,
     private readonly prisma: PrismaService,
-  ) {}
+  ) { }
 
   async create(data: CreateWorkspaceDto, userId: string, ownerId: string) {
     console.log('WorkspaceService', userId, ownerId);
-    const workspace = await this.prisma.workspace.create({
-      data: {
-        ...data,
-        owner_id: userId || ownerId,
-      },
+    const ownerForWorkspace = ownerId || userId;
+
+    // Ensure workspace code is unique (schema enforces global uniqueness)
+    const exists = await this.prisma.workspace.findUnique({ where: { code: data.code } });
+    if (exists) {
+      throw new BadRequestException('Workspace code already exists');
+    }
+
+    const workspace = await this.prisma.$transaction(async (tx) => {
+      const ws = await tx.workspace.create({
+        data: {
+          ...data,
+          owner_id: ownerForWorkspace,
+        },
+      });
+
+      await tx.companySettings.create({
+        data: {
+          owner_id: ownerForWorkspace,
+          workspace_id: ws.id,
+        },
+      });
+
+      return ws;
     });
+
     return {
       success: true,
       message: 'Workspace created successfully',
@@ -104,9 +125,9 @@ export class WorkspaceService {
 
     // 4. Create token
     const accessToken = this.jwtService.sign(payload, {
-    secret: process.env.JWT_SECRET + '-' + workspaceId,
-    expiresIn: '7d',
-  });
+      secret: appConfig().jwt.secret,
+      expiresIn: appConfig().jwt.expiry,
+    });
 
     return {
       success: true,
@@ -116,9 +137,9 @@ export class WorkspaceService {
         access_token: accessToken,
       },
       type: user.type,
-      user:{
+      user: {
         id: user.id,
-        owner_id: user.owner_id == null ? user.id :user.owner_id,
+        owner_id: user.owner_id == null ? user.id : user.owner_id,
         workspace_id: user.workspace_id,
         email: user.email,
         name: user.name
