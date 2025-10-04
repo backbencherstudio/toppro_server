@@ -111,5 +111,45 @@ export class LeadsController {
     return this.leadsService.removeFileFromLead(leadId, fileId);
   }
 
+  // Get lead counts per user for reporting
+  @Get('report/user-lead-counts')
+  async getUserLeadCounts(@Req() req) {
+    const ownerId = req.user.id;
+    const workspaceId = req.user.workspace_id;
+    return this.leadsService.getUserLeadCounts(ownerId, workspaceId);
+  }
+
+  // Get lead counts per pipeline for reporting
+  @Get('report/pipeline-lead-counts')
+  async getPipelineLeadCounts(@Req() req) {
+    const ownerId = req.user.id;
+    const workspaceId = req.user.workspace_id;
+    return this.leadsService.getPipelineLeadCounts(ownerId, workspaceId);
+  }
+
+  // Get lead counts by month for the latest year
+  @Get('report/monthly-lead-counts')
+  async getMonthlyLeadCounts(@Req() req, @Query(' ') month?: string) {
+    const ownerId = req.user.id;
+    const workspaceId = req.user.workspace_id;
+    return this.leadsService.getMonthlyLeadCounts(ownerId, workspaceId, month);
+  }
+
+  // Get lead counts per source for reporting
+  @Get('report/source-lead-counts')
+  async getSourceLeadCounts(@Req() req) {
+    const ownerId = req.user.id;
+    const workspaceId = req.user.workspace_id;
+    return this.leadsService.getSourceLeadCounts(ownerId, workspaceId);
+  }
+
+  // Get lead counts per day for the latest week
+  @Get('report/daily-lead-counts')
+  async getDailyLeadCounts(@Req() req) {
+    const ownerId = req.user.id;
+    const workspaceId = req.user.workspace_id;
+    return this.leadsService.getDailyLeadCounts(ownerId, workspaceId);
+  }
+
 
 }

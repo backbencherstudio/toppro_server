@@ -183,6 +183,11 @@ export class CallService {
           workspace_id: workspaceId,
         },
       },
+      include: {
+        lead: {
+          select: { id: true }
+        }
+      }
     });
 
     if (!call) {
@@ -191,19 +196,67 @@ export class CallService {
       );
     }
 
-    return this.prisma.call.update({
+    // Validate assignee_id if provided
+    if (data.assignee_id) {
+      const assignee = await this.prisma.user.findFirst({
+        where: {
+          id: data.assignee_id,
+          workspace_id: workspaceId,
+          owner_id: ownerId,
+          deleted_at: null,
+        },
+        select: { id: true },
+      });
+
+      if (!assignee) {
+        throw new BadRequestException(
+          `User with id ${data.assignee_id} not found in this workspace/owner`,
+        );
+      }
+    }
+
+    // Update the call
+    const updatedCall = await this.prisma.call.update({
       where: { id },
       data: {
-        subject: data.subject,
-        call_type: data.call_type,
-        duration: data.duration,
-        description: data.description,
-        result: data.result,
+        ...(data.subject !== undefined && { subject: data.subject }),
+        ...(data.call_type !== undefined && { call_type: data.call_type }),
+        ...(data.duration !== undefined && { duration: data.duration }),
+        ...(data.description !== undefined && { description: data.description }),
+        ...(data.result !== undefined && { result: data.result }),
         ...(data.assignee_id && {
           assignee: { connect: { id: data.assignee_id } },
         }),
       },
+      select: {
+        id: true,
+        subject: true,
+        call_type: true,
+        duration: true,
+        assignee_id: true,
+        description: true,
+        result: true,
+        created_at: true,
+        updated_at: true,
+      },
     });
+
+    // Get owner name for activity
+    const owner = await this.prisma.user.findUnique({
+      where: { id: ownerId },
+      select: { name: true },
+    });
+
+    // Create activity for call update
+    await this.activityService.createActivity(
+      workspaceId,
+      ownerId,
+      call.lead.id,
+      'call_update',
+      `${owner?.name || 'Someone'} updated a call`,
+    );
+
+    return updatedCall;
   }
 
   // --- DELETE CALL ---

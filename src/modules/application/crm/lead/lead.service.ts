@@ -404,6 +404,281 @@ export class LeadsService {
     };
   }
 
+  // Get lead counts per user for reporting
+  async getUserLeadCounts(ownerId: string, workspaceId: string) {
+    // Get all users in the workspace
+    const users = await this.prisma.user.findMany({
+      where: {
+        workspace_id: workspaceId,
+        owner_id: ownerId,
+        deleted_at: null,
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+      },
+    });
+
+    // Get lead counts for each user
+    const userLeadCounts = await Promise.all(
+      users.map(async (user) => {
+        const leadCount = await this.prisma.lead.count({
+          where: {
+            workspace_id: workspaceId,
+            owner_id: ownerId,
+            deleted_at: null,
+            users: {
+              some: {
+                id: user.id,
+              },
+            },
+          },
+        });
+
+        return {
+          user_name: user.name || 'Unknown',
+          user_id: user.id,
+          user_email: user.email || 'Unknown',
+          lead_count: leadCount,
+        };
+      })
+    );
+
+    // Sort by lead count descending
+    userLeadCounts.sort((a, b) => b.lead_count - a.lead_count);
+
+    return userLeadCounts;
+  }
+
+  // Get lead counts per pipeline for reporting
+  async getPipelineLeadCounts(ownerId: string, workspaceId: string) {
+    // Get all pipelines in the workspace
+    const pipelines = await this.prisma.pipeline.findMany({
+      where: {
+        workspace_id: workspaceId,
+        owner_id: ownerId,
+      },
+      select: {
+        id: true,
+        name: true,
+      },
+    });
+
+    // Get lead counts for each pipeline
+    const pipelineLeadCounts = await Promise.all(
+      pipelines.map(async (pipeline) => {
+        const leadCount = await this.prisma.lead.count({
+          where: {
+            workspace_id: workspaceId,
+            owner_id: ownerId,
+            deleted_at: null,
+            pipeline_id: pipeline.id,
+          },
+        });
+
+        return {
+          pipeline_id: pipeline.id,
+          pipeline_name: pipeline.name,
+          lead_count: leadCount,
+        };
+      })
+    );
+
+    // Sort by lead count descending
+    pipelineLeadCounts.sort((a, b) => b.lead_count - a.lead_count);
+
+    return pipelineLeadCounts;
+  }
+
+  // Get lead counts by month for the latest year
+  async getMonthlyLeadCounts(ownerId: string, workspaceId: string, month?: string) {
+    // Get current year
+    const currentYear = new Date().getFullYear();
+
+    // If specific month is requested, filter by that month
+    if (month) {
+      const monthNumber = this.getMonthNumber(month);
+      if (monthNumber === -1) {
+        throw new BadRequestException('Invalid month name. Use full month names like "January", "February", etc.');
+      }
+
+      const startDate = new Date(currentYear, monthNumber, 1);
+      const endDate = new Date(currentYear, monthNumber + 1, 0, 23, 59, 59, 999);
+
+      const leadCount = await this.prisma.lead.count({
+        where: {
+          workspace_id: workspaceId,
+          owner_id: ownerId,
+          deleted_at: null,
+          created_at: {
+            gte: startDate,
+            lte: endDate,
+          },
+        },
+      });
+
+      return {
+        month: month,
+        year: currentYear,
+        lead_count: leadCount,
+      };
+    }
+
+    // Get all months of the current year
+    const monthlyCounts = [];
+    const monthNames = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+
+    for (let i = 0; i < 12; i++) {
+      const startDate = new Date(currentYear, i, 1);
+      const endDate = new Date(currentYear, i + 1, 0, 23, 59, 59, 999);
+
+      const leadCount = await this.prisma.lead.count({
+        where: {
+          workspace_id: workspaceId,
+          owner_id: ownerId,
+          deleted_at: null,
+          created_at: {
+            gte: startDate,
+            lte: endDate,
+          },
+        },
+      });
+
+      monthlyCounts.push({
+        month: monthNames[i],
+        year: currentYear,
+        lead_count: leadCount,
+      });
+    }
+
+    return monthlyCounts;
+  }
+
+  // Helper method to convert month name to number
+  private getMonthNumber(monthName: string): number {
+    const months = {
+      'january': 0, 'february': 1, 'march': 2, 'april': 3,
+      'may': 4, 'june': 5, 'july': 6, 'august': 7,
+      'september': 8, 'october': 9, 'november': 10, 'december': 11
+    };
+
+    return months[monthName.toLowerCase()] ?? -1;
+  }
+
+  // Get lead counts per source for reporting
+  async getSourceLeadCounts(ownerId: string, workspaceId: string) {
+    // Get all sources in the workspace
+    const sources = await this.prisma.source.findMany({
+      where: {
+        workspace_id: workspaceId,
+        owner_id: ownerId,
+      },
+      select: {
+        id: true,
+        name: true,
+      },
+    });
+
+    // Get lead counts for each source
+    const sourceLeadCounts = await Promise.all(
+      sources.map(async (source) => {
+        const leadCount = await this.prisma.lead.count({
+          where: {
+            workspace_id: workspaceId,
+            owner_id: ownerId,
+            deleted_at: null,
+            sources: {
+              some: {
+                id: source.id,
+              },
+            },
+          },
+        });
+
+        return {
+          source_name: source.name,
+          source_id: source.id,
+          lead_count: leadCount,
+        };
+      })
+    );
+
+    // Sort by lead count descending
+    sourceLeadCounts.sort((a, b) => b.lead_count - a.lead_count);
+
+    return sourceLeadCounts;
+  }
+
+  // Get lead counts per day for the latest week
+  async getDailyLeadCounts(ownerId: string, workspaceId: string) {
+    // Get the start and end of the current week (Monday to Sunday)
+    const today = new Date();
+    const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Adjust for Sunday being 0
+
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - daysFromMonday);
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+
+    // Get all days of the week
+    const dailyCounts = [];
+    const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+    for (let i = 0; i < 7; i++) {
+      const currentDay = new Date(startOfWeek);
+      currentDay.setDate(startOfWeek.getDate() + i);
+
+      const startOfDay = new Date(currentDay);
+      startOfDay.setHours(0, 0, 0, 0);
+
+      const endOfDay = new Date(currentDay);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      const leadCount = await this.prisma.lead.count({
+        where: {
+          workspace_id: workspaceId,
+          owner_id: ownerId,
+          deleted_at: null,
+          created_at: {
+            gte: startOfDay,
+            lte: endOfDay,
+          },
+        },
+      });
+
+      dailyCounts.push({
+        day: dayNames[i],
+        // date: currentDay.toISOString().split('T')[0], // YYYY-MM-DD format
+        lead_count: leadCount,
+      });
+    }
+
+    // Calculate total count for the week
+    const totalCount = dailyCounts.reduce((sum, day) => sum + day.lead_count, 0);
+
+    // Add percentage for each day
+    const dailyCountsWithPercentage = dailyCounts.map(day => ({
+      ...day,
+      //need to add a percentage icon here...
+      percentage: totalCount > 0 ? Math.round((day.lead_count / totalCount) * 100 * 100) / 100 : 0
+    }));
+
+    return {
+      daily_counts: dailyCountsWithPercentage,
+      Weekly_total_count: totalCount,
+      // week_start: startOfWeek.toISOString().split('T')[0],
+      // week_end: endOfWeek.toISOString().split('T')[0],
+    };
+  }
+
 
 
 }
