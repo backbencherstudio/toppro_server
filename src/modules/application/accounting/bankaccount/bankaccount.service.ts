@@ -32,9 +32,12 @@ export class BankAccountService {
     try {
       const data: Prisma.BankAccountUncheckedCreateInput = {
         ...createBankAccountDto,
-        owner_id: ownerId || userId, // just a string
-        workspace_id: workspaceId, // must exist if relation enforced
-        user_id: userId || ownerId, // nullable if no user
+        owner_id: ownerId || userId,
+        workspace_id: workspaceId, 
+        user_id: userId || ownerId,
+
+
+        
         bank_type: createBankAccountDto.bank_type as BankType,
       };
 

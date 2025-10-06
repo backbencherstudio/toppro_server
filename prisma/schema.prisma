@@ -114,6 +114,7 @@ model User {
   ChartOfAccount ChartOfAccount[]
   CompanySettings CompanySettings[]
   CurrencySettings CurrencySettings[]
+  Revenue        Revenue[]
 
   @@map("users")
 }
@@ -164,6 +165,7 @@ model Workspace {
   CompanySettings CompanySettings[]
   ChartOfAccount ChartOfAccount[]
   CurrencySettings CurrencySettings[]
+  Revenue        Revenue[]
 }
 
 enum UserType {
@@ -585,6 +587,7 @@ model BankAccount {
   user           User?           @relation(fields: [user_id], references: [id])
   workspace      Workspace?      @relation(fields: [workspace_id], references: [id])
   ChartOfAccount ChartOfAccount? @relation(fields: [chart_of_account_id], references: [id])
+  Revenue        Revenue[]
 
   @@map("bank_accounts")
 }
@@ -735,6 +738,7 @@ model InvoiceCategory {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @default(now()) @updatedAt
   Invoice   Invoice[]
+  Revenue   Revenue[]
 }
 
 model BillCategory {
@@ -1554,6 +1558,7 @@ model Customer {
   invoice      Invoice[]
   item         Items[]
   invoice_item InvoiceItem[]
+  Revenue      Revenue[]
 }
 
 model Vendor {
@@ -2209,4 +2214,43 @@ model CurrencySettings {
 
 // ###############################################################################################################################
 //    ############################# Currency Settings ##End## ######################################################################
+// ###############################################################################################################################
+
+// ###############################################################################################################################
+//    ############################# Revenue ##Start## ##############################################################################
+// ###############################################################################################################################
+
+model Revenue {
+  id         String    @id @default(cuid())
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+  deleted_at DateTime?
+
+  date        DateTime
+  amount      Float?
+  reference   String?
+  description String?
+  files       String? // Can store file paths or JSON string
+
+  // Foreign Keys
+  account  String? // BankAccount id
+  customer String? // Customer id
+  category String? // InvoiceCategory id
+
+  user_id      String?
+  workspace_id String?
+  owner_id     String?
+
+  // Relations
+  bank_account     BankAccount?     @relation(fields: [account], references: [id], onDelete: Cascade)
+  customer_data    Customer?        @relation(fields: [customer], references: [id], onDelete: Cascade)
+  invoice_category InvoiceCategory? @relation(fields: [category], references: [id], onDelete: Cascade)
+  user             User?            @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  workspace        Workspace?       @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+
+  @@map("revenues")
+}
+
+// ###############################################################################################################################
+//    ############################# Revenue ##End## ################################################################################
 // ###############################################################################################################################
