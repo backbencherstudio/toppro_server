@@ -70,13 +70,13 @@ async create(
     limit: number = 10,
     ownerId: string,
     workspaceId: string,
+    userId: string,
   ) {
     const skip = (page - 1) * limit; // Calculate how many records to skip based on the page
-
     const [vendors, total] = await Promise.all([
       this.prisma.vendor.findMany({
         where: {
-          owner_id: ownerId,
+          owner_id: ownerId ||userId,
           workspace_id: workspaceId,
         },
         skip,

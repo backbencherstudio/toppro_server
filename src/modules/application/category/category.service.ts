@@ -6,7 +6,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class CategoryService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   // -------- ITEM CATEGORY --------
   async createItemCategory(
@@ -78,9 +78,10 @@ export class CategoryService {
     dto: CreateCategoryDto,
     ownerId: string,
     workspaceId: string,
+    userId: string,
   ) {
     const created = await this.prisma.invoiceCategory.create({
-      data: { ...dto, owner_id: ownerId, workspace_id: workspaceId },
+      data: { ...dto, owner_id: ownerId || userId, workspace_id: workspaceId },
     });
     return {
       success: true,
@@ -100,9 +101,9 @@ export class CategoryService {
     return { success: true, data };
   }
 
-  async findAllInvoiceCategories(ownerId: string, workspaceId: string) {
+  async findAllInvoiceCategories(ownerId: string, workspaceId: string, userId: string) {
     const data = await this.prisma.invoiceCategory.findMany({
-      where: { owner_id: ownerId, workspace_id: workspaceId },
+      where: { owner_id: ownerId || userId, workspace_id: workspaceId },
     });
     return { success: true, data };
   }
@@ -320,7 +321,7 @@ export class CategoryService {
     return { success: true, message: 'Item type created', data: created };
   }
 
-    async findItemTypesCategoryOne(id: string, ownerId: string, workspaceId: string) {
+  async findItemTypesCategoryOne(id: string, ownerId: string, workspaceId: string) {
     const data = await this.prisma.itemType.findFirst({
       where: { id, owner_id: ownerId, workspace_id: workspaceId },
     });
@@ -364,8 +365,8 @@ export class CategoryService {
     });
     return { success: true, message: 'Account type created', data: created };
   }
-  
-      async findIAccountTypesCategoryOne(id: string, ownerId: string, workspaceId: string) {
+
+  async findIAccountTypesCategoryOne(id: string, ownerId: string, workspaceId: string) {
     const data = await this.prisma.accountType.findFirst({
       where: { id, owner_id: ownerId, workspace_id: workspaceId },
     });
