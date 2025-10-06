@@ -36,6 +36,7 @@ import { CouponModule } from './subscription/coupon/coupon.module';
 import { CompanySettingsModule } from './settings/company-settings/company-settings.module';
 import { CurrencySettingsModule } from './settings/currency-settings/currency-settings.module';
 import { DashboardModule } from './crm/dashboard/dashboard.module';
+import { RevenueModule } from './accounting/income/revenue/revenue.module';
 @Module({
   imports: [
     NotificationModule,
@@ -75,6 +76,7 @@ import { DashboardModule } from './crm/dashboard/dashboard.module';
     CompanySettingsModule,
     CurrencySettingsModule,
     DashboardModule,
+    RevenueModule,
   ],
 })
 export class ApplicationModule {}

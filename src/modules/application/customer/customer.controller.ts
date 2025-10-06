@@ -33,8 +33,8 @@ export class CustomerController {
 
   @Get('all')
   @UseGuards(JwtAuthGuard, RolePermissionGuard)
-  @PermissionsGuard(Permissions.customer_view)
-  @PermissionsGuard(Permissions.customer_manage)
+  // @PermissionsGuard(Permissions.customer_view)
+  // @PermissionsGuard(Permissions.customer_manage)
   findAll(
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10, // Default to limit 10

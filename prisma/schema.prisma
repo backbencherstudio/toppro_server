@@ -2191,26 +2191,16 @@ model CurrencySettings {
   created_at DateTime  @default(now())
   updated_at DateTime  @default(now())
   deleted_at DateTime?
-
-  // Decimal Format Settings
   decimal_format      DecimalFormat @default(ONE_DECIMAL)
   decimal_separator   SeparatorType @default(DOT)
   thousands_separator SeparatorType @default(COMMA)
   float_number        SeparatorType @default(COMMA)
-
-  // Currency Symbol Settings
   currency_symbol_position CurrencySymbolPosition @default(PRE)
   currency_symbol_space   CurrencySymbolSpace     @default(WITHOUT_SPACE)
   currency_symbol_and_name CurrencySymbolAndName  @default(WITH_SYMBOL)
-
-  // Default Currency (stored as currency code like "USD", "EUR", etc.)
   default_currency String @default("USD")
-
-  // Multitenancy
   owner_id     String?
   workspace_id String?
-
-  // Relations
   owner     User?      @relation(fields: [owner_id], references: [id], onDelete: Cascade)
   workspace Workspace? @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
 

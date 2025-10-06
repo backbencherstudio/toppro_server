@@ -20,7 +20,7 @@ import { VendorService } from './vendor.service';
 
 @Controller('vendors')
 export class VendorController {
-  constructor(private readonly vendorService: VendorService) {}
+  constructor(private readonly vendorService: VendorService) { }
 
   @Post()
   @UseGuards(JwtAuthGuard, RolePermissionGuard)
@@ -30,7 +30,7 @@ export class VendorController {
     const {
       owner_id: ownerId,
       workspace_id: workspaceId,
-      user_id: userId,
+      id: userId,
     } = req.user;
     return this.vendorService.create(
       createVendorDto,
@@ -55,20 +55,24 @@ export class VendorController {
       itemId,
       ownerId,
       workspaceId,
+  
+      
     );
   }
 
   @Get('all')
-  @UseGuards(JwtAuthGuard, RolePermissionGuard)
-  @PermissionsGuard(Permissions.vendor_view)
-  @PermissionsGuard(Permissions.vendor_manage)
+  // @UseGuards(JwtAuthGuard, RolePermissionGuard)
+  @UseGuards(JwtAuthGuard)
+  // @PermissionsGuard(Permissions.vendor_view)
+  // @PermissionsGuard(Permissions.vendor_manage)
   findAll(
     @Query('page') page: number = 1, // Default to page 1
     @Query('limit') limit: number = 10, // Default to limit 10
     @Req() req,
   ) {
-    const { owner_id: ownerId, workspace_id: workspaceId } = req.user;
-    return this.vendorService.findAll(page, limit, ownerId, workspaceId);
+    const { owner_id: ownerId, workspace_id: workspaceId, id : userId } = req.user;
+   console.log('Owner ID..............................:', ownerId, 'Workspace ID:', workspaceId, 'User ID:', userId);
+    return this.vendorService.findAll(page, limit, ownerId, workspaceId, userId);
   }
 
   @Get(':id')
@@ -92,12 +96,12 @@ export class VendorController {
     const { owner_id: ownerId, workspace_id: workspaceId } = req.user;
     return this.vendorService.update(id, updateVendorDto, ownerId, workspaceId);
   }
-  
+
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolePermissionGuard)
   @PermissionsGuard(Permissions.vendor_delete)
   @PermissionsGuard(Permissions.vendor_manage)
-  remove(@Param('id') id: string,@Req() req) {
+  remove(@Param('id') id: string, @Req() req) {
     const { owner_id: ownerId, workspace_id: workspaceId } = req.user;
     return this.vendorService.remove(id, ownerId, workspaceId);
   }

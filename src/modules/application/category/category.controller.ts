@@ -73,11 +73,12 @@ export class CategoryController {
 
   @Post('invoices')
   createInvoiceCategory(@Body() dto: CreateCategoryDto, @Req() req) {
-    const { owner_id: ownerId, workspace_id: workspaceId } = req.user;
+    const { owner_id: ownerId, workspace_id: workspaceId, id: userId } = req.user;
     return this.categoryService.createInvoiceCategory(
       dto,
       ownerId,
       workspaceId,
+      userId,
     );
   }
 
@@ -93,8 +94,8 @@ export class CategoryController {
 
   @Get('invoices')
   findAllInvoiceCategories(@Req() req) {
-    const { owner_id: ownerId, workspace_id: workspaceId } = req.user;
-    return this.categoryService.findAllInvoiceCategories(ownerId, workspaceId);
+    const { owner_id: ownerId, workspace_id: workspaceId, id: userId } = req.user;
+    return this.categoryService.findAllInvoiceCategories(ownerId, workspaceId, userId);
   }
 
   @Patch('invoices/:id')
