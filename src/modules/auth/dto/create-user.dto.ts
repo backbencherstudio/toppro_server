@@ -8,16 +8,15 @@ export class CreateUserDto {
   name?: string;
 
 
-
-  @IsNotEmpty()
+  // @IsNotEmpty()
   @ApiProperty()
   first_name?: string;
 
-  @IsNotEmpty()
+  // @IsNotEmpty()
   @ApiProperty()
   last_name?: string;
 
-  @IsNotEmpty()
+  // @IsNotEmpty()
   @ApiProperty()
   address: string;
 
@@ -34,17 +33,17 @@ export class CreateUserDto {
   @ApiProperty()
   super_id?: string;
 
-  @IsNotEmpty()
+  // @IsNotEmpty()
   @ApiProperty()
   phone_number?: string;
 
   @IsOptional()
   @ApiProperty()
   roleId?: string;
-  
 
-  @IsNotEmpty()
-  @MinLength(8, { message: 'Password should be minimum 8' })
+
+  // @IsNotEmpty()
+  // @MinLength(8, { message: 'Password should be minimum 8' })
   @ApiProperty()
   password: string;
 

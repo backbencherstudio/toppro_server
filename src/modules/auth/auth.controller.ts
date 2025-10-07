@@ -27,7 +27,7 @@ import { LocalAuthGuard } from './guards/local-auth.guard';
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(private authService: AuthService) { }
 
   // get user details
   @ApiOperation({ summary: 'Get user details' })
@@ -37,7 +37,7 @@ export class AuthController {
   async me(@Req() req) {
     try {
       const { email } = req.user;
-      console.log('Authenticated user ID:', req.user);
+      console.log('Authenticated user type:', req.user.type);
 
       const response = await this.authService.me(email);
 
