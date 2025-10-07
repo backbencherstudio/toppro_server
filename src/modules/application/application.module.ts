@@ -37,6 +37,7 @@ import { CompanySettingsModule } from './settings/company-settings/company-setti
 import { CurrencySettingsModule } from './settings/currency-settings/currency-settings.module';
 import { DashboardModule } from './crm/dashboard/dashboard.module';
 import { RevenueModule } from './accounting/income/revenue/revenue.module';
+import { CreditNotesModule } from './accounting/income/credit-notes/credit-notes.module';
 @Module({
   imports: [
     NotificationModule,
@@ -77,6 +78,7 @@ import { RevenueModule } from './accounting/income/revenue/revenue.module';
     CurrencySettingsModule,
     DashboardModule,
     RevenueModule,
+    CreditNotesModule,
   ],
 })
 export class ApplicationModule {}

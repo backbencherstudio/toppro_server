@@ -115,6 +115,7 @@ model User {
   CompanySettings CompanySettings[]
   CurrencySettings CurrencySettings[]
   Revenue        Revenue[]
+  CreditNote     CreditNote[]
 
   @@map("users")
 }
@@ -166,6 +167,7 @@ model Workspace {
   ChartOfAccount ChartOfAccount[]
   CurrencySettings CurrencySettings[]
   Revenue        Revenue[]
+  CreditNote     CreditNote[]
 }
 
 enum UserType {
@@ -329,6 +331,7 @@ model Invoice {
   stock            Stock?           @relation(fields: [stock_id], references: [id])
   Item             Items[]
   InvoiceItem      InvoiceItem[]
+  CreditNote       CreditNote?
 
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
@@ -2253,4 +2256,42 @@ model Revenue {
 
 // ###############################################################################################################################
 //    ############################# Revenue ##End## ################################################################################
+// ###############################################################################################################################
+
+// ###############################################################################################################################
+//    ############################# Credit Note ##Start## #########################################################################
+// ###############################################################################################################################
+
+enum CreditNoteStatus {
+  PENDING
+  PARTIAL_USED
+  FULLY_USED
+}
+
+model CreditNote {
+  id         String            @id @default(cuid())
+  created_at DateTime          @default(now())
+  updated_at DateTime          @updatedAt
+  deleted_at DateTime?
+
+  invoice_id  String?          @unique
+  amount      Float?
+  date        DateTime?
+  status      CreditNoteStatus @default(PENDING)
+  description String?
+
+  user_id      String?
+  workspace_id String?
+  owner_id     String?
+
+  // Relations
+  invoice   Invoice?   @relation(fields: [invoice_id], references: [id], onDelete: Cascade)
+  user      User?      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  workspace Workspace? @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+
+  @@map("credit_notes")
+}
+
+// ###############################################################################################################################
+//    ############################# Credit Note ##End## ###########################################################################
 // ###############################################################################################################################
