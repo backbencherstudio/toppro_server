@@ -189,6 +189,12 @@ export class AuthController {
   //   }
   // }
 
+  // auth.controller.ts
+  @Post('register-owner')
+  async createOwner(@Body() body) {
+    return this.authService.createOwner(body);
+  }
+
   // ==========================
   // OWNER REGISTER ENDPOINT
   // ==========================
