@@ -27,7 +27,7 @@ import { LocalAuthGuard } from './guards/local-auth.guard';
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) { }
+  constructor(private authService: AuthService) {}
 
   // get user details
   @ApiOperation({ summary: 'Get user details' })
@@ -51,10 +51,202 @@ export class AuthController {
   }
 
   // register a user
-  @ApiOperation({ summary: 'Register a user' })
-  @Post('register')
+  // @ApiOperation({ summary: 'Register a user' })
+  // @Post('register')
+  // @UseGuards(JwtAuthGuard)
+  // async create(
+  //   @Body() data: CreateUserDto,
+  //   @Req()
+  //   req: Request & {
+  //     user: {
+  //       id: string;
+  //       owner_id?: string;
+  //       workspace_id?: string;
+  //     };
+  //   },
+  // ) {
+  //   const { id, owner_id, workspace_id } = req.user;
+  //   console.log('user::>>', id, owner_id, workspace_id);
+  //   try {
+  //     const {
+  //       name,
+  //       first_name,
+  //       last_name,
+  //       address,
+  //       phone_number,
+  //       email,
+  //       password,
+  //       type,
+  //       status,
+  //       // owner_id,
+  //       // super_id,
+  //       // workspace_id,
+  //       workspace_name,
+  //       roleId,
+  //     } = data;
+
+  //     // Validate input fields
+  //     if (!name) {
+  //       throw new HttpException('Name not provided', HttpStatus.UNAUTHORIZED);
+  //     }
+  //     if (!email) {
+  //       throw new HttpException('Email not provided', HttpStatus.UNAUTHORIZED);
+  //     }
+  //     if (!password) {
+  //       throw new HttpException(
+  //         'Password not provided',
+  //         HttpStatus.UNAUTHORIZED,
+  //       );
+  //     }
+
+  //     // If the user is of type 'OWNER', create a workspace
+  //     if (type === 'OWNER') {
+  //       // Create the OWNER user first
+  //       const ownerResponse = await this.authService.register({
+  //         name,
+  //         first_name,
+  //         last_name,
+  //         email,
+  //         super_id: id,
+  //         phone_number,
+  //         address,
+  //         password,
+  //         type,
+  //         workspace_id,
+  //         status: 0, // 👈 OWNER is active by default
+  //         roleId,
+  //       });
+
+  //       // console.log('Created Owner User:', ownerResponse);
+
+  //       if (!ownerResponse || !ownerResponse.data || !ownerResponse.data.id) {
+  //         throw new HttpException(
+  //           'Failed to create owner user or get owner id',
+  //           HttpStatus.INTERNAL_SERVER_ERROR,
+  //         );
+  //       }
+
+  //       // After OWNER creation, create the workspace using owner_id and super_id
+  //       const workspace = await this.authService.createWorkspace({
+  //         ownerName: name,
+  //         owner_id: ownerResponse.data?.id || owner_id,
+  //         super_id: id,
+  //         workspace_name: workspace_name || `${name}'s Workspace`,
+  //       });
+
+  //       // console.log('Created Workspace:', workspace);
+
+  //       // Update the OWNER with workspace_id
+  //       const updatedOwner = await this.authService.updateUserWorkspace(
+  //         ownerResponse.data.id,
+  //         workspace.id,
+  //       );
+
+  //       // console.log('Updated Owner with Workspace ID:', updatedOwner);
+
+  //       return {
+  //         success: true,
+  //         message: 'Owner and Workspace created successfully',
+  //         data: updatedOwner,
+  //       };
+  //     }
+
+  //     // USER case
+  //     if (type === 'USER') {
+  //       if (!id || !workspace_id) {
+  //         throw new HttpException(
+  //           'owner_id, and workspace_id are required for USER type',
+  //           HttpStatus.BAD_REQUEST,
+  //         );
+  //       }
+
+  //       // Register USER with status = 0 (pending admin approval)
+  //       const response = await this.authService.register({
+  //         name,
+  //         first_name,
+  //         last_name,
+  //         email,
+  //         phone_number,
+  //         address,
+  //         password,
+  //         type,
+  //         status: status ? status : 0,
+  //         owner_id: owner_id || id,
+  //         workspace_id: workspace_id || null,
+  //         roleId,
+  //       });
+
+  //       return response;
+  //     }
+
+  //     throw new HttpException('Invalid user type', HttpStatus.BAD_REQUEST);
+  //   } catch (error) {
+  //     console.error(error); // Log the error to debug
+  //     return {
+  //       success: false,
+  //       message: error.message,
+  //     };
+  //   }
+  // }
+
+  // ==========================
+  // OWNER REGISTER ENDPOINT
+  // ==========================
+  @ApiOperation({ summary: 'Register a new OWNER (creates workspace)' })
+  @Post('create/owner')
   @UseGuards(JwtAuthGuard)
-  async create(
+  async registerOwner(
+    @Body() data: CreateUserDto,
+    @Req()
+    req: Request & {
+      user: {
+        id: string;
+      };
+    },
+  ) {
+    const { id: super_id } = req.user;
+    const {
+      name,
+      first_name,
+      last_name,
+      email,
+      phone_number,
+      address,
+      password,
+      workspace_name,
+      roleId,
+    } = data;
+
+    if (!name || !email || !password) {
+      throw new HttpException(
+        'Missing required fields',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const result = await this.authService.registerOwner({
+      name,
+      first_name,
+      last_name,
+      email,
+      phone_number,
+      address,
+      password,
+      super_id,
+      workspace_name,
+      roleId,
+    });
+
+    return result;
+  }
+
+  // ==========================
+  // USER REGISTER ENDPOINT
+  // ==========================
+  @ApiOperation({ summary: 'Register a new USER under owner workspace' })
+  @Post('create/user')
+  @UseGuards(JwtAuthGuard)
+  async registerUser(
     @Body() data: CreateUserDto,
     @Req()
     req: Request & {
@@ -66,127 +258,39 @@ export class AuthController {
     },
   ) {
     const { id, owner_id, workspace_id } = req.user;
-    // console.log('user::>>', id, owner_id, workspace_id);
-    try {
-      const {
-        name,
-        first_name,
-        last_name,
-        address,
-        phone_number,
-        email,
-        password,
-        type,
-        status,
-        // owner_id,
-        // super_id,
-        // workspace_id,
-        workspace_name,
-        roleId,
-      } = data;
 
-      // Validate input fields
-      if (!name) {
-        throw new HttpException('Name not provided', HttpStatus.UNAUTHORIZED);
-      }
-      if (!email) {
-        throw new HttpException('Email not provided', HttpStatus.UNAUTHORIZED);
-      }
-      if (!password) {
-        throw new HttpException(
-          'Password not provided',
-          HttpStatus.UNAUTHORIZED,
-        );
-      }
+    console.log('req.user', req.user);
+    const {
+      name,
+      first_name,
+      last_name,
+      email,
+      phone_number,
+      address,
+      password,
+      roleId,
+      status,
+    } = data;
 
-      // If the user is of type 'OWNER', create a workspace
-      if (type === 'OWNER') {
-        // Create the OWNER user first
-        const ownerResponse = await this.authService.register({
-          name,
-          first_name,
-          last_name,
-          email,
-          super_id: id,
-          phone_number,
-          address,
-          password,
-          type,
-          workspace_id,
-          status: 0, // 👈 OWNER is active by default
-          roleId,
-        });
-
-        // console.log('Created Owner User:', ownerResponse);
-
-        if (!ownerResponse || !ownerResponse.data || !ownerResponse.data.id) {
-          throw new HttpException(
-            'Failed to create owner user or get owner id',
-            HttpStatus.INTERNAL_SERVER_ERROR,
-          );
-        }
-
-        // After OWNER creation, create the workspace using owner_id and super_id
-        const workspace = await this.authService.createWorkspace({
-          ownerName: name,
-          owner_id: ownerResponse.data?.id || owner_id,
-          super_id: id,
-          workspace_name: workspace_name || `${name}'s Workspace`,
-        });
-
-        // console.log('Created Workspace:', workspace);
-
-        // Update the OWNER with workspace_id
-        const updatedOwner = await this.authService.updateUserWorkspace(
-          ownerResponse.data.id,
-          workspace.id,
-        );
-
-        // console.log('Updated Owner with Workspace ID:', updatedOwner);
-
-        return {
-          success: true,
-          message: 'Owner and Workspace created successfully',
-          data: updatedOwner,
-        };
-      }
-
-      // USER case
-      if (type === 'USER') {
-        if (!id || !workspace_id) {
-          throw new HttpException(
-            'owner_id, and workspace_id are required for USER type',
-            HttpStatus.BAD_REQUEST,
-          );
-        }
-
-        // Register USER with status = 0 (pending admin approval)
-        const response = await this.authService.register({
-          name,
-          first_name,
-          last_name,
-          email,
-          phone_number,
-          address,
-          password,
-          type,
-          status: status ? status : 0, // Always 0 for USER
-          owner_id: id,
-          workspace_id,
-          roleId,
-        });
-
-        return response;
-      }
-
-      throw new HttpException('Invalid user type', HttpStatus.BAD_REQUEST);
-    } catch (error) {
-      console.error(error); // Log the error to debug
-      return {
-        success: false,
-        message: error.message,
-      };
+    if (!workspace_id) {
+      throw new HttpException('Workspace ID missing', HttpStatus.BAD_REQUEST);
     }
+
+    const result = await this.authService.registerUser({
+      name,
+      first_name,
+      last_name,
+      email,
+      phone_number,
+      address,
+      password,
+      owner_id: owner_id || id,
+      workspace_id,
+      roleId,
+      status,
+    });
+
+    return result;
   }
 
   // login user
