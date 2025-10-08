@@ -242,7 +242,7 @@ export class AuthService {
       // Step 2: Check if the user is an OWNER and validate the token
       if (user.type === 'OWNER' && token) {
         // Step 3: Check if the email is verified for all users
-        if (!user.email_verified_at) {
+        if (user.email_verified_at) {
           return { success: false, message: 'Please verify your email' };
         }
         // Validate the token (assuming the token is stored in the Ucode repository)
@@ -429,6 +429,72 @@ export class AuthService {
       };
     }
   }
+
+  // auth.service.ts
+async createOwner(dto: any) {
+  try {
+    const { email, password, name, workspace_name } = dto;
+
+    // 1️⃣ Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const superAdmin = await this.prisma.user.findFirst({
+      where: { type: 'SUPERADMIN' },
+      orderBy: { created_at: 'asc' },
+    });
+
+    if (!superAdmin) {
+      throw new Error('No SUPERADMIN found. Please create one first.');
+    }
+
+    // 3️⃣ Check if email already exists
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email },
+    });
+    if (existingUser) {
+      throw new Error('Email already exists.');
+    }
+
+    // 4️⃣ Create OWNER user first
+    const owner = await this.prisma.user.create({
+      data: {
+        name,
+        email,
+        password: hashedPassword,
+        type: 'OWNER',
+        super_id: superAdmin.id,
+        status: 1,
+      },
+    });
+
+    // 5️⃣ Create workspace for this owner
+    const workspace = await this.createWorkspace({
+      ownerName: name,
+      owner_id: owner.id,
+      super_id: superAdmin.id,
+      workspace_name: workspace_name || `${name}'s Workspace`,
+    });
+
+    // 6️⃣ Update owner with workspace_id
+    await this.prisma.user.update({
+      where: { id: owner.id },
+      data: { workspace_id: workspace.id },
+    });
+
+    // 7️⃣ Return response
+    return {
+      success: true,
+      message: 'Owner and workspace created successfully',
+      data: {
+        owner,
+        workspace,
+      },
+    };
+  } catch (error) {
+    throw new Error('Error creating owner: ' + error.message);
+  }
+}
+
 
   // async register({
   //   name,

@@ -13,17 +13,20 @@ export class PermissionsGuard implements CanActivate {
     const request = context.switchToHttp().getRequest();
     const user = request.user;
 
-    // Get the required permission from the handler
-    const requiredPermissions = this.reflector.getAllAndOverride<string[]>('permissions', [
-      context.getHandler(),
-      context.getClass(),
-    ]);
-    
+    if (user?.type === 'OWNER') {
+      return true;
+    }
+
+    const requiredPermissions = this.reflector.getAllAndOverride<string[]>(
+      'permissions',
+      [context.getHandler(), context.getClass()],
+    );
+
     if (!requiredPermissions) {
       return true;
     }
 
-    const userPermissions = await this.prisma.user.findUnique({
+    const userData = await this.prisma.user.findUnique({
       where: { id: user.id },
       include: {
         roles: {
@@ -34,10 +37,14 @@ export class PermissionsGuard implements CanActivate {
       },
     });
 
-    const userPermissionTitles = userPermissions.roles.flatMap((role) => role.permissions.map((perm) => perm.title));
+    if (!userData) return false;
 
-    return requiredPermissions.every(permission =>
-      userPermissionTitles.includes(permission)
+    const userPermissionTitles = userData.roles.flatMap((role) =>
+      role.permissions.map((perm) => perm.title),
+    );
+
+    return requiredPermissions.every((perm) =>
+      userPermissionTitles.includes(perm),
     );
   }
 }
