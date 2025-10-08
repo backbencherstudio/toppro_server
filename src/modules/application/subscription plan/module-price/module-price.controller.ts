@@ -4,6 +4,7 @@ import { ModulePriceService } from './module-price.service'; // ModulePrice Serv
 import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 import { CreateModulePriceDto, UpdateModulePriceDto } from './dto/module-price.dto';
 import { AdminGuard } from '../../../auth/guards/admin.guard';
+import { OwnerGuard } from 'src/modules/auth/guards/owner.guard';
 
 @Controller('module-price')
 export class ModulePriceController {
@@ -30,14 +31,14 @@ export class ModulePriceController {
   }
 
   // Get monthly prices
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, OwnerGuard, AdminGuard)
   @Get('yearly')
   async getMonthlyPrices() {
     return this.modulePriceService.getPrices('priceYear');
   }
 
   // Get yearly prices
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, OwnerGuard, AdminGuard)
   @Get('monthly')
   async getYearlyPrices() {
     return this.modulePriceService.getPrices('priceMonth');

@@ -28,12 +28,19 @@ model Account {
   @@map("accounts")
 }
 
+enum PackageStatus {
+  FREE
+  PREMIUM_MONTHLY
+  PREMIUM_YEARLY
+}
+
 model User {
   id          String    @id @default(cuid())
   created_at  DateTime  @default(now())
   updated_at  DateTime  @default(now())
   deleted_at  DateTime?
   status      Int?      @default(1) @db.SmallInt
+  package_status PackageStatus @default(FREE)
   approved_at DateTime?
 
   email      String? @unique
