@@ -101,12 +101,6 @@ export class AuthService {
       if (updateUserDto.name) {
         data.name = updateUserDto.name;
       }
-      if (updateUserDto.first_name) {
-        data.first_name = updateUserDto.first_name;
-      }
-      if (updateUserDto.last_name) {
-        data.last_name = updateUserDto.last_name;
-      }
       if (updateUserDto.phone_number) {
         data.phone_number = updateUserDto.phone_number;
       }
@@ -609,8 +603,6 @@ async createOwner(dto: any) {
   // ==========================
   async registerOwner({
     name,
-    first_name,
-    last_name,
     email,
     phone_number,
     address,
@@ -620,8 +612,6 @@ async createOwner(dto: any) {
     roleId,
   }: {
     name: string;
-    first_name: string;
-    last_name: string;
     email: string;
     phone_number: string;
     address: string;
@@ -646,8 +636,6 @@ async createOwner(dto: any) {
       const owner = await this.prisma.user.create({
         data: {
           name,
-          first_name,
-          last_name,
           email,
           phone_number,
           address,
@@ -702,8 +690,6 @@ async createOwner(dto: any) {
   // ==========================
   async registerUser({
     name,
-    first_name,
-    last_name,
     email,
     phone_number,
     address,
@@ -714,8 +700,6 @@ async createOwner(dto: any) {
     status,
   }: {
     name: string;
-    first_name: string;
-    last_name: string;
     email: string;
     phone_number: string;
     address: string;
@@ -749,8 +733,6 @@ async createOwner(dto: any) {
       const user = await this.prisma.user.create({
         data: {
           name,
-          first_name,
-          last_name,
           email,
           phone_number,
           address,
