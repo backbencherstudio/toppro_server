@@ -86,6 +86,7 @@ model User {
   permissions              Permission[]
   role_users               RoleUser[]
   payment_transactions     PaymentTransaction[]
+  payments                 Payment[]
   services                 Service[]
   subscriptions            Subscription[]
   email_history_recipients EmailHistoryRecipient[]
@@ -2003,6 +2004,7 @@ model BasicPackage {
   createdAt                DateTime @default(now())
   updatedAt                DateTime @updatedAt
   coupons                  Coupon[]
+  payments                 Payment[]
 }
 
 enum PlanType {
@@ -2025,8 +2027,76 @@ model ComboPlan {
   modules            ModulePrice[]
   isEnabled          Boolean       @default(true)
   coupons            Coupon[] // Relation to applicable coupons
+  payments           Payment[]
 
   @@map("combo_plans")
+}
+
+model Payment {
+  id              String        @id @default(cuid())
+  
+  // User information
+  userId          String
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  email           String
+
+  // Plan selections (one must be selected)
+  monthly         Boolean       @default(false)
+  yearly          Boolean       @default(false)
+
+  // Financials
+  amount          Decimal       @db.Decimal(10, 2) // Using Decimal for precise monetary values
+  currency        String        @default("USD")
+  
+  // Discount/Coupon
+  discountAmount  Decimal?      @db.Decimal(10, 2)
+  couponCode      String?
+  finalAmount     Decimal       @db.Decimal(10, 2) // Amount after discount
+
+  // Stripe payment details
+  stripePaymentIntentId   String?  @unique
+  stripeCustomerId        String?
+  stripeSubscriptionId    String?
+  stripeInvoiceId         String?
+  stripeChargeId          String?
+  
+  // Payment tracking
+  paymentStatus           String   @default("pending") // pending, succeeded, failed, refunded, canceled
+  paymentMethod           String?  // card, bank_transfer, etc.
+  last4                   String?  // Last 4 digits of card
+  cardBrand               String?  // visa, mastercard, amex, etc.
+  
+  // Refund information
+  refundAmount            Decimal? @db.Decimal(10, 2)
+  refundReason            String?
+  refundedAt              DateTime?
+
+  // Timing
+  paymentDate     DateTime      @default(now())
+  expirationDate  DateTime
+
+
+  // Relations to plans (at least one must be set)
+  basicPackageId  String?
+  basicPackage    BasicPackage? @relation(fields: [basicPackageId], references: [id])
+
+  comboPlanId     String?
+  comboPlan       ComboPlan?    @relation(fields: [comboPlanId], references: [id])
+
+  // Additional metadata
+  description     String?
+  metadata        Json?         // Store additional Stripe metadata
+  
+  // Timestamps
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@map("payments")
+  @@index([userId])
+  @@index([stripePaymentIntentId])
+  @@index([stripeCustomerId])
+  @@index([paymentStatus])
+  @@index([paymentDate])
 }
 
 // ###############################################################################################################################
