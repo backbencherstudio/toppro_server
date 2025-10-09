@@ -31,14 +31,14 @@ export class ModulePriceController {
   }
 
   // Get monthly prices
-  @UseGuards(JwtAuthGuard, OwnerGuard, AdminGuard)
+  @UseGuards(JwtAuthGuard)
   @Get('yearly')
   async getMonthlyPrices() {
     return this.modulePriceService.getPrices('priceYear');
   }
 
   // Get yearly prices
-  @UseGuards(JwtAuthGuard, OwnerGuard, AdminGuard)
+  @UseGuards(JwtAuthGuard)
   @Get('monthly')
   async getYearlyPrices() {
     return this.modulePriceService.getPrices('priceMonth');
@@ -46,7 +46,7 @@ export class ModulePriceController {
 
   // Update ModulePrice - Admin only
   @UseGuards(JwtAuthGuard, AdminGuard)
-  @Patch(':id')
+  @Patch(':id') 
   @UseInterceptors(FileInterceptor('logo'))  // Interceptor for logo upload (only if logo is provided)
   async updateModulePrice(
     @Param('id') id: string,  // The ID of the ModulePrice to update

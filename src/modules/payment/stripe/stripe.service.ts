@@ -8,9 +8,9 @@ export class StripeService {
   private stripe: Stripe;
 
   constructor(private prisma: PrismaService) {
-    this.stripe = new Stripe('your-stripe-secret-key', {
-      apiVersion: '2025-03-31.basil', 
-    });
+    // this.stripe = new Stripe('your-stripe-secret-key', {
+    //   apiVersion: '2025-03-31.basil', 
+    // });
   }
 
   // Create a checkout session
