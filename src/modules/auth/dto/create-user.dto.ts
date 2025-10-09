@@ -3,37 +3,27 @@ import { IsNotEmpty, IsOptional, MinLength } from 'class-validator';
 
 export class CreateUserDto {
 
-  @IsNotEmpty()
+    @IsOptional()
   @ApiProperty()
   name?: string;
 
 
-  // @IsNotEmpty()
-  @ApiProperty()
-  first_name?: string;
-
-  // @IsNotEmpty()
-  @ApiProperty()
-  last_name?: string;
 
   // @IsNotEmpty()
   @ApiProperty()
   address: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @ApiProperty()
   email?: string;
 
+    @IsOptional()
   @ApiProperty()
   workspace_id?: string;
 
-  @ApiProperty()
-  owner_id?: string;
 
-  @ApiProperty()
-  super_id?: string;
 
-  // @IsNotEmpty()
+    @IsOptional()
   @ApiProperty()
   phone_number?: string;
 

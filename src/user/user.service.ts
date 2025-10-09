@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
@@ -99,29 +100,51 @@ export class UserService {
 
   // Get all users
   async getAllUsers(ownerId: string, workspaceId: string, userId: string) {
-    const data = this.prisma.user.findMany({
-      where: {
-        owner_id: ownerId || userId, // Match ownerId
-        workspace_id: workspaceId, // Match workspaceId
-        type: 'USER', // filter only Users
-      },
-      select: {
-        id: true,
-        username: true,
-        email: true,
-        type: true,
-        owner_id: true,
-        phone_number: true,
-        created_at: true,
-        updated_at: true,
-        first_name: true,
-        last_name: true,
-      },
-      orderBy: { id: 'asc' },
-    });
+    try {
+      const users = await this.prisma.user.findMany({
+        where: {
+          owner_id: ownerId || userId, // Match ownerId or userId
+          workspace_id: workspaceId, // Match workspaceId
+          type: 'USER', // Filter only USER type
+        },
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          type: true,
+          owner_id: true,
+          phone_number: true,
+          created_at: true,
+          updated_at: true,
+          first_name: true,
+          last_name: true,
+        },
+        orderBy: { created_at: 'desc' },
+      });
 
-    // console.log('All users data:', data); // Debug log to check the data being returned
-    return data;
+      // ✅ Handle empty data case
+      if (users.length === 0) {
+        return {
+          success: true,
+          message: 'No users found in this workspace.',
+          data: [],
+        };
+      }
+
+      // ✅ Success case
+      return {
+        success: true,
+        message: 'All users fetched successfully!',
+        data: users,
+      };
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      throw new BadRequestException({
+        success: false,
+        message: 'Failed to fetch users.',
+        error: error.message,
+      });
+    }
   }
 
   // // Get all customers
@@ -212,22 +235,41 @@ export class UserService {
     });
 
     if (!user) {
-      throw new Error('User not found');
+      throw new NotFoundException('User not found');
     }
 
-    // Update user information
-    const updatedUser = await this.prisma.user.update({
-      where: { id: userId },
-      data: {
-        ...updateUserDto, // Spread the updated user details
-      },
-    });
+    // ✅ Email check logic
+    if (updateUserDto.email) {
+      const isSameEmail = updateUserDto.email === user.email;
 
-    return {
-      success: true,
-      message: 'User updated successfully!',
-      user: updatedUser,
-    };
+      if (!isSameEmail) {
+        const emailExists = await this.prisma.user.findUnique({
+          where: { email: updateUserDto.email },
+        });
+
+        if (emailExists) {
+          throw new BadRequestException('Email already in use by another user');
+        }
+      }
+    }
+
+    try {
+      const updatedUser = await this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          ...updateUserDto,
+        },
+      });
+
+      return {
+        success: true,
+        message: 'User updated successfully!',
+        user: updatedUser,
+      };
+    } catch (error) {
+      console.error('Error updating user:', error);
+      throw new BadRequestException('Failed to update user');
+    }
   }
 
   // Get a single user by userId
@@ -435,7 +477,6 @@ export class UserService {
       })),
     };
   }
-
 
   async deleteUser(userId: string) {
     const user = await this.prisma.user.findUnique({

@@ -213,8 +213,6 @@ export class AuthController {
     const { id: super_id } = req.user;
     const {
       name,
-      first_name,
-      last_name,
       email,
       phone_number,
       address,
@@ -232,8 +230,6 @@ export class AuthController {
 
     const result = await this.authService.registerOwner({
       name,
-      first_name,
-      last_name,
       email,
       phone_number,
       address,
@@ -268,8 +264,6 @@ export class AuthController {
     console.log('req.user', req.user);
     const {
       name,
-      first_name,
-      last_name,
       email,
       phone_number,
       address,
@@ -284,8 +278,6 @@ export class AuthController {
 
     const result = await this.authService.registerUser({
       name,
-      first_name,
-      last_name,
       email,
       phone_number,
       address,
