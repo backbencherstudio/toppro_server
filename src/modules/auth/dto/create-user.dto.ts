@@ -2,12 +2,9 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty, IsOptional, MinLength } from 'class-validator';
 
 export class CreateUserDto {
-
-    @IsOptional()
+  @IsOptional()
   @ApiProperty()
   name?: string;
-
-
 
   // @IsNotEmpty()
   @ApiProperty()
@@ -17,13 +14,11 @@ export class CreateUserDto {
   @ApiProperty()
   email?: string;
 
-    @IsOptional()
+  @IsOptional()
   @ApiProperty()
   workspace_id?: string;
 
-
-
-    @IsOptional()
+  @IsOptional()
   @ApiProperty()
   phone_number?: string;
 
@@ -31,9 +26,9 @@ export class CreateUserDto {
   @ApiProperty()
   roleId?: string;
 
-
   // @IsNotEmpty()
   // @MinLength(8, { message: 'Password should be minimum 8' })
+  @IsOptional()
   @ApiProperty()
   password: string;
 
@@ -41,7 +36,6 @@ export class CreateUserDto {
     type: String,
     example: 'USER',
   })
-
   type?: string;
 
   @IsOptional() // Optional for cases where status needs to be set manually
