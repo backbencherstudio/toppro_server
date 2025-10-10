@@ -198,6 +198,7 @@ model Ucode {
   token      String?
   email      String?
   expired_at DateTime?
+  metadata   Json?    // Store temporary registration data
 
   @@map("ucodes")
 }

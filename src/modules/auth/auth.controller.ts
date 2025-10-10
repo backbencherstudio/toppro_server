@@ -18,16 +18,16 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import { memoryStorage } from 'multer';
 import { AuthService } from './auth.service';
+import appConfig from '../../config/app.config';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { VerifyEmailDto } from './dto/verify-email.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(private authService: AuthService) { }
 
   // get user details
   @ApiOperation({ summary: 'Get user details' })
@@ -50,144 +50,6 @@ export class AuthController {
     }
   }
 
-  // register a user
-  // @ApiOperation({ summary: 'Register a user' })
-  // @Post('register')
-  // @UseGuards(JwtAuthGuard)
-  // async create(
-  //   @Body() data: CreateUserDto,
-  //   @Req()
-  //   req: Request & {
-  //     user: {
-  //       id: string;
-  //       owner_id?: string;
-  //       workspace_id?: string;
-  //     };
-  //   },
-  // ) {
-  //   const { id, owner_id, workspace_id } = req.user;
-  //   console.log('user::>>', id, owner_id, workspace_id);
-  //   try {
-  //     const {
-  //       name,
-  //       first_name,
-  //       last_name,
-  //       address,
-  //       phone_number,
-  //       email,
-  //       password,
-  //       type,
-  //       status,
-  //       // owner_id,
-  //       // super_id,
-  //       // workspace_id,
-  //       workspace_name,
-  //       roleId,
-  //     } = data;
-
-  //     // Validate input fields
-  //     if (!name) {
-  //       throw new HttpException('Name not provided', HttpStatus.UNAUTHORIZED);
-  //     }
-  //     if (!email) {
-  //       throw new HttpException('Email not provided', HttpStatus.UNAUTHORIZED);
-  //     }
-  //     if (!password) {
-  //       throw new HttpException(
-  //         'Password not provided',
-  //         HttpStatus.UNAUTHORIZED,
-  //       );
-  //     }
-
-  //     // If the user is of type 'OWNER', create a workspace
-  //     if (type === 'OWNER') {
-  //       // Create the OWNER user first
-  //       const ownerResponse = await this.authService.register({
-  //         name,
-  //         first_name,
-  //         last_name,
-  //         email,
-  //         super_id: id,
-  //         phone_number,
-  //         address,
-  //         password,
-  //         type,
-  //         workspace_id,
-  //         status: 0, // 👈 OWNER is active by default
-  //         roleId,
-  //       });
-
-  //       // console.log('Created Owner User:', ownerResponse);
-
-  //       if (!ownerResponse || !ownerResponse.data || !ownerResponse.data.id) {
-  //         throw new HttpException(
-  //           'Failed to create owner user or get owner id',
-  //           HttpStatus.INTERNAL_SERVER_ERROR,
-  //         );
-  //       }
-
-  //       // After OWNER creation, create the workspace using owner_id and super_id
-  //       const workspace = await this.authService.createWorkspace({
-  //         ownerName: name,
-  //         owner_id: ownerResponse.data?.id || owner_id,
-  //         super_id: id,
-  //         workspace_name: workspace_name || `${name}'s Workspace`,
-  //       });
-
-  //       // console.log('Created Workspace:', workspace);
-
-  //       // Update the OWNER with workspace_id
-  //       const updatedOwner = await this.authService.updateUserWorkspace(
-  //         ownerResponse.data.id,
-  //         workspace.id,
-  //       );
-
-  //       // console.log('Updated Owner with Workspace ID:', updatedOwner);
-
-  //       return {
-  //         success: true,
-  //         message: 'Owner and Workspace created successfully',
-  //         data: updatedOwner,
-  //       };
-  //     }
-
-  //     // USER case
-  //     if (type === 'USER') {
-  //       if (!id || !workspace_id) {
-  //         throw new HttpException(
-  //           'owner_id, and workspace_id are required for USER type',
-  //           HttpStatus.BAD_REQUEST,
-  //         );
-  //       }
-
-  //       // Register USER with status = 0 (pending admin approval)
-  //       const response = await this.authService.register({
-  //         name,
-  //         first_name,
-  //         last_name,
-  //         email,
-  //         phone_number,
-  //         address,
-  //         password,
-  //         type,
-  //         status: status ? status : 0,
-  //         owner_id: owner_id || id,
-  //         workspace_id: workspace_id || null,
-  //         roleId,
-  //       });
-
-  //       return response;
-  //     }
-
-  //     throw new HttpException('Invalid user type', HttpStatus.BAD_REQUEST);
-  //   } catch (error) {
-  //     console.error(error); // Log the error to debug
-  //     return {
-  //       success: false,
-  //       message: error.message,
-  //     };
-  //   }
-  // }
 
   // auth.controller.ts
   @Post('register-owner')
@@ -195,52 +57,7 @@ export class AuthController {
     return this.authService.createOwner(body);
   }
 
-  // ==========================
-  // OWNER REGISTER ENDPOINT
-  // ==========================
-  @ApiOperation({ summary: 'Register a new OWNER (creates workspace)' })
-  @Post('create/owner')
-  @UseGuards(JwtAuthGuard)
-  async registerOwner(
-    @Body() data: CreateUserDto,
-    @Req()
-    req: Request & {
-      user: {
-        id: string;
-      };
-    },
-  ) {
-    const { id: super_id } = req.user;
-    const {
-      name,
-      email,
-      phone_number,
-      address,
-      password,
-      workspace_name,
-      roleId,
-    } = data;
-
-    if (!name || !email || !password) {
-      throw new HttpException(
-        'Missing required fields',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
-    const result = await this.authService.registerOwner({
-      name,
-      email,
-      phone_number,
-      address,
-      password,
-      super_id,
-      workspace_name,
-      roleId,
-    });
-
-    return result;
-  }
+  // Removed duplicate admin-only owner creation endpoint to simplify flow
 
   // ==========================
   // USER REGISTER ENDPOINT
@@ -445,48 +262,51 @@ export class AuthController {
     }
   }
 
-  // verify email to verify the email
-  @ApiOperation({ summary: 'Verify email' })
-  @Post('verify-email')
-  async verifyEmail(@Body() data: VerifyEmailDto) {
+  // verify email to verify the email (POST - for API calls)
+  @ApiOperation({ summary: 'Verify email (GET link from email)' })
+  @Get('verify-email')
+  async verifyEmailGet(@Req() req: Request, @Res() res: Response) {
     try {
-      const email = data.email;
-      const token = data.token;
-      if (!email) {
-        throw new HttpException('Email not provided', HttpStatus.UNAUTHORIZED);
+      const email = (req.query.email as string) || '';
+      const token = (req.query.token as string) || '';
+      if (!email || !token) {
+        return res.status(HttpStatus.BAD_REQUEST).send('Email and token are required');
       }
-      if (!token) {
-        throw new HttpException('Token not provided', HttpStatus.UNAUTHORIZED);
+      const result = await this.authService.verifyEmail({ email, token });
+      if (result.success) {
+        return res.status(HttpStatus.OK).send('Registration successfully');
       }
-      return await this.authService.verifyEmail({
-        email: email,
-        token: token,
-      });
+      return res.status(HttpStatus.BAD_REQUEST).send(result.message || 'Invalid or expired token');
     } catch (error) {
-      return {
-        success: false,
-        message: 'Failed to verify email',
-      };
+      return res.status(HttpStatus.BAD_REQUEST).send('Failed to verify email');
     }
   }
 
-  // resend verification email to verify the email
-  @ApiOperation({ summary: 'Resend verification email' })
-  @Post('resend-verification-email')
-  async resendVerificationEmail(@Body() data: { email: string }) {
+  @ApiOperation({ summary: 'Verify email (POST for API clients)' })
+  @Post('email-verify')
+  async verifyEmailPost(
+    @Body() body: { email?: string; token?: string },
+    @Res() res: Response,
+  ) {
     try {
-      const email = data.email;
-      if (!email) {
-        throw new HttpException('Email not provided', HttpStatus.UNAUTHORIZED);
+      const email = body.email || '';
+      const token = body.token || '';
+      if (!email || !token) {
+        return res.status(HttpStatus.BAD_REQUEST).send('Email and token are required');
       }
-      return await this.authService.resendVerificationEmail(email);
+      const result = await this.authService.verifyEmail({ email, token });
+      if (result.success) {
+        return res.status(HttpStatus.OK).send('Registration successfully');
+      }
+      return res.status(HttpStatus.BAD_REQUEST).send(result.message || 'Invalid or expired token');
     } catch (error) {
-      return {
-        success: false,
-        message: 'Failed to resend verification email',
-      };
+      return res.status(HttpStatus.BAD_REQUEST).send('Failed to verify email');
     }
   }
+
+
+
+  // resend verification removed per simplified flow
 
   // reset password if user forget the password
   @ApiOperation({ summary: 'Reset password' })
