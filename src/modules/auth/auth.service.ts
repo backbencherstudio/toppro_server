@@ -443,7 +443,11 @@ export class AuthService {
         throw new Error('No SUPERADMIN found. Please create one first.');
       }
 
+<<<<<<< HEAD
+      // 3️⃣ Check if email already exists
+=======
       // 2️⃣ Check if email already exists
+>>>>>>> eef32f918a8bb859478cf2b4f69fbd8cc3b1766f
       const existingUser = await this.prisma.user.findUnique({
         where: { email },
       });
@@ -451,6 +455,42 @@ export class AuthService {
         throw new Error('Email already exists.');
       }
 
+<<<<<<< HEAD
+      // 4️⃣ Create OWNER user first
+      const owner = await this.prisma.user.create({
+        data: {
+          name,
+          email,
+          password: hashedPassword,
+          type: 'OWNER',
+          super_id: superAdmin.id,
+          status: 1,
+        },
+      });
+
+      // 5️⃣ Create workspace for this owner
+      const workspace = await this.createWorkspace({
+        ownerName: name,
+        owner_id: owner.id,
+        super_id: superAdmin.id,
+        workspace_name: workspace_name || `${name}'s Workspace`,
+      });
+
+      // 6️⃣ Update owner with workspace_id
+      await this.prisma.user.update({
+        where: { id: owner.id },
+        data: { workspace_id: workspace.id },
+      });
+
+      // 7️⃣ Return response
+      return {
+        success: true,
+        message: 'Owner and workspace created successfully',
+        data: {
+          owner,
+          workspace,
+        },
+=======
       // 3️⃣ Check if there's already a pending registration
       const pendingReg = await this.prisma.ucode.findFirst({
         where: {
@@ -499,12 +539,16 @@ export class AuthService {
       return {
         success: true,
         message: 'Registration submitted! Please check your email to verify your account and complete registration.',
+>>>>>>> eef32f918a8bb859478cf2b4f69fbd8cc3b1766f
       };
     } catch (error) {
       throw new Error('Error creating owner: ' + error.message);
     }
   }
+<<<<<<< HEAD
+=======
 
+>>>>>>> eef32f918a8bb859478cf2b4f69fbd8cc3b1766f
 
   // async register({
   //   name,
@@ -728,24 +772,25 @@ export class AuthService {
     email: string;
     phone_number: string;
     address: string;
-    password: string;
+    password?: string; // 👈 optional
     owner_id: string;
     workspace_id: string;
     roleId?: string;
     status?: number;
   }): Promise<any> {
-    // console.log('registerUser', { name, first_name, last_name, email, phone_number, address, password, owner_id, workspace_id, roleId, status });
     try {
       // ✅ Check workspace validity
       const workspace = await this.prisma.workspace.findUnique({
         where: { id: workspace_id },
       });
-
       if (!workspace) {
-        throw new Error('Invalid workspace_id: Workspace not found');
+        return {
+          success: false,
+          message: 'Invalid workspace_id: Workspace not found',
+        };
       }
 
-      // ✅ Check email
+      // ✅ Check email duplication
       const existingUser = await this.prisma.user.findUnique({
         where: { email },
       });
@@ -753,22 +798,25 @@ export class AuthService {
         return { success: false, message: 'Email already exists' };
       }
 
-      const hashedPassword = await bcrypt.hash(password, 10);
+      // ✅ Password hashing only if provided
+      let hashedPassword: string | null = null;
+      if (password && password.trim() !== '') {
+        hashedPassword = await bcrypt.hash(password, 10);
+      }
 
+      // ✅ Create user
       const user = await this.prisma.user.create({
         data: {
           name,
           email,
           phone_number,
           address,
-          password: hashedPassword,
+          password: hashedPassword, // can be null
           type: UserType.USER,
           status: status ?? 1,
           owner_id,
           workspace_id,
-          ...(roleId && {
-            roles: { connect: { id: roleId } },
-          }),
+          ...(roleId && { roles: { connect: { id: roleId } } }),
         },
       });
 
@@ -778,7 +826,10 @@ export class AuthService {
         data: user,
       };
     } catch (error) {
-      throw new Error('Error registering user: ' + error.message);
+      return {
+        success: false,
+        message: 'Error registering user: ' + error.message,
+      };
     }
   }
 

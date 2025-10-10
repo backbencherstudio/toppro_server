@@ -109,15 +109,13 @@ export class UserService {
         },
         select: {
           id: true,
-          username: true,
+          name: true,
           email: true,
           type: true,
           owner_id: true,
           phone_number: true,
           created_at: true,
           updated_at: true,
-          first_name: true,
-          last_name: true,
         },
         orderBy: { created_at: 'desc' },
       });
@@ -279,9 +277,7 @@ export class UserService {
       select: {
         id: true,
         email: true,
-        first_name: true,
-        last_name: true,
-        username: true,
+        name: true,
         type: true,
         owner_id: true,
         phone_number: true,
@@ -321,14 +317,12 @@ export class UserService {
       user: {
         id: user.id,
         email: user.email,
-        first_name: user.first_name,
-        last_name: user.last_name,
         type: user.type,
         owner_id: user.owner_id,
         phone_number: user.phone_number,
         created_at: user.created_at,
         updated_at: user.updated_at,
-        username: user.username,
+        name: user.name,
         roles: rolesWithPermissions,
       },
     };
