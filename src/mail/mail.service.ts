@@ -9,7 +9,7 @@ export class MailService {
   constructor(
     @InjectQueue('mail-queue') private queue: Queue,
     private mailerService: MailerService,
-  ) {}
+  ) { }
 
   async sendMemberInvitation({ user, member, url }) {
     try {
@@ -59,12 +59,19 @@ export class MailService {
     email: string;
     name: string;
     token: string;
-    type: string;
   }) {
     try {
-      const verificationLink = `${appConfig().app.client_app_url}/verify-email?token=${params.token}&email=${params.email}&type=${params.type}`;
+      console.log('📧 Preparing to send verification email to:', params.email);
+
+      // Use backend URL for verification (GET endpoint)
+      // const backendUrl = appConfig().app.url || process.env.APP_URL || 'http://localhost:4080';
+      // console.log('🔗 Backend URL:', backendUrl);
+
+      const verificationLink = `${appConfig().app.client_app_url}/email-verify?token=${params.token}&email=${params.email}&name=${params.name}`;
+      console.log('🔗 Verification link:', verificationLink);
 
       // add to queue
+      console.log('📬 Adding email to queue...');
       await this.queue.add('sendVerificationLink', {
         to: params.email,
         subject: 'Verify Your Email',
@@ -74,8 +81,12 @@ export class MailService {
           verificationLink,
         },
       });
+      console.log('✅ Email added to queue successfully!');
     } catch (error) {
-      console.log(error);
+      console.error('❌ Error sending verification email:', error);
+      console.error('❌ Error message:', error.message);
+      console.error('❌ Stack trace:', error.stack);
+      throw error; // Re-throw so caller knows it failed
     }
   }
 }
