@@ -1,12 +1,1 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty } from 'class-validator';
-
-export class VerifyEmailDto {
-  @IsNotEmpty()
-  @ApiProperty()
-  email: string;
-
-  @IsNotEmpty()
-  @ApiProperty()
-  token: number;
-}
+// Removed per simplified email verification flow (GET endpoint with query params)

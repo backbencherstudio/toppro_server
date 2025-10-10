@@ -141,7 +141,7 @@ export class UcodeRepository {
       },
     });
   }
-  
+
 
   static async createVerificationToken(params: {
     userId: string;
@@ -162,6 +162,59 @@ export class UcodeRepository {
 
       return ucode;
     } catch (error) {
+      return null;
+    }
+  }
+
+  /**
+   * Create pending registration with metadata
+   * Used to store registration data before email verification
+   */
+  static async createPendingRegistration(params: {
+    email: string;
+    registrationData: any;
+  }) {
+    try {
+      const token = crypto.randomBytes(32).toString('hex');
+
+      const ucode = await prisma.ucode.create({
+        data: {
+          email: params.email,
+          token: token,
+          expired_at: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+          status: 1,
+          metadata: params.registrationData, // Store registration data as JSON
+        },
+      });
+
+      return ucode;
+    } catch (error) {
+      console.error('Error creating pending registration:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get pending registration by token and email
+   */
+  static async getPendingRegistration(params: {
+    email: string;
+    token: string;
+  }) {
+    try {
+      const ucode = await prisma.ucode.findFirst({
+        where: {
+          email: params.email,
+          token: params.token,
+          expired_at: {
+            gte: new Date(),
+          },
+        },
+      });
+
+      return ucode;
+    } catch (error) {
+      console.error('Error getting pending registration:', error);
       return null;
     }
   }

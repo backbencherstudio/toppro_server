@@ -20,7 +20,7 @@ export class AuthService {
     private jwtService: JwtService,
     private prisma: PrismaService,
     private mailService: MailService,
-  ) {}
+  ) { }
 
   async me(email: string) {
     try {
@@ -224,57 +224,59 @@ export class AuthService {
 
   async login({ email, password, token }) {
     try {
-      // Step 1: Fetch user from the database using the email
+      // Step 1: Check if there's a pending registration for this email
+      const pendingRegistration = await this.prisma.ucode.findFirst({
+        where: {
+          email,
+          expired_at: { gte: new Date() },
+          metadata: { not: null },
+        },
+      });
+
+      if (pendingRegistration) {
+        return {
+          success: false,
+          message: 'Please verify your email to complete registration. Check your inbox for the verification link.',
+        };
+      }
+
+      // Step 2: Fetch user from the database using the email
       const user = await this.prisma.user.findUnique({
         where: { email },
       });
 
       if (!user) {
-        return { success: false, message: 'User not found' };
+        return { success: false, message: 'User not found. Please register first.' };
       }
 
-      // Step 2: Check if the user is an OWNER and validate the token
-      if (user.type === 'OWNER' && token) {
-        // Step 3: Check if the email is verified for all users
-        if (user.email_verified_at) {
-          return { success: false, message: 'Please verify your email' };
-        }
-        // Validate the token (assuming the token is stored in the Ucode repository)
-        const tokenRecord = await UcodeRepository.validateToken({
-          email: email,
-          token: token,
-        });
-
-        if (!tokenRecord) {
-          return { success: false, message: 'Invalid token' };
-        }
-
-        // If the token is valid, update email_verified_at
-        await this.prisma.user.update({
-          where: { email },
-          data: { email_verified_at: new Date() }, // Mark the email as verified
-        });
-      }
-
-      // Step 4: If the user type is USER, check the status
-      if (user.type === 'USER' && user.status === 0) {
-        return {
-          success: false,
-          message: 'Owner has not approved your account',
-        };
-      }
-      if (user.type === 'OWNER' && user.status === 0) {
-        return {
-          success: false,
-          message: 'Admin has not approved your account',
-        };
-      }
-
-      // Step 5: Validate password
+      // Step 3: Validate password first
       const isPasswordValid = await bcrypt.compare(password, user.password);
 
       if (!isPasswordValid) {
         return { success: false, message: 'Invalid password' };
+      }
+
+      // Step 4: Check if email is verified for OWNER users
+      if (user.type === 'OWNER' && !user.email_verified_at) {
+        return {
+          success: false,
+          message: 'Please verify your email before logging in. Check your inbox for the verification link.'
+        };
+      }
+
+      // Step 5: Check account status
+      if (user.status === 0) {
+        if (user.type === 'OWNER') {
+          return {
+            success: false,
+            message: 'Your account is pending verification. Please check your email.',
+          };
+        } else if (user.type === 'USER') {
+          return {
+            success: false,
+            message: 'Your account is pending approval by the owner.',
+          };
+        }
       }
 
       // Step 6: Generate JWT tokens (access and refresh tokens)
@@ -441,7 +443,11 @@ export class AuthService {
         throw new Error('No SUPERADMIN found. Please create one first.');
       }
 
+<<<<<<< HEAD
       // 3️⃣ Check if email already exists
+=======
+      // 2️⃣ Check if email already exists
+>>>>>>> eef32f918a8bb859478cf2b4f69fbd8cc3b1766f
       const existingUser = await this.prisma.user.findUnique({
         where: { email },
       });
@@ -449,6 +455,7 @@ export class AuthService {
         throw new Error('Email already exists.');
       }
 
+<<<<<<< HEAD
       // 4️⃣ Create OWNER user first
       const owner = await this.prisma.user.create({
         data: {
@@ -483,11 +490,65 @@ export class AuthService {
           owner,
           workspace,
         },
+=======
+      // 3️⃣ Check if there's already a pending registration
+      const pendingReg = await this.prisma.ucode.findFirst({
+        where: {
+          email,
+          expired_at: { gte: new Date() },
+        },
+      });
+
+      if (pendingReg) {
+        // Delete old pending registration and allow re-registration
+        console.log('🔄 Deleting old pending registration to allow new one...');
+        await this.prisma.ucode.delete({
+          where: { id: pendingReg.id },
+        });
+        console.log('✅ Old registration deleted. Proceeding with new registration...');
+      }
+
+      // 4️⃣ Store registration data temporarily (DON'T create user yet!)
+      const registrationData = {
+        name,
+        email,
+        password: hashedPassword,
+        type: 'OWNER',
+        super_id: superAdmin.id,
+        workspace_name: workspace_name || `${name}'s Workspace`,
+      };
+
+      // 5️⃣ Create pending registration with token
+      const pendingRegistration = await UcodeRepository.createPendingRegistration({
+        email,
+        registrationData,
+      });
+
+      if (!pendingRegistration) {
+        throw new Error('Failed to create pending registration');
+      }
+
+      // 6️⃣ Send verification email
+      await this.mailService.sendVerificationLink({
+        email,
+        name,
+        token: pendingRegistration.token,
+      });
+
+      // 7️⃣ Return response
+      return {
+        success: true,
+        message: 'Registration submitted! Please check your email to verify your account and complete registration.',
+>>>>>>> eef32f918a8bb859478cf2b4f69fbd8cc3b1766f
       };
     } catch (error) {
       throw new Error('Error creating owner: ' + error.message);
     }
   }
+<<<<<<< HEAD
+=======
+
+>>>>>>> eef32f918a8bb859478cf2b4f69fbd8cc3b1766f
 
   // async register({
   //   name,
@@ -628,56 +689,65 @@ export class AuthService {
         return { success: false, message: 'Email already exists' };
       }
 
-      // Hash password
-      const hashedPassword = await bcrypt.hash(password, 10);
-
-      // Create OWNER user
-      const owner = await this.prisma.user.create({
-        data: {
-          name,
+      // Check if there's already a pending registration for this email
+      const pendingReg = await this.prisma.ucode.findFirst({
+        where: {
           email,
-          phone_number,
-          address,
-          password: hashedPassword,
-          type: UserType.OWNER,
-          status: 1,
-          super_id,
-          ...(roleId && {
-            roles: {
-              connect: { id: roleId },
-            },
-          }),
+          expired_at: { gte: new Date() },
         },
       });
 
-      // Create workspace for owner
-      const workspace = await this.createWorkspace({
-        ownerName: name,
-        owner_id: owner.id,
+      if (pendingReg) {
+        // Option 1: Block duplicate registration (commented out)
+        // return {
+        //   success: false,
+        //   message: 'A verification email has already been sent. Please check your inbox or use the resend verification endpoint.',
+        // };
+
+        // Option 2: Delete old pending registration and allow re-registration
+        console.log('🔄 Deleting old pending registration to allow new one...');
+        await this.prisma.ucode.delete({
+          where: { id: pendingReg.id },
+        });
+        console.log('✅ Old registration deleted. Proceeding with new registration...');
+      }
+
+      // Hash password
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      // Store registration data temporarily (DON'T create user yet!)
+      const registrationData = {
+        name,
+        email,
+        phone_number,
+        address,
+        password: hashedPassword,
+        type: 'OWNER',
         super_id,
         workspace_name: workspace_name || `${name}'s Workspace`,
+        roleId,
+      };
+
+      // Create pending registration with token
+      const pendingRegistration = await UcodeRepository.createPendingRegistration({
+        email,
+        registrationData,
       });
 
-      // Update owner with workspace_id
-      await this.updateUserWorkspace(owner.id, workspace.id);
+      if (!pendingRegistration) {
+        throw new Error('Failed to create pending registration');
+      }
 
       // Send verification email
-      const token = await UcodeRepository.createVerificationToken({
-        userId: owner.id,
-        email: owner.email,
-      });
-
       await this.mailService.sendVerificationLink({
-        email: owner.email,
-        name: owner.name,
-        token: token.token,
-        type: 'OWNER',
+        email,
+        name,
+        token: pendingRegistration.token,
       });
 
       return {
         success: true,
-        message: 'Owner and Workspace created successfully',
-        data: { owner, workspace },
+        message: 'Registration submitted! Please check your email to verify your account and complete registration.',
       };
     } catch (error) {
       throw new Error('Error registering owner: ' + error.message);
@@ -852,92 +922,111 @@ export class AuthService {
 
   async verifyEmail({ email, token }) {
     try {
-      const user = await UserRepository.exist({
-        field: 'email',
-        value: email,
+      console.log('🔍 Verifying email:', email);
+      console.log('🔍 Token:', token);
+
+      // Only allow OWNER verification via pending registration metadata
+      const pendingRegistration = await UcodeRepository.getPendingRegistration({
+        email,
+        token,
       });
 
-      if (user) {
-        const existToken = await UcodeRepository.validateToken({
-          email: email,
-          token: token,
-        });
+      console.log('🔍 Pending registration found:', !!pendingRegistration);
+      console.log('🔍 Has metadata:', !!pendingRegistration?.metadata);
 
-        if (existToken) {
-          await this.prisma.user.update({
-            where: {
-              id: user.id,
-            },
-            data: {
-              email_verified_at: new Date(Date.now()),
-            },
-          });
+      if (pendingRegistration && pendingRegistration.metadata) {
+        // New flow: Create user from pending registration
+        const registrationData: any = pendingRegistration.metadata;
 
-          // delete otp code
-          // await UcodeRepository.deleteToken({
-          //   email: email,
-          //   token: token,
-          // });
-
-          return {
-            success: true,
-            message: 'Email verified successfully',
-          };
-        } else {
+        // Enforce OWNER-only verification
+        if ((registrationData.type || 'OWNER') !== 'OWNER') {
           return {
             success: false,
-            message: 'Invalid token',
+            message: 'Email verification is only required for owner registration',
           };
         }
-      } else {
-        return {
-          success: false,
-          message: 'Email not found',
-        };
-      }
-    } catch (error) {
-      return {
-        success: false,
-        message: error.message,
-      };
-    }
-  }
 
-  async resendVerificationEmail(email: string) {
-    try {
-      const user = await UserRepository.getUserByEmail(email);
-
-      if (user) {
-        // create otp code
-        const token = await UcodeRepository.createToken({
-          userId: user.id,
-          isOtp: true,
+        // Check if user already exists
+        const existingUser = await this.prisma.user.findUnique({
+          where: { email },
         });
 
-        // send otp code to email
-        await this.mailService.sendOtpCodeToEmail({
-          email: email,
-          name: user.name,
-          otp: token,
-        });
+        if (existingUser) {
+          return {
+            success: false,
+            message: 'User already exists',
+          };
+        }
 
+        // Create OWNER user with status 1 (active by default!)
+        console.log('✅ Creating user from registration data...');
+        const owner = await this.prisma.user.create({
+          data: {
+            name: registrationData.name,
+            email: registrationData.email,
+            phone_number: registrationData.phone_number,
+            address: registrationData.address,
+            password: registrationData.password, // Already hashed
+            type: UserType.OWNER,
+            status: 1, // 👈 Active from the start!
+            super_id: registrationData.super_id,
+            email_verified_at: new Date(), // Mark as verified
+            ...(registrationData.roleId && {
+              roles: {
+                connect: { id: registrationData.roleId },
+              },
+            }),
+          },
+        });
+        console.log('✅ User created:', owner.id);
+
+        // Create workspace for owner
+        console.log('✅ Creating workspace...');
+        const workspace = await this.createWorkspace({
+          ownerName: registrationData.name,
+          owner_id: owner.id,
+          super_id: registrationData.super_id,
+          workspace_name: registrationData.workspace_name,
+        });
+        console.log('✅ Workspace created:', workspace.id);
+
+        // Update owner with workspace_id
+        console.log('✅ Linking user to workspace...');
+        await this.updateUserWorkspace(owner.id, workspace.id);
+        console.log('✅ User linked to workspace');
+
+        // Delete the pending registration token
+        console.log('✅ Deleting pending registration token...');
+        await this.prisma.ucode.delete({
+          where: { id: pendingRegistration.id },
+        });
+        console.log('✅ Token deleted');
+
+        console.log('🎉 Email verification completed successfully!');
         return {
           success: true,
-          message: 'We have sent a verification code to your email',
-        };
-      } else {
-        return {
-          success: false,
-          message: 'Email not found',
+          message: 'Email verified successfully! Your account has been created and is now active. You can login now.',
+          data: { owner, workspace },
         };
       }
+
+      // No pending registration found => invalid for owner-only flow
+      return {
+        success: false,
+        message: 'Invalid or expired token',
+      };
     } catch (error) {
+      console.error('❌ Verification error:', error);
+      console.error('❌ Error details:', error.message);
+      console.error('❌ Stack trace:', error.stack);
       return {
         success: false,
         message: error.message,
       };
     }
   }
+
+  // resendVerificationEmail removed per simplified flow
 
   async changePassword({ user_id, oldPassword, newPassword }) {
     try {
