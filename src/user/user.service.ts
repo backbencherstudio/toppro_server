@@ -99,28 +99,37 @@ export class UserService {
   }
 
   // Get all users
+
   async getAllUsers(ownerId: string, workspaceId: string, userId: string) {
     try {
       const users = await this.prisma.user.findMany({
         where: {
-          owner_id: ownerId || userId, // Match ownerId or userId
-          workspace_id: workspaceId, // Match workspaceId
-          type: 'USER', // Filter only USER type
+          owner_id: ownerId || userId,
+          workspace_id: workspaceId,
+          type: 'USER',
         },
         select: {
           id: true,
           name: true,
           email: true,
           type: true,
-          owner_id: true,
           phone_number: true,
           created_at: true,
           updated_at: true,
+          role_users: {
+            select: {
+              role: {
+                select: {
+                  id: true,
+                  title: true,
+                },
+              },
+            },
+          },
         },
         orderBy: { created_at: 'desc' },
       });
 
-      // ✅ Handle empty data case
       if (users.length === 0) {
         return {
           success: true,
@@ -129,11 +138,22 @@ export class UserService {
         };
       }
 
-      // ✅ Success case
+      // ✅ Extract first role title or fallback
+      const formattedUsers = users.map((user) => ({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        type: user.type,
+        phone_number: user.phone_number,
+        created_at: user.created_at,
+        updated_at: user.updated_at,
+        role_name: user.role_users?.[0]?.role?.title || 'No Role', // 👈 single string output
+      }));
+
       return {
         success: true,
         message: 'All users fetched successfully!',
-        data: users,
+        data: formattedUsers,
       };
     } catch (error) {
       console.error('Error fetching users:', error);

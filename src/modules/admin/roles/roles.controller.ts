@@ -18,14 +18,12 @@ import { RolesService } from './roles.service';
 export class RolesController {
   constructor(private readonly rolesService: RolesService) {}
 
-
-
   // GET single role by ID
   @Get(':roleId')
   getRole(@Param('roleId') roleId: string) {
     return this.rolesService.getRole(roleId);
   }
-  
+
   // assing role to single user
   @Put(':roleId/assign-user')
   assignUserToRole(
@@ -44,8 +42,6 @@ export class RolesController {
   ) {
     return this.rolesService.assignUsersToRole(roleId, dto.user_ids);
   }
-
-
 
   // Endpoint to create a new role and assign permissions to that role
   @Post('create')
