@@ -6,12 +6,6 @@ export enum Permissions {
   user_management_update = 'user_management_update',
   user_management_show = 'user_management_show',
   user_management_delete = 'user_management_delete',
-  // role
-  role_management_read = 'role_management_read',
-  role_management_create = 'role_management_create',
-  role_management_update = 'role_management_update',
-  role_management_show = 'role_management_show',
-  role_management_delete = 'role_management_delete',
   // CRM
   crm_manage = 'crm_manage',
   crm_create = 'crm_create',

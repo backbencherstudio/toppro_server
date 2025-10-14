@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  NotFoundException,
   Param,
   Post,
   Put,
@@ -13,14 +14,50 @@ import { AssignUsersToRoleDto } from 'src/modules/admin/roles/dto/assign-users-t
 import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 import { CreateRoleDto } from './dto/create-role.dto'; // DTO for creating a role
 import { RolesService } from './roles.service';
+import { UpdateRoleDto } from './dto/update-role.dto';
 
 @Controller('roles')
 export class RolesController {
   constructor(private readonly rolesService: RolesService) {}
 
-  // GET single role by ID
+  // Update a role and its permissions
+  @Put(':roleId')
+  @UseGuards(JwtAuthGuard)
+  async updateRole(
+    @Param('roleId') roleId: string,
+    @Body() updateRoleDto: CreateRoleDto,
+    @Req() req,
+  ) {
+    try {
+      const { owner_id: ownerId, workspace_id: workspaceId, id: userId } = req.user;
+      const updatedRole = await this.rolesService.updateRole(
+        roleId,
+        updateRoleDto,
+        ownerId,
+        workspaceId,
+        userId,
+
+      );
+
+      return updatedRole;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        return {
+          success: false,
+          message: error.message,
+        };
+      }
+
+      return {
+        success: false,
+        message: 'Failed to update role',
+        error: error.message,
+      };
+    }
+  }
+
   @Get(':roleId')
-  getRole(@Param('roleId') roleId: string) {
+  async getRoleById(@Param('roleId') roleId: string) {
     return this.rolesService.getRole(roleId);
   }
 
@@ -67,14 +104,5 @@ export class RolesController {
   // @Get(':id')
   // async getRoleById(@Param('id') roleId: string) {
   //   return this.rolesService.getRoleById(roleId);
-  // }
-
-  // Endpoint to update a role with new permissions (if needed)
-  // @Put(':roleId')
-  // async updateRole(
-  //   @Param('roleId') roleId: string,
-  //   @Body() updateRoleDto: UpdateRoleDto, // Body will contain the data to update the role
-  // ) {
-  //   return this.rolesService.updateRole(roleId, updateRoleDto);
   // }
 }
