@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Permissions } from 'src/ability/permissions.enum'; // Permissions enum
 import { UpdateRoleDto } from 'src/modules/admin/roles/dto/update-role.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -40,7 +44,41 @@ export class RolesService {
   }
 
   async getRole(roleId: string) {
-    return this.shapeRoleResponse(roleId);
+    try {
+      const role = await this.prisma.role.findUnique({
+        where: { id: roleId },
+        select: {
+          id: true,
+          title: true,
+          permissions: {
+            select: {
+              title: true,
+            },
+          },
+        },
+      });
+
+      if (!role) {
+        return {
+          success: false,
+          message: 'Role not found',
+          data: null,
+        };
+      }
+
+      return {
+        success: true,
+        message: 'Role fetched successfully!',
+        data: role,
+      };
+    } catch (error) {
+      console.error('Error fetching role:', error);
+      throw new BadRequestException({
+        success: false,
+        message: 'Failed to fetch role',
+        error: error.message,
+      });
+    }
   }
 
   async assignUserToRole(roleId: string, userId: string) {
@@ -179,56 +217,144 @@ export class RolesService {
     };
   }
 
-  // Function to update a role
-  async updateRole(roleId: string, updateRoleDto: UpdateRoleDto) {
-    // Step 1: Find the role by id
-    const role = await this.prisma.role.findUnique({
+  async updateRole(
+    roleId: string,
+    updateRoleDto: CreateRoleDto, // same DTO reuse করা যায়
+    ownerId: string,
+    workspaceId: string,
+    userId: string,
+  ) {
+    // Step 1: Check if role exists
+    const existingRole = await this.prisma.role.findUnique({
       where: { id: roleId },
+      include: { permissions: true },
     });
 
-    if (!role) {
-      throw new Error('Role not found');
+    if (!existingRole) {
+      return {
+        success: false,
+        message: 'Role not found!',
+      };
     }
 
-    // Step 2: Update the role data
-    const updatedRole = await this.prisma.role.update({
+    // Step 2: Clear old permissions first
+    await this.prisma.role.update({
       where: { id: roleId },
       data: {
-        title: updateRoleDto.title || role.title, // Keep existing title if not provided
-        description: updateRoleDto.description || role.description, // Keep existing description if not provided
+        permissions: {
+          set: [], // remove all old relations
+        },
       },
     });
 
-    // Step 3: Handle permissions if provided
-    if (updateRoleDto.permissions) {
-      const validPermissions = this.getValidPermissions(
-        updateRoleDto.permissions,
-      );
+    // Step 3: Validate new permissions
+    const newPermissions = updateRoleDto.permissions || [];
+    const validPermissions = this.getValidPermissions(newPermissions);
 
-      // Fetch existing permission data
-      const permissionData = await this.prisma.permission.findMany({
-        where: {
-          title: { in: validPermissions },
-        },
-      });
-
-      // Connect the valid permissions to the role
-      await this.prisma.role.update({
-        where: { id: updatedRole.id },
-        data: {
-          permissions: {
-            connect: permissionData.map((perm) => ({ id: perm.id })),
-          },
-        },
-      });
+    if (validPermissions.length === 0) {
+      return {
+        success: false,
+        message: 'No valid permissions provided for update.',
+      };
     }
+
+    // Step 4: Ensure permissions exist (create if missing)
+    const permissionData = await Promise.all(
+      validPermissions.map(async (permission) => {
+        let existingPermission = await this.prisma.permission.findUnique({
+          where: { title: permission },
+        });
+
+        if (!existingPermission) {
+          existingPermission = await this.prisma.permission.create({
+            data: {
+              title: permission,
+              action: permission.split('_')[1],
+              subject: permission.split('_')[0],
+            },
+          });
+        }
+
+        return existingPermission;
+      }),
+    );
+
+    // Step 5: Update role title/description and connect new permissions
+    const updatedRole = await this.prisma.role.update({
+      where: { id: roleId },
+      data: {
+        title: updateRoleDto.title,
+        description: updateRoleDto.description,
+        owner_id: ownerId || userId,
+        workspace_id: workspaceId,
+        permissions: {
+          connect: permissionData.map((perm) => ({ id: perm.id })),
+        },
+      },
+      include: {
+        permissions: {
+          select: { title: true },
+        },
+      },
+    });
 
     return {
       success: true,
-      message: 'Role updated successfully!',
-      role: updatedRole,
+      message: 'Role updated successfully with new permissions!',
+      data: updatedRole,
     };
   }
+
+  // Function to update a role
+  // async updateRole(roleId: string, updateRoleDto: UpdateRoleDto) {
+  //   // Step 1: Find the role by id
+  //   const role = await this.prisma.role.findUnique({
+  //     where: { id: roleId },
+  //   });
+
+  //   if (!role) {
+  //     throw new Error('Role not found');
+  //   }
+
+  //   // Step 2: Update the role data
+  //   const updatedRole = await this.prisma.role.update({
+  //     where: { id: roleId },
+  //     data: {
+  //       title: updateRoleDto.title || role.title, // Keep existing title if not provided
+  //       description: updateRoleDto.description || role.description, // Keep existing description if not provided
+  //     },
+  //   });
+
+  //   // Step 3: Handle permissions if provided
+  //   if (updateRoleDto.permissions) {
+  //     const validPermissions = this.getValidPermissions(
+  //       updateRoleDto.permissions,
+  //     );
+
+  //     // Fetch existing permission data
+  //     const permissionData = await this.prisma.permission.findMany({
+  //       where: {
+  //         title: { in: validPermissions },
+  //       },
+  //     });
+
+  //     // Connect the valid permissions to the role
+  //     await this.prisma.role.update({
+  //       where: { id: updatedRole.id },
+  //       data: {
+  //         permissions: {
+  //           connect: permissionData.map((perm) => ({ id: perm.id })),
+  //         },
+  //       },
+  //     });
+  //   }
+
+  //   return {
+  //     success: true,
+  //     message: 'Role updated successfully!',
+  //     role: updatedRole,
+  //   };
+  // }
 
   // Function to validate permissions against the Permissions Enum
   private getValidPermissions(permissions: string[]): string[] {

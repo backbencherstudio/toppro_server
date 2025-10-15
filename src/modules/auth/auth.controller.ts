@@ -27,7 +27,7 @@ import { LocalAuthGuard } from './guards/local-auth.guard';
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) { }
+  constructor(private authService: AuthService) {}
 
   // get user details
   @ApiOperation({ summary: 'Get user details' })
@@ -49,8 +49,6 @@ export class AuthController {
       };
     }
   }
-
-
 
   // auth.controller.ts
   @Post('register-owner')
@@ -79,16 +77,9 @@ export class AuthController {
   ) {
     const { id, owner_id, workspace_id } = req.user;
 
-    console.log('req.user', req.user);
-    const {
-      name,
-      email,
-      phone_number,
-      address,
-      password,
-      roleId,
-      status,
-    } = data;
+    // console.log('req.user', req.user);
+    const { name, email, phone_number, address, password, roleId, status } =
+      data;
 
     if (!workspace_id) {
       throw new HttpException('Workspace ID missing', HttpStatus.BAD_REQUEST);
@@ -271,13 +262,17 @@ export class AuthController {
       const email = (req.query.email as string) || '';
       const token = (req.query.token as string) || '';
       if (!email || !token) {
-        return res.status(HttpStatus.BAD_REQUEST).send('Email and token are required');
+        return res
+          .status(HttpStatus.BAD_REQUEST)
+          .send('Email and token are required');
       }
       const result = await this.authService.verifyEmail({ email, token });
       if (result.success) {
         return res.status(HttpStatus.OK).send('Registration successfully');
       }
-      return res.status(HttpStatus.BAD_REQUEST).send(result.message || 'Invalid or expired token');
+      return res
+        .status(HttpStatus.BAD_REQUEST)
+        .send(result.message || 'Invalid or expired token');
     } catch (error) {
       return res.status(HttpStatus.BAD_REQUEST).send('Failed to verify email');
     }
@@ -293,19 +288,21 @@ export class AuthController {
       const email = body.email || '';
       const token = body.token || '';
       if (!email || !token) {
-        return res.status(HttpStatus.BAD_REQUEST).send('Email and token are required');
+        return res
+          .status(HttpStatus.BAD_REQUEST)
+          .send('Email and token are required');
       }
       const result = await this.authService.verifyEmail({ email, token });
       if (result.success) {
         return res.status(HttpStatus.OK).send('Registration successfully');
       }
-      return res.status(HttpStatus.BAD_REQUEST).send(result.message || 'Invalid or expired token');
+      return res
+        .status(HttpStatus.BAD_REQUEST)
+        .send(result.message || 'Invalid or expired token');
     } catch (error) {
       return res.status(HttpStatus.BAD_REQUEST).send('Failed to verify email');
     }
   }
-
-
 
   // resend verification removed per simplified flow
 
