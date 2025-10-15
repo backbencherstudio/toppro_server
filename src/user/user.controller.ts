@@ -91,7 +91,7 @@ export class UserController {
       id: userId,
     } = req.user;
     return this.userService.getUsersWithCrmAccess(ownerId, workspaceId, userId);
-  }
+  };
 
   @Get('purchase/all')
   @UseGuards(JwtAuthGuard)

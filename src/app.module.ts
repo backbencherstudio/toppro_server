@@ -26,9 +26,9 @@ import { CategoryModule } from './modules/admin/sevice-management/category/categ
 import { ServiceManagementModule } from './modules/admin/sevice-management/service-management.module';
 import { ApplicationModule } from './modules/application/application.module';
 import { AuthModule } from './modules/auth/auth.module';
-import { PaymentModule } from './modules/payment/payment.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { UserModule } from './user/user.module';
+import { PaymentModule } from './modules/payment/stripe/payment.module';
 
 
 @Module({
