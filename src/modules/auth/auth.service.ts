@@ -508,12 +508,7 @@ export class AuthService {
       // 7️⃣ Return response
       return {
         success: true,
-<<<<<<< HEAD
         message: 'Registration submitted! Please check your email to verify your account and complete registration.',
-=======
-        message:
-          'Registration submitted! Please check your email to verify your account and complete registration.',
->>>>>>> fde86d5ea7047c8f4ceacd07f2f4a995ed8fb158
       };
     } catch (error) {
       // Re-throw custom exceptions to preserve their HTTP status and structure

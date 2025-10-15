@@ -1547,12 +1547,12 @@ model PostPerformance {
 
 model Customer {
   id          String   @id @default(cuid())
-  customer_no String?
   balance     Float    @default(0)
-  name        String   @db.VarChar(255)
-  contact     String   @db.VarChar(255)
-  email       String   @unique @db.VarChar(255)
-  password    String   @db.VarChar(255)
+  customer_no String?
+  name        String?   @db.VarChar(255)
+  contact     String?   @db.VarChar(255)
+  email       String?  @unique @db.VarChar(255)
+  password    String?  @db.VarChar(255)
   taxNumber   String?  @unique @db.VarChar(255)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @default(now()) @updatedAt
