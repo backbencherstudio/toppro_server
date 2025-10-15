@@ -13,6 +13,7 @@ import appConfig from '../../config/app.config';
 import { MailService } from '../../mail/mail.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { EmailAlreadyExistsException, PendingRegistrationExistsException, InvalidRegistrationDataException } from '../../common/exception/registration-exceptions';
 
 @Injectable()
 export class AuthService {
@@ -20,7 +21,7 @@ export class AuthService {
     private jwtService: JwtService,
     private prisma: PrismaService,
     private mailService: MailService,
-  ) {}
+  ) { }
 
   async me(email: string) {
     try {
@@ -454,7 +455,7 @@ export class AuthService {
         where: { email },
       });
       if (existingUser) {
-        throw new Error('Email already exists.');
+        throw new EmailAlreadyExistsException(email, '/auth/register-owner');
       }
 
       // 3️⃣ Check if there's already a pending registration
@@ -511,6 +512,12 @@ export class AuthService {
           'Registration submitted! Please check your email to verify your account and complete registration.',
       };
     } catch (error) {
+      // Re-throw custom exceptions to preserve their HTTP status and structure
+      if (error instanceof EmailAlreadyExistsException ||
+        error instanceof PendingRegistrationExistsException ||
+        error instanceof InvalidRegistrationDataException) {
+        throw error;
+      }
       throw new Error('Error creating owner: ' + error.message);
     }
   }
@@ -651,7 +658,7 @@ export class AuthService {
         where: { email },
       });
       if (existingUser) {
-        return { success: false, message: 'Email already exists' };
+        throw new EmailAlreadyExistsException(email, '/auth/register-owner');
       }
 
       // Check if there's already a pending registration for this email
@@ -719,6 +726,12 @@ export class AuthService {
           'Registration submitted! Please check your email to verify your account and complete registration.',
       };
     } catch (error) {
+      // Re-throw custom exceptions to preserve their HTTP status and structure
+      if (error instanceof EmailAlreadyExistsException ||
+        error instanceof PendingRegistrationExistsException ||
+        error instanceof InvalidRegistrationDataException) {
+        throw error;
+      }
       throw new Error('Error registering owner: ' + error.message);
     }
   }
@@ -764,7 +777,7 @@ export class AuthService {
         where: { email },
       });
       if (existingUser) {
-        return { success: false, message: 'Email already exists' };
+        throw new EmailAlreadyExistsException(email, '/auth/register-user');
       }
 
       // ✅ Password hashing only if provided
@@ -795,6 +808,12 @@ export class AuthService {
         data: user,
       };
     } catch (error) {
+      // Re-throw custom exceptions to preserve their HTTP status and structure
+      if (error instanceof EmailAlreadyExistsException ||
+        error instanceof PendingRegistrationExistsException ||
+        error instanceof InvalidRegistrationDataException) {
+        throw error;
+      }
       return {
         success: false,
         message: 'Error registering user: ' + error.message,
