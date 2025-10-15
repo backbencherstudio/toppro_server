@@ -81,4 +81,4 @@ import { CreditNotesModule } from './accounting/income/credit-notes/credit-notes
     CreditNotesModule,
   ],
 })
-export class ApplicationModule {}
+export class ApplicationModule { }
