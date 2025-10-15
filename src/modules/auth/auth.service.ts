@@ -13,6 +13,7 @@ import appConfig from '../../config/app.config';
 import { MailService } from '../../mail/mail.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { EmailAlreadyExistsException, PendingRegistrationExistsException, InvalidRegistrationDataException } from '../../common/exception/registration-exceptions';
 
 @Injectable()
 export class AuthService {
@@ -236,7 +237,8 @@ export class AuthService {
       if (pendingRegistration) {
         return {
           success: false,
-          message: 'Please verify your email to complete registration. Check your inbox for the verification link.',
+          message:
+            'Please verify your email to complete registration. Check your inbox for the verification link.',
         };
       }
 
@@ -246,7 +248,10 @@ export class AuthService {
       });
 
       if (!user) {
-        return { success: false, message: 'User not found. Please register first.' };
+        return {
+          success: false,
+          message: 'User not found. Please register first.',
+        };
       }
 
       // Step 3: Validate password first
@@ -260,7 +265,8 @@ export class AuthService {
       if (user.type === 'OWNER' && !user.email_verified_at) {
         return {
           success: false,
-          message: 'Please verify your email before logging in. Check your inbox for the verification link.'
+          message:
+            'Please verify your email before logging in. Check your inbox for the verification link.',
         };
       }
 
@@ -269,7 +275,8 @@ export class AuthService {
         if (user.type === 'OWNER') {
           return {
             success: false,
-            message: 'Your account is pending verification. Please check your email.',
+            message:
+              'Your account is pending verification. Please check your email.',
           };
         } else if (user.type === 'USER') {
           return {
@@ -448,7 +455,7 @@ export class AuthService {
         where: { email },
       });
       if (existingUser) {
-        throw new Error('Email already exists.');
+        throw new EmailAlreadyExistsException(email, '/auth/register-owner');
       }
 
       // 3️⃣ Check if there's already a pending registration
@@ -465,7 +472,9 @@ export class AuthService {
         await this.prisma.ucode.delete({
           where: { id: pendingReg.id },
         });
-        console.log('✅ Old registration deleted. Proceeding with new registration...');
+        console.log(
+          '✅ Old registration deleted. Proceeding with new registration...',
+        );
       }
 
       // 4️⃣ Store registration data temporarily (DON'T create user yet!)
@@ -479,10 +488,11 @@ export class AuthService {
       };
 
       // 5️⃣ Create pending registration with token
-      const pendingRegistration = await UcodeRepository.createPendingRegistration({
-        email,
-        registrationData,
-      });
+      const pendingRegistration =
+        await UcodeRepository.createPendingRegistration({
+          email,
+          registrationData,
+        });
 
       if (!pendingRegistration) {
         throw new Error('Failed to create pending registration');
@@ -498,9 +508,20 @@ export class AuthService {
       // 7️⃣ Return response
       return {
         success: true,
+<<<<<<< HEAD
         message: 'Registration submitted! Please check your email to verify your account and complete registration.',
+=======
+        message:
+          'Registration submitted! Please check your email to verify your account and complete registration.',
+>>>>>>> fde86d5ea7047c8f4ceacd07f2f4a995ed8fb158
       };
     } catch (error) {
+      // Re-throw custom exceptions to preserve their HTTP status and structure
+      if (error instanceof EmailAlreadyExistsException ||
+        error instanceof PendingRegistrationExistsException ||
+        error instanceof InvalidRegistrationDataException) {
+        throw error;
+      }
       throw new Error('Error creating owner: ' + error.message);
     }
   }
@@ -641,7 +662,7 @@ export class AuthService {
         where: { email },
       });
       if (existingUser) {
-        return { success: false, message: 'Email already exists' };
+        throw new EmailAlreadyExistsException(email, '/auth/register-owner');
       }
 
       // Check if there's already a pending registration for this email
@@ -664,7 +685,9 @@ export class AuthService {
         await this.prisma.ucode.delete({
           where: { id: pendingReg.id },
         });
-        console.log('✅ Old registration deleted. Proceeding with new registration...');
+        console.log(
+          '✅ Old registration deleted. Proceeding with new registration...',
+        );
       }
 
       // Hash password
@@ -684,10 +707,11 @@ export class AuthService {
       };
 
       // Create pending registration with token
-      const pendingRegistration = await UcodeRepository.createPendingRegistration({
-        email,
-        registrationData,
-      });
+      const pendingRegistration =
+        await UcodeRepository.createPendingRegistration({
+          email,
+          registrationData,
+        });
 
       if (!pendingRegistration) {
         throw new Error('Failed to create pending registration');
@@ -702,9 +726,16 @@ export class AuthService {
 
       return {
         success: true,
-        message: 'Registration submitted! Please check your email to verify your account and complete registration.',
+        message:
+          'Registration submitted! Please check your email to verify your account and complete registration.',
       };
     } catch (error) {
+      // Re-throw custom exceptions to preserve their HTTP status and structure
+      if (error instanceof EmailAlreadyExistsException ||
+        error instanceof PendingRegistrationExistsException ||
+        error instanceof InvalidRegistrationDataException) {
+        throw error;
+      }
       throw new Error('Error registering owner: ' + error.message);
     }
   }
@@ -750,7 +781,7 @@ export class AuthService {
         where: { email },
       });
       if (existingUser) {
-        return { success: false, message: 'Email already exists' };
+        throw new EmailAlreadyExistsException(email, '/auth/register-user');
       }
 
       // ✅ Password hashing only if provided
@@ -781,6 +812,12 @@ export class AuthService {
         data: user,
       };
     } catch (error) {
+      // Re-throw custom exceptions to preserve their HTTP status and structure
+      if (error instanceof EmailAlreadyExistsException ||
+        error instanceof PendingRegistrationExistsException ||
+        error instanceof InvalidRegistrationDataException) {
+        throw error;
+      }
       return {
         success: false,
         message: 'Error registering user: ' + error.message,
@@ -897,7 +934,8 @@ export class AuthService {
         if ((registrationData.type || 'OWNER') !== 'OWNER') {
           return {
             success: false,
-            message: 'Email verification is only required for owner registration',
+            message:
+              'Email verification is only required for owner registration',
           };
         }
 
@@ -960,7 +998,8 @@ export class AuthService {
         console.log('🎉 Email verification completed successfully!');
         return {
           success: true,
-          message: 'Email verified successfully! Your account has been created and is now active. You can login now.',
+          message:
+            'Email verified successfully! Your account has been created and is now active. You can login now.',
           data: { owner, workspace },
         };
       }

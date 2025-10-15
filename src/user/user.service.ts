@@ -99,28 +99,39 @@ export class UserService {
   }
 
   // Get all users
+
   async getAllUsers(ownerId: string, workspaceId: string, userId: string) {
     try {
       const users = await this.prisma.user.findMany({
         where: {
-          owner_id: ownerId || userId, // Match ownerId or userId
-          workspace_id: workspaceId, // Match workspaceId
-          type: 'USER', // Filter only USER type
+          owner_id: ownerId || userId,
+          workspace_id: workspaceId,
+          type: 'USER',
         },
         select: {
           id: true,
           name: true,
           email: true,
           type: true,
-          owner_id: true,
+          password: true,
           phone_number: true,
           created_at: true,
           updated_at: true,
+          status: true,
+          role_users: {
+            select: {
+              role: {
+                select: {
+                  id: true,
+                  title: true,
+                },
+              },
+            },
+          },
         },
         orderBy: { created_at: 'desc' },
       });
 
-      // ✅ Handle empty data case
       if (users.length === 0) {
         return {
           success: true,
@@ -129,11 +140,24 @@ export class UserService {
         };
       }
 
-      // ✅ Success case
+      // Extract first role title or fallback
+      const formattedUsers = users.map((user) => ({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        password: user.password,
+        type: user.type,
+        phone_number: user.phone_number,
+        created_at: user.created_at,
+        updated_at: user.updated_at,
+        status: user.status,
+        role_name: user.role_users?.[0]?.role?.title || 'No Role',
+      }));
+
       return {
         success: true,
         message: 'All users fetched successfully!',
-        data: users,
+        data: formattedUsers,
       };
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -236,33 +260,41 @@ export class UserService {
       throw new NotFoundException('User not found');
     }
 
-    // ✅ Email check logic
-    if (updateUserDto.email) {
-      const isSameEmail = updateUserDto.email === user.email;
+    // ✅ Email validation check
+    if (updateUserDto.email && updateUserDto.email !== user.email) {
+      const emailExists = await this.prisma.user.findUnique({
+        where: { email: updateUserDto.email },
+      });
 
-      if (!isSameEmail) {
-        const emailExists = await this.prisma.user.findUnique({
-          where: { email: updateUserDto.email },
-        });
-
-        if (emailExists) {
-          throw new BadRequestException('Email already in use by another user');
-        }
+      if (emailExists) {
+        throw new BadRequestException('Email already in use by another user');
       }
     }
 
+    // ✅ Password hashing (only if updated)
+    let updateData: any = { ...updateUserDto };
+    if (updateUserDto.password) {
+      const salt = await bcrypt.genSalt();
+      updateData.password = await bcrypt.hash(updateUserDto.password, salt);
+    }
+
     try {
+      // ✅ Update only changed fields
       const updatedUser = await this.prisma.user.update({
         where: { id: userId },
-        data: {
-          ...updateUserDto,
-        },
+        data: updateData,
       });
+
+      // ✅ Build response only with updated fields
+      const updatedFields: any = {};
+      for (const key of Object.keys(updateUserDto)) {
+        updatedFields[key] = updatedUser[key];
+      }
 
       return {
         success: true,
         message: 'User updated successfully!',
-        user: updatedUser,
+        updated_fields: updatedFields,
       };
     } catch (error) {
       console.error('Error updating user:', error);
