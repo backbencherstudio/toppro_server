@@ -1,8 +1,11 @@
 // src/modules/items/items.service.ts
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateItemDto } from './dto/create-item.dto';
 import { UpdateItemDto } from './dto/update-item.dto';
+import appConfig from 'src/config/app.config';
+import { SojebStorage } from 'src/common/lib/Disk/SojebStorage';
+import { StringHelper } from 'src/common/helper/string.helper';
 
 function nullify(v?: string | null) {
   return v === undefined || v === null || v === '' || v === 'null' ? null : v;
@@ -12,53 +15,102 @@ function nullify(v?: string | null) {
 export class ItemsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(
-    dto: CreateItemDto,
-    user_id: string,
-    owner_id: string,
-    workspace_id: string,
-  ) {
+async create(
+  dto: CreateItemDto,
+  user_id: string,
+  owner_id: string,
+  workspace_id: string,
+  file?: Express.Multer.File, // ✅ optional file from Multer
+) {
+  try {
+    // ✅ Step 1: Clean DTO fields
     const cleaned = {
       ...dto,
       tax_id: nullify(dto.tax_id),
       itemCategory_id: nullify(dto.itemCategory_id),
       unit_id: nullify(dto.unit_id),
-      image: nullify(dto.image),
       vendor_id: nullify(dto.vendor_id),
       itemType_id: nullify(dto.itemType_id),
-      invoice_id: nullify(dto.invoice_id || null),
+      invoice_id: nullify(dto.invoice_id),
     };
 
+    // ✅ Step 2: Handle file upload (if provided)
+    if (file) {
+      try {
+        // generate a short unique filename without relying on StringHelper.randomString()
+        const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 10)}_${file.originalname}`;
+
+        await SojebStorage.put(
+          appConfig().storageUrl.avatar + fileName, // or use `.item` folder if available
+          file.buffer,
+        );
+
+        cleaned.image = fileName; // Save filename to DB
+      } catch (uploadError) {
+        console.error('Item image upload error:', uploadError);
+        throw new InternalServerErrorException('Failed to upload item image');
+      }
+    }
+
+    // ✅ Step 3: Create the Item
     const item = await this.prisma.items.create({
       data: {
         ...cleaned,
-        user_id: user_id || null,
-        owner_id: owner_id === null ? user_id : owner_id,
-        workspace_id: workspace_id,
+        user_id,
+        owner_id: owner_id || user_id,
+        workspace_id,
       },
     });
 
+    if (!item) throw new Error('Item creation failed');
+
+    // ✅ Step 4: Create the Stock for this item
     const stock = await this.prisma.stock.create({
       data: {
-        item_id: item.id, // Link the stock to the newly created item
-        quantity: dto.quantity || 0, // Use provided quantity or default to 0
-        deleted_at: null, // Ensure it is not marked as deleted
-        product_name: item.name, // Use the product name from the item
-        sku: item.sku, // Use the SKU from the item
-        image: item.image, // Use the image from the item
+        item_id: item.id, // Make sure your FK name matches schema
+        quantity: dto.quantity || 0,
+        deleted_at: null,
+        product_name: item.name || 'Unnamed Item',
+        sku: item.sku || 'N/A',
+        image: item.image,
         owner_id: owner_id || user_id,
-        workspace_id: workspace_id,
-        user_id: user_id,
+        workspace_id,
+        user_id,
       },
     });
 
+    if (!stock) throw new Error('Stock creation failed');
+
+    // ✅ Step 5: Build success response
     return {
       success: true,
       message: 'Item created successfully!',
-      data: item,
-      stock: stock,
+      data: {
+        ...item,
+        image_url: item.image
+        ? SojebStorage.url(appConfig().storageUrl.avatar + item.image)
+        : null,
+      },
+      stock,
+    };
+  } catch (error) {
+    console.error('Error creating item:', error);
+
+    // ✅ Step 6: Smart error handling
+    if (error instanceof InternalServerErrorException) {
+      return { success: false, message: error.message, code: 500 };
+    }
+
+    return {
+      success: false,
+      message: error.message || 'An unexpected error occurred during item creation',
+      code: 500,
+      details: process.env.NODE_ENV === 'development' ? error : undefined,
     };
   }
+}
+
+
 
   async findAll(
     userId: string,

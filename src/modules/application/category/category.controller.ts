@@ -37,14 +37,31 @@ export class CategoryController {
 
   @Get('items')
   findAllItemCategories(@Req() req) {
-    const { owner_id: ownerId, workspace_id: workspaceId, id: userId } = req.user;
-    return this.categoryService.findAllItemCategories(ownerId, workspaceId, userId);
+    const {
+      owner_id: ownerId,
+      workspace_id: workspaceId,
+      id: userId,
+    } = req.user;
+    return this.categoryService.findAllItemCategories(
+      ownerId,
+      workspaceId,
+      userId,
+    );
   }
 
   @Get('items/:id')
   findItemCategoryOne(@Req() req, @Param('id') id: string) {
-    const { owner_id: ownerId, workspace_id: workspaceId, id: userId } = req.user;
-    return this.categoryService.findItemCategoryOne(id, ownerId, workspaceId, userId);
+    const {
+      owner_id: ownerId,
+      workspace_id: workspaceId,
+      id: userId,
+    } = req.user;
+    return this.categoryService.findItemCategoryOne(
+      id,
+      ownerId,
+      workspaceId,
+      userId,
+    );
   }
 
   @Patch('items/:id')
@@ -53,7 +70,11 @@ export class CategoryController {
     @Body() dto: UpdateCategoryDto,
     @Req() req,
   ) {
-    const { owner_id: ownerId, workspace_id: workspaceId, id: userId } = req.user;
+    const {
+      owner_id: ownerId,
+      workspace_id: workspaceId,
+      id: userId,
+    } = req.user;
     return this.categoryService.updateItemCategory(
       id,
       dto,
@@ -65,15 +86,28 @@ export class CategoryController {
 
   @Delete('items/:id')
   removeItemCategory(@Param('id') id: string, @Req() req) {
-    const { owner_id: ownerId, workspace_id: workspaceId , id: userId } = req.user;
-    return this.categoryService.removeItemCategory(id, ownerId, workspaceId , userId);
+    const {
+      owner_id: ownerId,
+      workspace_id: workspaceId,
+      id: userId,
+    } = req.user;
+    return this.categoryService.removeItemCategory(
+      id,
+      ownerId,
+      workspaceId,
+      userId,
+    );
   }
 
   // -------- INVOICE CATEGORY --------
 
   @Post('invoices')
   createInvoiceCategory(@Body() dto: CreateCategoryDto, @Req() req) {
-    const { owner_id: ownerId, workspace_id: workspaceId, id: userId } = req.user;
+    const {
+      owner_id: ownerId,
+      workspace_id: workspaceId,
+      id: userId,
+    } = req.user;
     return this.categoryService.createInvoiceCategory(
       dto,
       ownerId,
@@ -84,18 +118,31 @@ export class CategoryController {
 
   @Get('invoices/:id')
   async findInvoiceCategoryOne(@Req() req, @Param('id') id: string) {
-    const { owner_id: ownerId, workspace_id: workspaceId } = req.user;
+    const {
+      owner_id: ownerId,
+      workspace_id: workspaceId,
+      id: userId,
+    } = req.user;
     return await this.categoryService.findInvoiceCategoryOne(
       id,
       ownerId,
       workspaceId,
+      userId,
     );
   }
 
   @Get('invoices')
   findAllInvoiceCategories(@Req() req) {
-    const { owner_id: ownerId, workspace_id: workspaceId, id: userId } = req.user;
-    return this.categoryService.findAllInvoiceCategories(ownerId, workspaceId, userId);
+    const {
+      owner_id: ownerId,
+      workspace_id: workspaceId,
+      id: userId,
+    } = req.user;
+    return this.categoryService.findAllInvoiceCategories(
+      ownerId,
+      workspaceId,
+      userId,
+    );
   }
 
   @Patch('invoices/:id')
@@ -122,8 +169,17 @@ export class CategoryController {
   // -------- BILL CATEGORY --------
   @Post('bills')
   createBillCategory(@Body() dto: CreateCategoryDto, @Req() req) {
-    const { owner_id: ownerId, workspace_id: workspaceId } = req.user;
-    return this.categoryService.createBillCategory(dto, ownerId, workspaceId);
+    const {
+      owner_id: ownerId,
+      workspace_id: workspaceId,
+      id: userId,
+    } = req.user;
+    return this.categoryService.createBillCategory(
+      dto,
+      ownerId,
+      workspaceId,
+      userId,
+    );
   }
 
   @Get('bills/:id')
@@ -138,8 +194,16 @@ export class CategoryController {
 
   @Get('bills')
   findAllBillCategories(@Req() req) {
-    const { owner_id: ownerId, workspace_id: workspaceId } = req.user;
-    return this.categoryService.findAllBillCategories(ownerId, workspaceId);
+    const {
+      owner_id: ownerId,
+      workspace_id: workspaceId,
+      id: userId,
+    } = req.user;
+    return this.categoryService.findAllBillCategories(
+      ownerId,
+      workspaceId,
+      userId,
+    );
   }
 
   @Patch('bills/:id')
@@ -166,8 +230,12 @@ export class CategoryController {
   // -------- TAX --------
   @Post('taxes')
   createTax(@Body() dto: CreateCategoryDto, @Req() req) {
-    const { owner_id: ownerId, workspace_id: workspaceId } = req.user;
-    return this.categoryService.createTax(dto, ownerId, workspaceId);
+    const {
+      owner_id: ownerId,
+      workspace_id: workspaceId,
+      id: userId,
+    } = req.user;
+    return this.categoryService.createTax(dto, ownerId, workspaceId, userId);
   }
 
   @Get('taxes/:id')
@@ -182,8 +250,12 @@ export class CategoryController {
 
   @Get('taxes')
   findAllTaxes(@Req() req) {
-    const { owner_id: ownerId, workspace_id: workspaceId } = req.user;
-    return this.categoryService.findAllTaxes(ownerId, workspaceId);
+    const {
+      owner_id: ownerId,
+      workspace_id: workspaceId,
+      id: userId,
+    } = req.user;
+    return this.categoryService.findAllTaxes(ownerId, workspaceId, userId);
   }
 
   @Patch('taxes/:id')
@@ -204,9 +276,21 @@ export class CategoryController {
 
   // -------- UNIT --------
   @Post('units')
-  createUnit(@Body() dto: CreateCategoryDto, @Req() req) {
-    const { owner_id: ownerId, workspace_id: workspaceId } = req.user;
-    return this.categoryService.createUnit(dto, ownerId, workspaceId);
+  async createUnit(@Body() dto: CreateCategoryDto, @Req() req) {
+    const {
+      owner_id: ownerId,
+      workspace_id: workspaceId,
+      id: userId,
+    } = req.user;
+
+    const response = await this.categoryService.createUnit(
+      dto,
+      ownerId,
+      userId,
+      workspaceId,
+    );
+
+    return response;
   }
 
   @Get('units/:id')
@@ -221,8 +305,12 @@ export class CategoryController {
 
   @Get('units')
   findAllUnits(@Req() req) {
-    const { owner_id: ownerId, workspace_id: workspaceId } = req.user;
-    return this.categoryService.findAllUnits(ownerId, workspaceId);
+    const {
+      owner_id: ownerId,
+      workspace_id: workspaceId,
+      id: userId,
+    } = req.user;
+    return this.categoryService.findAllUnits(ownerId, workspaceId, userId);
   }
 
   @Patch('units/:id')
@@ -231,8 +319,8 @@ export class CategoryController {
     @Body() dto: UpdateCategoryDto,
     @Req() req,
   ) {
-    const { owner_id: ownerId, workspace_id: workspaceId } = req.user;
-    return this.categoryService.updateUnit(id, dto, ownerId, workspaceId);
+    const { owner_id: ownerId, workspace_id: workspaceId, id: userId } = req.user;
+    return this.categoryService.updateUnit(id, dto, ownerId, workspaceId, userId);
   }
 
   @Delete('units/:id')
@@ -243,25 +331,44 @@ export class CategoryController {
 
   // -------- ITEM TYPE --------
   @Post('item-types')
-  createItemType(@Body() dto: CreateCategoryDto, @Req() req) {
-    const { owner_id: ownerId, workspace_id: workspaceId } = req.user;
-    return this.categoryService.createItemType(dto, ownerId, workspaceId);
+  async createItemType(@Body() dto: CreateCategoryDto, @Req() req) {
+    const {
+      owner_id: ownerId,
+      workspace_id: workspaceId,
+      id: userId,
+    } = req.user;
+
+    return this.categoryService.createItemType(
+      dto,
+      ownerId,
+      userId,
+      workspaceId,
+    );
   }
 
   @Get('item-types/:id')
   async findItemTypesCategoryOne(@Req() req, @Param('id') id: string) {
-    const { owner_id: ownerId, workspace_id: workspaceId } = req.user;
+    const {
+      owner_id: ownerId,
+      workspace_id: workspaceId,
+      id: userId,
+    } = req.user;
     return await this.categoryService.findItemTypesCategoryOne(
       id,
       ownerId,
       workspaceId,
+      userId,
     );
   }
 
   @Get('item-types')
   findAllItemTypes(@Req() req) {
-    const { owner_id: ownerId, workspace_id: workspaceId } = req.user;
-    return this.categoryService.findAllItemTypes(ownerId, workspaceId);
+    const {
+      owner_id: ownerId,
+      workspace_id: workspaceId,
+      id: userId,
+    } = req.user;
+    return this.categoryService.findAllItemTypes(ownerId, workspaceId, userId);
   }
 
   @Patch('item-types/:id')
@@ -270,8 +377,8 @@ export class CategoryController {
     @Body() dto: UpdateCategoryDto,
     @Req() req,
   ) {
-    const { owner_id: ownerId, workspace_id: workspaceId } = req.user;
-    return this.categoryService.updateItemType(id, dto, ownerId, workspaceId);
+    const { owner_id: ownerId, workspace_id: workspaceId, id: userId } = req.user;
+    return this.categoryService.updateItemType(id, dto, ownerId, workspaceId, userId);
   }
 
   @Delete('item-types/:id')
@@ -283,24 +390,42 @@ export class CategoryController {
   // -------- ACCOUNT TYPE --------
   @Post('account-types')
   createAccountType(@Body() dto: CreateCategoryDto, @Req() req) {
-    const { owner_id: ownerId, workspace_id: workspaceId } = req.user;
-    return this.categoryService.createAccountType(dto, ownerId, workspaceId);
+    const {
+      owner_id: ownerId,
+      workspace_id: workspaceId,
+      id: userId,
+    } = req.user;
+    return this.categoryService.createAccountType(
+      dto,
+      ownerId,
+      workspaceId,
+      userId,
+    );
   }
 
   @Get('account-types/:id')
   async findIAccountTypesCategoryOne(@Req() req, @Param('id') id: string) {
-    const { owner_id: ownerId, workspace_id: workspaceId } = req.user;
+    const { owner_id: ownerId, workspace_id: workspaceId, id: userId } = req.user;
     return await this.categoryService.findIAccountTypesCategoryOne(
       id,
       ownerId,
       workspaceId,
+      userId,
     );
   }
 
   @Get('account-types')
   findAllAccountTypes(@Req() req) {
-    const { owner_id: ownerId, workspace_id: workspaceId } = req.user;
-    return this.categoryService.findAllAccountTypes(ownerId, workspaceId);
+    const {
+      owner_id: ownerId,
+      workspace_id: workspaceId,
+      id: userId,
+    } = req.user;
+    return this.categoryService.findAllAccountTypes(
+      ownerId,
+      workspaceId,
+      userId,
+    );
   }
 
   @Patch('account-types/:id')
@@ -309,12 +434,13 @@ export class CategoryController {
     @Body() dto: UpdateCategoryDto,
     @Req() req,
   ) {
-    const { owner_id: ownerId, workspace_id: workspaceId } = req.user;
+    const { owner_id: ownerId, workspace_id: workspaceId, id: userId } = req.user;
     return this.categoryService.updateAccountType(
       id,
       dto,
       ownerId,
       workspaceId,
+      userId,
     );
   }
 
