@@ -9,8 +9,11 @@ import {
   Post,
   Query,
   Req,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 import { CreateItemDto } from './dto/create-item.dto';
 import { UpdateItemDto } from './dto/update-item.dto';
@@ -22,15 +25,19 @@ export class ItemsController {
   constructor(private readonly itemsService: ItemsService) {}
 
   @Post('create')
-  async create(@Body() dto: CreateItemDto, @Req() req: any) {
+  @UseInterceptors(FileInterceptor('image'))
+  async create(
+    @Body() dto: CreateItemDto,
+    @Req() req: any,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
     const {
       id: userId,
       owner_id: ownerId,
       workspace_id: workspaceId,
     } = req.user;
 
-    console.log('ItemsController', userId, ownerId, workspaceId);
-    return this.itemsService.create(dto, userId, ownerId, workspaceId);
+    return this.itemsService.create(dto, userId, ownerId, workspaceId, file);
   }
 
   @Get('all')

@@ -27,7 +27,7 @@ async create(
       };
     }
 
-    // ✅ 2. Create new customer
+    //  2. Create new customer
     const customer = await this.prisma.customer.create({
       data: {
         ...createCustomerDto,
@@ -43,9 +43,8 @@ async create(
       customer,
     };
   } catch (error: any) {
-    console.error('❌ Customer creation failed:', error);
 
-    // ✅ 3. Handle specific Prisma errors
+    // 3. Handle specific Prisma errors
     if (error.code === 'P2002') {
       // Unique constraint failed
       return {
@@ -70,7 +69,7 @@ async create(
       };
     }
 
-    // ✅ 4. Handle general runtime errors
+    //  4. Handle general runtime errors
     return {
       success: false,
       message: 'An unexpected error occurred while creating the customer.',
