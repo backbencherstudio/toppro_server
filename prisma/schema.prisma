@@ -1549,8 +1549,8 @@ model Customer {
   id          String   @id @default(cuid())
   balance     Float    @default(0)
   customer_no String?
-  name        String?   @db.VarChar(255)
-  contact     String?   @db.VarChar(255)
+  name        String?  @db.VarChar(255)
+  contact     String?  @db.VarChar(255)
   email       String?  @unique @db.VarChar(255)
   password    String?  @db.VarChar(255)
   taxNumber   String?  @unique @db.VarChar(255)
@@ -1578,7 +1578,7 @@ model Customer {
   user_id      String?
 
   // relations
-  user        User?         @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user         User?         @relation(fields: [user_id], references: [id], onDelete: Cascade)
   workspace    Workspace?    @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
   invoice      Invoice[]
   item         Items[]
@@ -1590,8 +1590,11 @@ model Vendor {
   id        String   @id @default(cuid())
   name      String   @db.VarChar(255)
   contact   String   @db.VarChar(255)
+  balance   Float?   @default(0)
+  
+  vendor_no String?  @db.VarChar(255)
   email     String   @unique @db.VarChar(255)
-  password  String   @db.VarChar(255)
+  password  String?   @db.VarChar(255)
   taxNumber String?  @unique @db.VarChar(255)
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt

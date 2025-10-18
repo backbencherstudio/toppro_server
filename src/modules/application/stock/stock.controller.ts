@@ -13,10 +13,18 @@ export class StockController {
     return this.stockService.createStock(createStockDto, userId, ownerId, workspaceId);
   }
 
-  @Get()
+  @Get("all")
   async getAllStocks(@Req() req) {
     const { owner_id: ownerId, workspace_id: workspaceId, id: userId } = req.user 
     return this.stockService.getAllStocks(ownerId, workspaceId, userId);
+  }
+
+ // Get Single Stock by ID
+  @Get(':id')
+  async getSingleStock(@Param('id') id: string, @Req() req: any) {
+    const { owner_id, workspace_id, id: user_id } = req.user;
+
+    return this.stockService.getSingleStock(id, owner_id, workspace_id, user_id);
   }
 
   @Put(':id')

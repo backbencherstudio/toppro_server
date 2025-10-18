@@ -1,5 +1,5 @@
 import { Float } from 'aws-sdk/clients/batch';
-import { IsOptional, IsString } from 'class-validator';
+import { IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class CreateCustomerDto {
   @IsString()
@@ -24,7 +24,8 @@ export class CreateCustomerDto {
 
 
   @IsOptional()
-  balance: Float;
+  @IsNumber()
+  balance: number;
 
   @IsOptional()
   @IsString()

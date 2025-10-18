@@ -45,7 +45,7 @@ export class ItemsController {
     @Req() req: any,
     @Query('itemType_id') itemTypeId: string,
     @Query('itemCategory_id') itemCategoryId: string,
-    @Query('search') searchTerm: string, // Accept the search term
+    @Query('search') searchTerm: string,
   ) {
     const {
       id: userId,
