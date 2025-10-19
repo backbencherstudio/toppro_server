@@ -1,19 +1,23 @@
-import { IsEmail, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { float } from 'aws-sdk/clients/cloudfront';
+import { IsEmail, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class CreateVendorDto {
   @IsNotEmpty()
   @IsString()
   name: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
   contact: string;
 
-  @IsNotEmpty()
+  @IsOptional()
+  @IsNumber()
+  balance: number;
+  @IsOptional()
   @IsEmail()
   email: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
   password: string;
 

@@ -251,6 +251,6 @@ async findOne(id: string, workspace_id: string) {
     if (!exists) throw new NotFoundException('Item not found');
 
     await this.prisma.items.delete({ where: { id } });
-    return { success: true, message: 'Item deleted' };
+    return { success: true, message: 'Item deleted Successfully' };
   }
 }

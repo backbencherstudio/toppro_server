@@ -39,7 +39,7 @@ async create(
   return {
     success: true,
     message: 'Vendor created successfully!',
-    vendor,
+    data: vendor,
   };
 }
 
