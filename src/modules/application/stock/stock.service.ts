@@ -166,33 +166,42 @@ export class StockService {
   }
 
   // Update an existing stock item
-  async updateStock(
-    stockId: string,
-    updateStockDto: UpdateStockDto,
-    ownerId: string,
-    workspaceId: string,
-    userId: string,
-  ) {
-    const existingStock = await this.prisma.stock.findUnique({
-      where: { id: stockId },
-    });
+async updateStock(
+  stockId: string,
+  updateStockDto: UpdateStockDto,
+  ownerId: string,
+  workspaceId: string,
+  userId: string,
+) {
+  const existingStock = await this.prisma.stock.findUnique({
+    where: { id: stockId },
+  });
 
-    if (!existingStock) {
-      throw new NotFoundException('Stock item not found');
-    }
-
-    // Updating the stock item
-    const updatedStock = await this.prisma.stock.update({
-      where: { id: stockId },
-      data: {
-        ...updateStockDto,
-        owner_id: ownerId || userId,
-        workspace_id: workspaceId,
-      },
-    });
-
-    return updatedStock;
+  if (!existingStock) {
+    throw new NotFoundException('Stock item not found');
   }
+  let newQuantity = existingStock.quantity;
+  if (updateStockDto.quantity !== undefined) {
+    newQuantity = existingStock.quantity + updateStockDto.quantity;
+  }
+
+  const updatedStock = await this.prisma.stock.update({
+    where: { id: stockId },
+    data: {
+      ...updateStockDto,
+      quantity: newQuantity,
+      owner_id: ownerId || userId,
+      workspace_id: workspaceId,
+    },
+  });
+
+  return {
+    success: true,
+    message: 'Stock updated successfully!',
+    data: updatedStock,
+  };
+}
+
 
   // Soft delete a stock item
   async deleteStock(

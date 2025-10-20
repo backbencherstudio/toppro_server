@@ -1,4 +1,3 @@
-import { float } from 'aws-sdk/clients/cloudfront';
 import { IsEmail, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class CreateVendorDto {
@@ -57,4 +56,8 @@ export class CreateVendorDto {
   @IsOptional()
   @IsString()
   item_id?: string;
+
+  @IsOptional()
+  @IsString()
+  createdAt?: Date;
 }

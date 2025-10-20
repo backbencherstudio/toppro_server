@@ -1,9 +1,10 @@
 import { Module } from '@nestjs/common';
-import { ChartofaccountsService } from './chartofaccounts.service';
-import { ChartofaccountsController } from './chartofaccounts.controller';
+import { ChartOfAccountController } from 'src/modules/application/accounting/chartofaccounts/chartofaccounts.controller';
+import { ChartOfAccountService } from 'src/modules/application/accounting/chartofaccounts/chartofaccounts.service';
+import { PrismaService } from 'src/prisma/prisma.service';
 
 @Module({
-  controllers: [ChartofaccountsController],
-  providers: [ChartofaccountsService],
+  controllers: [ChartOfAccountController],
+  providers: [ChartOfAccountService, PrismaService],
 })
-export class ChartofaccountsModule {}
+export class ChartOfAccountModule {}
