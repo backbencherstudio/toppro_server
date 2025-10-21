@@ -126,12 +126,10 @@ export class VendorController {
     return this.vendorService.update(id, updateVendorDto, ownerId, workspaceId, userId);
   }
 
-  @Delete(':id')
-  @UseGuards(JwtAuthGuard)
-  // @PermissionsGuard(Permissions.vendor_delete)
-  // @PermissionsGuard(Permissions.vendor_manage)
-  remove(@Param('id') id: string, @Req() req) {
-    const { owner_id: ownerId, workspace_id: workspaceId } = req.user;
-    return this.vendorService.remove(id, ownerId, workspaceId);
-  }
+@Delete('delete/:id')
+@UseGuards(JwtAuthGuard)
+remove(@Param('id') id: string, @Req() req) {
+  const { owner_id: ownerId, workspace_id: workspaceId, id: userId } = req.user;
+  return this.vendorService.remove(id, ownerId, workspaceId, userId);
+}
 }

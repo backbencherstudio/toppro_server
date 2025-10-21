@@ -3,56 +3,86 @@ import { Type } from 'class-transformer';
 
 export class UpdateItemDto {
   @IsString()
-  id!: string;          // cuid string
+  id!: string; // cuid string
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   name?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   sku?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   description?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   tax_id?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   itemCategory_id?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   unit_id?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   image?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   vendor_id?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   itemType_id?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   invoice_id?: string;
 
-  @IsOptional() @Type(() => Number) @IsNumber() @Min(0)
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
   sale_price?: number;
 
-  @IsOptional() @Type(() => Number) @IsNumber() @Min(0)
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
   purchase_price?: number;
 
-  @IsOptional() @Type(() => Number) @IsNumber() @Min(0)
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
   unit_price?: number;
 
-  @IsOptional() @Type(() => Number) @IsNumber()
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
   quantity?: number;
 
-  @IsOptional() @Type(() => Number) @IsNumber() @Min(0)
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
   discount?: number;
 
-  @IsOptional() @Type(() => Number) @IsNumber() @Min(0)
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
   total?: number;
 
-  @IsOptional() @Type(() => Number) @IsNumber() @Min(0)
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
   total_price?: number;
 }
