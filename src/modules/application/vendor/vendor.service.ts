@@ -1,4 +1,10 @@
-import { BadRequestException, ConflictException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateVendorDto } from './dto/create-vendor.dto';
@@ -249,55 +255,76 @@ export class VendorService {
 
       // Prisma validation or query errors
       if (error instanceof Prisma.PrismaClientValidationError) {
-        throw new BadRequestException('Invalid data provided for vendor update');
+        throw new BadRequestException(
+          'Invalid data provided for vendor update',
+        );
       }
 
       // Catch-all fallback
-      throw new InternalServerErrorException(error.message || 'Something went wrong');
+      throw new InternalServerErrorException(
+        error.message || 'Something went wrong',
+      );
     }
   }
 
   // Delete a vendor by ID
-  async remove(id: string, owner_id: string, workspace_id: string) {
-    return this.prisma.vendor.delete({
-      where: { id, owner_id, workspace_id },
-    });
-  }
-
 
   async findByItemId(itemId: string) {
-  try {
-    const vendors = await this.prisma.vendor.findMany({
-      where: { item_id: itemId },
-      orderBy: { createdAt: 'desc' }, // optional
-    });
+    try {
+      const vendors = await this.prisma.vendor.findMany({
+        where: { item_id: itemId },
+        orderBy: { createdAt: 'desc' }, // optional
+      });
 
-    if (!vendors || vendors.length === 0) {
+      if (!vendors || vendors.length === 0) {
+        return {
+          success: false,
+          message: 'No vendors found for this item.',
+          data: [],
+        };
+      }
+
+      return {
+        success: true,
+        message: 'Vendors retrieved successfully!',
+        data: vendors,
+      };
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2023') {
+          // invalid ID format
+          return { success: false, message: 'Invalid item ID format.' };
+        }
+      }
+
       return {
         success: false,
-        message: 'No vendors found for this item.',
-        data: [],
+        message:
+          'Something went wrong while fetching vendors. Please try again.',
       };
     }
+  }
+
+  async remove(
+    id: string,
+    ownerId: string,
+    workspaceId: string,
+    userId: string,
+  ) {
+    const deleted = await this.prisma.vendor.deleteMany({
+      where: {
+        id,
+      },
+    });
+
+    console.log('Deleted vendor:', deleted);
 
     return {
       success: true,
-      message: 'Vendors retrieved successfully!',
-      data: vendors,
-    };
-  } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      if (error.code === 'P2023') {
-        // invalid ID format
-        return { success: false, message: 'Invalid item ID format.' };
-      }
-    }
-
-    return {
-      success: false,
-      message: 'Something went wrong while fetching vendors. Please try again.',
+      message: deleted.count
+        ? 'Vendor deleted successfully!'
+        : 'Vendor not found or not authorized to delete.',
+      data: deleted,
     };
   }
-}
-
 }

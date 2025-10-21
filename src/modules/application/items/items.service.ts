@@ -272,7 +272,7 @@ async findOne(id: string, workspace_id: string) {
 
   async remove(id: string, workspace_id: string) {
     const exists = await this.prisma.items.findFirst({
-      where: { id, workspace_id },
+      where: { id },
       select: { id: true },
     });
     if (!exists) throw new NotFoundException('Item not found');

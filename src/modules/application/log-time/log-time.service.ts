@@ -25,51 +25,63 @@ export class LogTimeService {
       },
     });
 
-    return{
+    return {
       success: true,
       message: 'LogTime created successfully',
       // data: logTime
-    }
+    };
   }
 
   // GET all logTime entries
-async findAll(
-  userId: string,
-  ownerId: string,
-  workspaceId: string,
-  itemId: string,
-) {
-  const logTime = await this.prisma.logTime.findMany({
-    where: {
-      deleted_at: null,
-      owner_id: ownerId || userId,
-      workspace_id: workspaceId,
-      item_id: itemId,
-    }
-  });
+  async findAll(
+    userId: string,
+    ownerId: string,
+    workspaceId: string,
+    itemId: string,
+  ) {
+    // console.log(
+    //   '🔍 Finding log times with parameters:',
+    //   { userId, ownerId, workspaceId, itemId },
+    // );
 
-  // If no logTimes are found, return a 'not found' error
-  if (logTime.length === 0) {
-    throw new NotFoundException('LogTime not found');
+    const logTimes = await this.prisma.logTime.findMany({
+      where: {
+        // If either owner_id or user_id can own the log, use an OR condition
+        OR: [{ owner_id: ownerId }, { user_id: userId }],
+        workspace_id: workspaceId,
+        item_id: itemId,
+        deleted_at: null, // ✅ Recommended for soft-deleted filtering
+      },
+    });
+
+    // console.log('✅ logTime entries found:', logTimes.length);
+
+    return {
+      success: true,
+      message: logTimes.length
+        ? 'LogTime found successfully'
+        : 'No logTime entries found',
+      data: logTimes.map((log) => ({
+        id: log.id || null,
+        description: log.description || null,
+        date: log.date || null,
+      })),
+    };
   }
 
-  // Returning the results
-  return {
-    success: true,
-    message: 'LogTime found successfully',
-    data: logTime.map((log) => ({
-      id: log.id || null,
-      description: log.description || null,
-      date: log.date || null,
-    })),
-  };
-}
-
-
   // DELETE a logTime entry
-  async delete(id: string, userId: string, ownerId: string, workspaceId: string) {
+  async delete(
+    id: string,
+    userId: string,
+    ownerId: string,
+    workspaceId: string,
+  ) {
     const logTime = await this.prisma.logTime.findUnique({
-      where: { id, owner_id: ownerId || userId, workspace_id: workspaceId },
+      where: {
+        id,
+        OR: [{ owner_id: ownerId }, { user_id: userId }],
+        workspace_id: workspaceId,
+      },
     });
 
     if (!logTime) {
