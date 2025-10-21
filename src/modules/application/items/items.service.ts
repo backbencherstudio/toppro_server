@@ -1,11 +1,10 @@
 // src/modules/items/items.service.ts
-import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { SojebStorage } from 'src/common/lib/Disk/SojebStorage';
+import appConfig from 'src/config/app.config';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateItemDto } from './dto/create-item.dto';
 import { UpdateItemDto } from './dto/update-item.dto';
-import appConfig from 'src/config/app.config';
-import { SojebStorage } from 'src/common/lib/Disk/SojebStorage';
-import { StringHelper } from 'src/common/helper/string.helper';
 
 function nullify(v?: string | null) {
   return v === undefined || v === null || v === '' || v === 'null' ? null : v;
@@ -168,34 +167,62 @@ async create(
   }
 
 async findOne(id: string, workspace_id: string) {
-  const item = await this.prisma.items.findFirst({
-    where: { id, workspace_id },
-    include: {
-      tax: { select: { name: true } },
-      unit: { select: { name: true } },
-      stock: { select: { quantity: true } },
-    },
-  });
+  try {
+    const item = await this.prisma.items.findFirst({
+      where: { id, workspace_id },
+      include: {
+        tax: { select: { name: true, id: true } },
+        unit: { select: { name: true, id: true } },
+        stock: { select: { quantity: true, id: true } },
+      },
+    });
 
-  if (!item) throw new NotFoundException('Item not found');
+    if (!item) {
+      throw new NotFoundException('Item not found');
+    }
 
-  return {
-    success: true,
-    message: 'Item found successfully!',
-    data: {
+    const responseData = {
       id: item.id,
       image: item.image,
       name: item.name,
       sku: item.sku,
       description: item.description,
-      quantity: item.stock?.length > 0 ? item.stock[0].quantity : 0, // Quantity from stock
-      tax_name: item.tax?.name || null, // Tax name
+      itemCategory_id: item.itemCategory_id || '',
+      quantity: item.stock?.length > 0 ? item.stock[0].quantity : 0,
+      tax_name: item.tax?.name || '',
+      tax_id: item.tax?.id || '',
+      vendor_id: item.vendor_id || '',
+      itemType_id: item.itemType_id || '',
       purchase_price: item.purchase_price,
-      unit_name: item.unit?.name || null, // Unit name
+      unit_name: item.unit?.name || '',
+      unit_id: item.unit?.id || '',
       sale_price: item.sale_price,
-    },
-  };
+    };
+
+    return {
+      success: true,
+      message: 'Item found successfully!',
+      data: responseData,
+    };
+  } catch (error) {
+    // Custom handling for specific Prisma or validation errors
+    console.error('❌ Error in findOne:', error);
+
+    if (error instanceof NotFoundException) {
+      throw error; // rethrow to be handled by global filter
+    }
+
+    // Prisma client errors can be wrapped here
+    if (error.code === 'P2023') {
+      // invalid ID format, for example
+      throw new BadRequestException('Invalid item ID format');
+    }
+
+    // fallback error response
+    throw new InternalServerErrorException('Something went wrong while fetching the item');
+  }
 }
+
 
   async update(dto: UpdateItemDto, workspace_id: string) {
     const { id, ...rest } = dto;
