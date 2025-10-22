@@ -18,21 +18,21 @@ export class TransferService {
     owner_id: string,
   ) {
     try {
-      // const transfer = await this.prisma.transfer.create({
-      //   data: {
-      //     ...dto,
-      //     user_id: user_id || owner_id,
-      //     workspace_id,
-      //     owner_id: owner_id || user_id,
-      //     date: new Date(),
-      //   },
-      // });
+      const transfer = await this.prisma.transfer.create({
+        data: {
+          ...dto,
+          user_id: user_id || owner_id,
+          workspace_id,
+          owner_id: owner_id || user_id,
+          date: new Date(),
+        },
+      });
 
-      // return {
-      //   success: true,
-      //   message: 'Transfer created successfully',
-      //   data: transfer,
-      // };
+      return {
+        success: true,
+        message: 'Transfer created successfully',
+        data: transfer,
+      };
     } catch (error) {
       throw new BadRequestException(error.message);
     }
@@ -76,16 +76,16 @@ export class TransferService {
     const transfer = await this.prisma.transfer.findUnique({ where: { id } });
     if (!transfer) throw new NotFoundException('Transfer not found');
 
-    // const updated = await this.prisma.transfer.update({
-    //   where: { id },
-    //   // data: { ...dto },
-    // });
+    const updated = await this.prisma.transfer.update({
+      where: { id },
+      data: { ...dto },
+    });
 
-    // return {
-    //   success: true,
-    //   message: 'Transfer updated successfully',
-    //   data: updated,
-    // };
+    return {
+      success: true,
+      message: 'Transfer updated successfully',
+      data: updated,
+    };
   }
 
   async remove(id: string) {

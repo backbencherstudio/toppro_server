@@ -1,21 +1,18 @@
-import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import { BankType } from '@prisma/client';
+import { IsString, IsNumber, IsOptional, IsEnum } from 'class-validator';
 
 export class CreateTransferDto {
-  @IsString()
-  @IsNotEmpty()
-  from_type: string;
+  @IsEnum(BankType)
+  from_type: BankType;
+
+  @IsEnum(BankType)
+  to_type: BankType;
 
   @IsString()
-  @IsNotEmpty()
-  to_type: string;
+  from_account: string; // BankAccount ID
 
   @IsString()
-  @IsNotEmpty()
-  from_account: string;
-
-  @IsString()
-  @IsNotEmpty()
-  to_account: string;
+  to_account: string; // BankAccount ID
 
   @IsNumber()
   amount: number;
@@ -27,10 +24,6 @@ export class CreateTransferDto {
   @IsOptional()
   @IsString()
   description?: string;
-
-  @IsOptional()
-  @IsString()
-  owner_id?: string;
 
   @IsOptional()
   @IsString()
