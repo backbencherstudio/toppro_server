@@ -46,7 +46,7 @@ export class ChartOfAccountService {
 
       return {
         success: true,
-        message: 'Account created successfully ✅',
+        message: 'Account created successfully',
         data: created,
       };
     } catch (error) {
@@ -63,83 +63,119 @@ export class ChartOfAccountService {
   /**
    *  Get all accounts
    */
-  async findAll() {
-    try {
-      
-      const accounts = await this.prisma.chartOfAccount.findMany({
-        orderBy: { code: 'asc' },
-        select: {
-          id: true,
-          code: true,
-          name: true,
-          account_category: true,
-          parent_account_name: true,
-          balance: true,
-          status: true,
-        },
-      });
+async findAll(workspace_id: string, user_id: string, owner_id: string) {
+  const charts = await this.prisma.chartOfAccount.findMany({
+    where: {
+      workspace_id,
+      OR: [{ owner_id }, { user_id }],
+    },
+  });
 
-      if (!accounts.length) {
-        return {
-          success: true,
-          message: 'No accounts found in the system.',
-          data: [],
-        };
-      }
+  return {
+    success: true,
+    message: 'Chart of accounts retrieved successfully',
+    data: charts.map((chart) => ({
+      id: chart.id,
+      code: chart.code,
+      name: chart.name,
+      description: chart.description,
+      account_category: chart.account_category,
+      parent_account_name: chart.parent_account_name,
+      child_account_type: chart.child_account_type,
+      balance: chart.balance,
+      status: chart.status,
+      createdAt: chart.createdAt,
+      updatedAt: chart.updatedAt,
+      deletedAt: chart.deletedAt,
+    })),
+  };
+}
+async findAllList(workspace_id: string, user_id: string, owner_id: string) {
+  const charts = await this.prisma.chartOfAccount.findMany({
+    where: {
+      workspace_id,
+      OR: [{ owner_id }, { user_id }],
+      status: 'ACTIVE',
+    },
+  });
 
-      return {
-        success: true,
-        message: 'Accounts retrieved successfully.',
-        data: accounts,
-      };
-    } catch (error) {
-      console.error('Fetch Accounts Error:', error);
-      throw new InternalServerErrorException({
-        success: false,
-        message: 'Failed to retrieve chart of accounts.',
-      });
-    }
-  }
+  return {
+    success: true,
+    message: 'Chart of accounts retrieved successfully',
+    data: charts.map((chart) => ({
+      id: chart.id,
+      code: chart.code,
+      name: chart.name,
+      balance: chart.balance,
+    })),
+  };
+}
 
 
   /**
    *  Get single account by ID
    */
-  async findOne(id: string) {
-    try {
-      if (!id) {
-        throw new BadRequestException({
-          success: false,
-          message: 'Account ID is required.',
-        });
-      }
-
-      const account = await this.prisma.chartOfAccount.findUnique({
-        where: { id },
-      });
-
-      if (!account) {
-        throw new NotFoundException({
-          success: false,
-          message: 'Account not found.',
-        });
-      }
-
-      return {
-        success: true,
-        message: 'Account found successfully.',
-        data: account,
-      };
-    } catch (error) {
-      console.error('Find One Account Error:', error);
-      if (error instanceof BadRequestException || error instanceof NotFoundException) throw error;
-
-      throw new InternalServerErrorException({
+async findOne(id: string) {
+  try {
+    // Validation
+    if (!id) {
+      throw new BadRequestException({
         success: false,
-        message: 'Something went wrong while fetching the account.',
+        message: 'Account ID is required.',
       });
     }
+
+    // Fetch single Chart of Account with optional related Bank Accounts
+    const account = await this.prisma.chartOfAccount.findUnique({
+      where: { id }
+    });
+
+    // Handle not found
+    if (!account) {
+      throw new NotFoundException({
+        success: false,
+        message: 'Account not found.',
+      });
+    }
+
+
+    // Response structure
+    return {
+      success: true,
+      message: 'Chart of account retrieved successfully',
+      data: {
+        id: account.id,
+        code: account.code,
+        name: account.name,
+        description: account.description,
+        account_category: account.account_category,
+        parent_account_name: account.parent_account_name,
+        child_account_type: account.child_account_type,
+        balance: account.balance,
+        status: account.status,
+        createdAt: account.createdAt,
+        updatedAt: account.updatedAt,
+          deletedAt: account.deletedAt,
+      },
+    };
+  } catch (error) {
+    console.error('Find One Account Error:', error);
+
+    if (
+      error instanceof BadRequestException ||
+      error instanceof NotFoundException
+    ) {
+      throw error;
+    }
+
+    throw new InternalServerErrorException({
+      success: false,
+      message: 'Something went wrong while fetching the account.',
+    });
   }
+}
+
+
 
   /**
    *  Update existing account

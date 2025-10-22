@@ -38,6 +38,7 @@ import { DashboardModule } from './crm/dashboard/dashboard.module';
 import { RevenueModule } from './accounting/income/revenue/revenue.module';
 import { CreditNotesModule } from './accounting/income/credit-notes/credit-notes.module';
 import { ChartOfAccountModule } from 'src/modules/application/accounting/chartofaccounts/chartofaccounts.module';
+import { TransferModule } from './accounting/transfer/transfer.module';
 @Module({
   imports: [
     NotificationModule,
@@ -79,6 +80,7 @@ import { ChartOfAccountModule } from 'src/modules/application/accounting/chartof
     DashboardModule,
     RevenueModule,
     CreditNotesModule,
+    TransferModule,
   ],
 })
 export class ApplicationModule { }

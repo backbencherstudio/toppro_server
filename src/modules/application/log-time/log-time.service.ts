@@ -39,22 +39,15 @@ export class LogTimeService {
     workspaceId: string,
     itemId: string,
   ) {
-    // console.log(
-    //   '🔍 Finding log times with parameters:',
-    //   { userId, ownerId, workspaceId, itemId },
-    // );
-
     const logTimes = await this.prisma.logTime.findMany({
       where: {
         // If either owner_id or user_id can own the log, use an OR condition
         OR: [{ owner_id: ownerId }, { user_id: userId }],
         workspace_id: workspaceId,
         item_id: itemId,
-        deleted_at: null, // ✅ Recommended for soft-deleted filtering
+        deleted_at: null,
       },
     });
-
-    // console.log('✅ logTime entries found:', logTimes.length);
 
     return {
       success: true,

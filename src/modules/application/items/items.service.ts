@@ -19,95 +19,115 @@ async create(
   user_id: string,
   owner_id: string,
   workspace_id: string,
-  file?: Express.Multer.File, // ✅ optional file from Multer
+  file?: Express.Multer.File, // optional file
 ) {
   try {
-    // ✅ Step 1: Clean DTO fields
-    const cleaned = {
-      ...dto,
-      tax_id: nullify(dto.tax_id),
-      itemCategory_id: nullify(dto.itemCategory_id),
-      unit_id: nullify(dto.unit_id),
-      vendor_id: nullify(dto.vendor_id),
-      itemType_id: nullify(dto.itemType_id),
-      invoice_id: nullify(dto.invoice_id),
+    // -------------------------------
+    // Step 0: Validate mandatory foreign keys
+    // -------------------------------
+    const user = await this.prisma.user.findUnique({ where: { id: user_id } });
+    if (!user) throw new BadRequestException(`User with ID ${user_id} does not exist`);
+
+    let workspace = null;
+    if (workspace_id) {
+      workspace = await this.prisma.workspace.findUnique({ where: { id: workspace_id } });
+      if (!workspace) throw new BadRequestException(`Workspace with ID ${workspace_id} does not exist`);
+    }
+
+    // Optional relations: validate or set null
+    const nullifyIfNotExist = async (model: any, id: string | undefined) => {
+      if (!id) return null;
+      const record = await model.findUnique({ where: { id } });
+      return record ? id : null;
     };
 
-    // ✅ Step 2: Handle file upload (if provided)
+    const validUnitId = await nullifyIfNotExist(this.prisma.unit, dto.unit_id);
+    const validTaxId = await nullifyIfNotExist(this.prisma.tax, dto.tax_id);
+    const validCategoryId = await nullifyIfNotExist(this.prisma.itemCategory, dto.itemCategory_id);
+    const validItemTypeId = await nullifyIfNotExist(this.prisma.itemType, dto.itemType_id);
+    const validInvoiceId = await nullifyIfNotExist(this.prisma.invoice, dto.invoice_id);
+
+    // -------------------------------
+    // Step 1: Clean DTO fields
+    // -------------------------------
+    const cleaned = {
+      ...dto,
+      user_id,
+      owner_id: owner_id || user_id,
+      workspace_id: workspace_id || null,
+      unit_id: validUnitId,
+      tax_id: validTaxId,
+      itemCategory_id: validCategoryId,
+      itemType_id: validItemTypeId,
+      invoice_id: validInvoiceId,
+    };
+
+    // -------------------------------
+    // Step 2: Handle file upload
+    // -------------------------------
     if (file) {
       try {
-        // generate a short unique filename without relying on StringHelper.randomString()
         const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 10)}_${file.originalname}`;
-
-        await SojebStorage.put(
-          appConfig().storageUrl.avatar + fileName, // or use `.item` folder if available
-          file.buffer,
-        );
-
-        cleaned.image = fileName; // Save filename to DB
+        await SojebStorage.put(appConfig().storageUrl.avatar + fileName, file.buffer);
+        cleaned.image = fileName;
       } catch (uploadError) {
         console.error('Item image upload error:', uploadError);
         throw new InternalServerErrorException('Failed to upload item image');
       }
     }
 
-    // ✅ Step 3: Create the Item
+    // -------------------------------
+    // Step 3: Create the Item
+    // -------------------------------
     const item = await this.prisma.items.create({
-      data: {
-        ...cleaned,
-        user_id,
-        owner_id: owner_id || user_id,
-        workspace_id,
-      },
+      data: cleaned,
     });
 
-    if (!item) throw new Error('Item creation failed');
+    if (!item) throw new InternalServerErrorException('Item creation failed');
 
-    // ✅ Step 4: Create the Stock for this item
+    // -------------------------------
+    // Step 4: Create Stock
+    // -------------------------------
     const stock = await this.prisma.stock.create({
       data: {
-        item_id: item.id, // Make sure your FK name matches schema
+        item_id: item.id,
         quantity: dto.quantity || 0,
         deleted_at: null,
         product_name: item.name || 'Unnamed Item',
         sku: item.sku || 'N/A',
         image: item.image,
-        owner_id: owner_id || user_id,
-        workspace_id,
-        user_id,
+        owner_id: item.owner_id,
+        workspace_id: item.workspace_id,
+        user_id: item.user_id,
       },
     });
 
-    if (!stock) throw new Error('Stock creation failed');
+    if (!stock) throw new InternalServerErrorException('Stock creation failed');
 
-    // ✅ Step 5: Build success response
+    // -------------------------------
+    // Step 5: Build response
+    // -------------------------------
     return {
       success: true,
       message: 'Item created successfully!',
       data: {
         ...item,
-        image_url: item.image
-        ? SojebStorage.url(appConfig().storageUrl.avatar + item.image)
-        : null,
+        image_url: item.image ? SojebStorage.url(appConfig().storageUrl.avatar + item.image) : null,
       },
       stock,
     };
   } catch (error) {
     console.error('Error creating item:', error);
 
-    // ✅ Step 6: Smart error handling
-    if (error instanceof InternalServerErrorException) {
-      return { success: false, message: error.message, code: 500 };
-    }
-
     return {
       success: false,
       message: error.message || 'An unexpected error occurred during item creation',
-      code: 500,
+      code: error instanceof BadRequestException ? 400 : 500,
       details: process.env.NODE_ENV === 'development' ? error : undefined,
     };
   }
 }
+
 
 
 
@@ -141,6 +161,43 @@ async create(
 
     const items = await this.prisma.items.findMany({
       where: whereCondition,
+      orderBy: { created_at: 'desc' },
+      include: {
+        tax: { select: { name: true } },
+        unit: { select: { name: true } },
+        itemType: { select: { name: true } },
+        stock: { select: { quantity: true } },
+      },
+    });
+
+    const formatted = items.map((item) => ({
+      id: item.id,
+      image: item.image,
+      name: item.name,
+      sku: item.sku,
+      sale_price: item.sale_price,
+      purchase_price: item.purchase_price,
+      tax_name: item.tax?.name || null,
+      unit_name: item.unit?.name || null,
+      quantity: item.stock.length > 0 ? item.stock[0].quantity : 0,
+      item_type: item.itemType?.name || null,
+    }));
+
+    return { success: true, message: 'All Items found successfully!', data: formatted };
+  }
+  async findAllItemType(
+    userId: string,
+    ownerId: string,
+    workspaceId: string,
+    itemTypeId: string | null,
+  ) {
+
+    const items = await this.prisma.items.findMany({
+      where: {
+        workspace_id: workspaceId,
+        owner_id: ownerId || userId,
+        itemType_id: itemTypeId,
+      },
       orderBy: { created_at: 'desc' },
       include: {
         tax: { select: { name: true } },

@@ -134,6 +134,7 @@ model User {
   CurrencySettings CurrencySettings[]
   Revenue          Revenue[]
   CreditNote       CreditNote[]
+  Transfer         Transfer[]
 
   @@map("users")
 }
@@ -184,6 +185,7 @@ model Workspace {
   CurrencySettings CurrencySettings[]
   Revenue          Revenue[]
   CreditNote       CreditNote[]
+  Transfer         Transfer[]
 
   @@map("workspaces")
 }
@@ -594,7 +596,7 @@ model BankAccount {
   holder_name     String?
   bank_name       String?
   account_number  String?
-  opening_balance Float?
+  opening_balance Float?   @default(0)
   contact_number  String?
   bank_branch     String?
   swift           String?
@@ -610,6 +612,8 @@ model BankAccount {
   workspace      Workspace?      @relation(fields: [workspace_id], references: [id])
   ChartOfAccount ChartOfAccount? @relation(fields: [chart_of_account_id], references: [id])
   Revenue        Revenue[]
+  transfersFrom  Transfer[]      @relation("FromAccount")
+  transfersTo    Transfer[]      @relation("ToAccount")
 
   @@map("bank_accounts")
 }
@@ -651,7 +655,7 @@ model ChartOfAccount {
   account_category    ParentAccountType
   parent_account_name String?
   child_account_type  ChildAccountType?
-  balance             Decimal?          @default(0.0)
+  balance             Float?            @default(0)
   status              String?           @default("ACTIVE")
 
   user_id      String?
@@ -668,6 +672,35 @@ model ChartOfAccount {
   bank_account BankAccount[]
 
   @@map("chart_of_accounts")
+}
+
+model Transfer {
+  id           String   @id @default(cuid())
+  from_type    BankType
+  to_type      BankType
+  from_account String
+  to_account   String
+  amount       Float
+  date         DateTime @default(now())
+  reference    String?
+  description  String?
+
+  // Common fields
+  owner_id     String?
+  workspace_id String?
+  user_id      String?
+
+  // Relations
+  user      User?       @relation(fields: [user_id], references: [id])
+  workspace Workspace?  @relation(fields: [workspace_id], references: [id])
+  fromBank  BankAccount @relation("FromAccount", fields: [from_account], references: [id])
+  toBank    BankAccount @relation("ToAccount", fields: [to_account], references: [id])
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@map("transfers")
 }
 
 model Bill {
@@ -1587,14 +1620,14 @@ model Customer {
 }
 
 model Vendor {
-  id        String   @id @default(cuid())
-  name      String   @db.VarChar(255)
-  contact   String   @db.VarChar(255)
-  balance   Float?   @default(0)
-  
+  id      String @id @default(cuid())
+  name    String @db.VarChar(255)
+  contact String @db.VarChar(255)
+  balance Float? @default(0)
+
   vendor_no String?  @db.VarChar(255)
   email     String   @unique @db.VarChar(255)
-  password  String?   @db.VarChar(255)
+  password  String?  @db.VarChar(255)
   taxNumber String?  @unique @db.VarChar(255)
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt

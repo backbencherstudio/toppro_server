@@ -14,12 +14,19 @@ export class ChartOfAccountController {
     const { workspace_id: workspaceId, id: userId, owner_id: ownerId } = req.user;
     return this.chartService.create(dto, workspaceId, userId, ownerId);
   }
-
   @Get()
-  findAll() {
-    return this.chartService.findAll();
+  findAll(@Req() req) {
+    const { workspace_id: workspaceId, id: userId, owner_id: ownerId } = req.user;
+    return this.chartService.findAll(workspaceId, userId, ownerId);
   }
 
+  @Get("list")
+  findAllList(@Req() req) {
+    const { workspace_id: workspaceId, id: userId, owner_id: ownerId } = req.user;
+    return this.chartService.findAllList(workspaceId, userId, ownerId);
+  }
+
+  
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.chartService.findOne(id);
