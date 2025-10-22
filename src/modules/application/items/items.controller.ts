@@ -63,6 +63,26 @@ export class ItemsController {
     );
   }
 
+
+  @Get('all/:itemType_id')
+  async getAllItemType(
+    @Req() req: any,
+    @Param('itemType_id') itemTypeId: string,
+  ) {
+    const {
+      id: userId,
+      owner_id: ownerId,
+      workspace_id: workspaceId,
+    } = req.user;
+
+    return this.itemsService.findAllItemType(
+      userId,
+      ownerId,
+      workspaceId,
+      itemTypeId,
+    );
+  }
+
   @Patch(':id')
   async update(
     @Param('id') id: string,
