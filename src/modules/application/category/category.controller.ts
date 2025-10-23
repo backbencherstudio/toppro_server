@@ -3,6 +3,8 @@ import {
   Controller,
   Delete,
   Get,
+  HttpException,
+  HttpStatus,
   Param,
   Patch,
   Post,
@@ -414,19 +416,34 @@ export class CategoryController {
     );
   }
 
-  @Get('account-types')
-  findAllAccountTypes(@Req() req) {
+@Get('account-types')
+async findAllAccountTypes(@Req() req) {
+  try {
     const {
       owner_id: ownerId,
       workspace_id: workspaceId,
       id: userId,
     } = req.user;
-    return this.categoryService.findAllAccountTypes(
+
+    const result = await this.categoryService.findAllAccountTypes(
       ownerId,
       workspaceId,
       userId,
     );
+
+    return result;
+  } catch (error) {
+    console.error('Error fetching account types:', error);
+    throw new HttpException(
+      {
+        success: false,
+        message: error.message || 'Failed to fetch account types.',
+      },
+      error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+    );
   }
+}
+
 
   @Patch('account-types/:id')
   updateAccountType(

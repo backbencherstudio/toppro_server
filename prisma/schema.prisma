@@ -703,6 +703,89 @@ model Transfer {
   @@map("transfers")
 }
 
+// ###############################################################################################################################
+//    ############################# Currency Settings ##End## ######################################################################
+// ###############################################################################################################################
+
+// ###############################################################################################################################
+//    ############################# Revenue ##Start## ##############################################################################
+// ###############################################################################################################################
+
+model Revenue {
+  id         String    @id @default(cuid())
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+  deleted_at DateTime?
+
+  date        DateTime
+  amount      Float?
+  reference   String?
+  description String?
+  files       String? // Can store file paths or JSON string
+
+  // Foreign Keys
+  bank_account_id     String? // BankAccount id
+  customer_id         String? // Customer id
+  invoice_category_id String? // InvoiceCategory id
+
+  user_id      String?
+  workspace_id String?
+  owner_id     String?
+
+  // Relations
+  bank_account     BankAccount?     @relation(fields: [bank_account_id], references: [id], onDelete: Cascade)
+  customer_data    Customer?        @relation(fields: [customer_id], references: [id], onDelete: Cascade)
+  invoice_category InvoiceCategory? @relation(fields: [invoice_category_id], references: [id], onDelete: Cascade)
+  user             User?            @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  workspace        Workspace?       @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+
+  @@map("revenues")
+}
+
+// ###############################################################################################################################
+//    ############################# Revenue ##End## ################################################################################
+// ###############################################################################################################################
+
+// ###############################################################################################################################
+//    ############################# Credit Note ##Start## #########################################################################
+// ###############################################################################################################################
+
+enum CreditNoteStatus {
+  PENDING
+  PARTIAL_USED
+  FULLY_USED
+}
+
+model CreditNote {
+  id         String    @id @default(cuid())
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+  deleted_at DateTime?
+
+  invoice_id  String?          @unique
+  amount      Float?
+  date        DateTime?
+  status      CreditNoteStatus @default(PENDING)
+  description String?
+  customer_id String?
+
+  user_id      String?
+  workspace_id String?
+  owner_id     String?
+
+  // Relations
+  invoice   Invoice?   @relation(fields: [invoice_id], references: [id], onDelete: Cascade)
+  user      User?      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  workspace Workspace? @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  customer  Customer?  @relation(fields: [customer_id], references: [id], onDelete: Cascade)
+
+  @@map("credit_notes")
+}
+
+// ###############################################################################################################################
+//    ############################# Credit Note ##End## ###########################################################################
+// ###############################################################################################################################
+
 model Bill {
   id             String    @id @default(cuid())
   created_at     DateTime  @default(now())
@@ -1617,6 +1700,7 @@ model Customer {
   item         Items[]
   invoice_item InvoiceItem[]
   Revenue      Revenue[]
+  CreditNote   CreditNote[]
 }
 
 model Vendor {
@@ -2386,84 +2470,3 @@ model CurrencySettings {
 
   @@map("currency_settings")
 }
-
-// ###############################################################################################################################
-//    ############################# Currency Settings ##End## ######################################################################
-// ###############################################################################################################################
-
-// ###############################################################################################################################
-//    ############################# Revenue ##Start## ##############################################################################
-// ###############################################################################################################################
-
-model Revenue {
-  id         String    @id @default(cuid())
-  created_at DateTime  @default(now())
-  updated_at DateTime  @updatedAt
-  deleted_at DateTime?
-
-  date        DateTime
-  amount      Float?
-  reference   String?
-  description String?
-  files       String? // Can store file paths or JSON string
-
-  // Foreign Keys
-  account  String? // BankAccount id
-  customer String? // Customer id
-  category String? // InvoiceCategory id
-
-  user_id      String?
-  workspace_id String?
-  owner_id     String?
-
-  // Relations
-  bank_account     BankAccount?     @relation(fields: [account], references: [id], onDelete: Cascade)
-  customer_data    Customer?        @relation(fields: [customer], references: [id], onDelete: Cascade)
-  invoice_category InvoiceCategory? @relation(fields: [category], references: [id], onDelete: Cascade)
-  user             User?            @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  workspace        Workspace?       @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
-
-  @@map("revenues")
-}
-
-// ###############################################################################################################################
-//    ############################# Revenue ##End## ################################################################################
-// ###############################################################################################################################
-
-// ###############################################################################################################################
-//    ############################# Credit Note ##Start## #########################################################################
-// ###############################################################################################################################
-
-enum CreditNoteStatus {
-  PENDING
-  PARTIAL_USED
-  FULLY_USED
-}
-
-model CreditNote {
-  id         String    @id @default(cuid())
-  created_at DateTime  @default(now())
-  updated_at DateTime  @updatedAt
-  deleted_at DateTime?
-
-  invoice_id  String?          @unique
-  amount      Float?
-  date        DateTime?
-  status      CreditNoteStatus @default(PENDING)
-  description String?
-
-  user_id      String?
-  workspace_id String?
-  owner_id     String?
-
-  // Relations
-  invoice   Invoice?   @relation(fields: [invoice_id], references: [id], onDelete: Cascade)
-  user      User?      @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  workspace Workspace? @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
-
-  @@map("credit_notes")
-}
-
-// ###############################################################################################################################
-//    ############################# Credit Note ##End## ###########################################################################
-// ###############################################################################################################################

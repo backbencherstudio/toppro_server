@@ -10,15 +10,15 @@ export class CreateRevenueDto {
 
     @IsOptional()
     @IsString()
-    account?: string; // BankAccount id
+    bank_account_id?: string;
 
     @IsOptional()
     @IsString()
-    customer?: string; // Customer id
+    customer_id?: string;
 
     @IsOptional()
     @IsString()
-    category?: string; // InvoiceCategory id
+    invoice_category_id?: string;
 
     @IsOptional()
     @IsString()
