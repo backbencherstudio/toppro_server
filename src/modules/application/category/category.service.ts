@@ -2,9 +2,13 @@
 import {
   BadRequestException,
   ConflictException,
+  HttpException,
+  HttpStatus,
   Injectable,
   InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { CreateCategoryDto } from 'src/modules/application/category/dto/create-category.dto';
 import { UpdateCategoryDto } from 'src/modules/application/category/dto/update-category.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -617,12 +621,48 @@ export class CategoryService {
     return { success: true, data };
   }
 
-  async findAllItemTypes(ownerId: string, workspaceId: string, userId: string) {
+async findAllItemTypes(ownerId: string, workspaceId: string, userId: string) {
+  try {
     const data = await this.prisma.itemType.findMany({
-      where: { owner_id: ownerId || userId, workspace_id: workspaceId },
+      where: {
+        owner_id: ownerId || userId,
+        workspace_id: workspaceId,
+      },
     });
-    return { success: true, data };
+
+    if (!data || data.length === 0) {
+      throw new NotFoundException('No item types found');
+    }
+
+    return {
+      success: true,
+      message: 'Item types fetched successfully',
+      data,
+    };
+  } catch (error) {
+    // Known not-found or bad request
+    if (error instanceof NotFoundException || error instanceof BadRequestException) {
+      throw error;
+    }
+
+    // Prisma-specific error
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      throw new BadRequestException({
+        message: 'Database error occurred while fetching item types',
+        code: error.code,
+        meta: error.meta,
+      });
+    }
+
+    // Unknown/unexpected error
+    console.error('findAllItemTypes Error:', error);
+    throw new InternalServerErrorException({
+      message: 'Something went wrong while fetching item types',
+      error: error.message,
+    });
   }
+}
+
 
 async updateItemType(
   id: string,
@@ -713,16 +753,45 @@ async updateItemType(
     return { success: true, data };
   }
 
-  async findAllAccountTypes(
-    ownerId: string,
-    workspaceId: string,
-    userId: string,
-  ) {
+async findAllAccountTypes(
+  ownerId: string,
+  workspaceId: string,
+  userId: string,
+) {
+  try {
     const data = await this.prisma.accountType.findMany({
-      where: { owner_id: ownerId || userId, workspace_id: workspaceId },
+      where: {
+        owner_id: ownerId || userId,
+        workspace_id: workspaceId,
+      },
     });
-    return { success: true, data };
+
+    if (!data || data.length === 0) {
+      return {
+        success: false,
+        message: 'No account types found for this workspace.',
+        data: [],
+      };
+    }
+
+    return {
+      success: true,
+      message: 'Account types retrieved successfully.',
+      data,
+    };
+  } catch (error) {
+    console.error('Prisma error (findAllAccountTypes):', error);
+    throw new HttpException(
+      {
+        success: false,
+        message: 'Database query failed while fetching account types.',
+        error: error.message,
+      },
+      HttpStatus.INTERNAL_SERVER_ERROR,
+    );
   }
+}
+
 
   async updateAccountType(
     id: string,

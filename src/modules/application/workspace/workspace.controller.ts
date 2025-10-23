@@ -33,6 +33,12 @@ export class WorkspaceController {
     return this.workspaceService.findAll(ownerId, userId);
   }
 
+  @Get('all/workspaces/:ownerId')
+  findAllWorkspaces(@Param('ownerId') ownerId: string, @Req() req) {
+    const { id: userId } = req.user;
+    return this.workspaceService.findAllWorkspaces(ownerId, userId);
+  }
+
   // count workspaces
   @Get('count')
   async getWorkspaceCount(@Req() req) {
