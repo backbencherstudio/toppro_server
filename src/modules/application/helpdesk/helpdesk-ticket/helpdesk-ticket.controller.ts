@@ -5,6 +5,9 @@ import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 import { CreateTicketDto } from './dto/create-helpdesk-ticket.dto';
 import { UpdateHelpdeskTicketDto } from './dto/update-helpdesk-ticket.dto';
 import { UserType } from '@prisma/client';
+import { RolesGuard } from 'src/common/guard/role/roles.guard';
+import { Roles } from 'src/common/guard/role/roles.decorator';
+import { AdminGuard } from 'src/modules/auth/guards/admin.guard';
 
 @Controller('helpdesk-ticket')
 export class HelpDeskTicketController {
@@ -74,5 +77,5 @@ export class HelpDeskTicketController {
     return this.helpDeskTicketService.deleteHelpDeskTicket(req, userType as UserType, id);
   }
 
-  
+
 }
