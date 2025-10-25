@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { handlePrismaError } from 'src/common/utils/prisma-error-handler';
 import { UpdateInvoiceDto } from 'src/modules/application/invoice/dto/update-invoice.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateInvoiceDto } from './dto/create-invoice.dto';
@@ -281,70 +282,75 @@ export class InvoiceService {
     page: number = 1,
     limit: number = 10,
   ) {
-    // Build the filters
-    const filters: any = {
-      owner_id: ownerId || userId,
-      workspace_id: workspaceId,
-      deleted_at: null,
-    };
+    try {
+      // Build the filters
+      const filters: any = {
+        owner_id: ownerId || userId,
+        workspace_id: workspaceId,
+        deleted_at: null,
+      };
 
-    if (issueDate) {
-      filters.issueAt = new Date(issueDate);
-    }
+      if (issueDate) {
+        filters.issueAt = new Date(issueDate);
+      }
 
-    if (customer) {
-      filters.customer_id = customer;
-    }
+      if (customer) {
+        filters.customer_id = customer;
+      }
 
-    if (status) {
-      filters.status = status;
-    }
+      if (status) {
+        filters.status = status;
+      }
 
-    if (accountType) {
-      filters.account_type_id = accountType;
-    }
+      if (accountType) {
+        filters.account_type_id = accountType;
+      }
 
-    // Fetch invoices with pagination and filters
-    const invoices = await this.prisma.invoice.findMany({
-      where: filters,
-      include: {
-        Account_type: {
-          select: { name: true },
+      // Fetch invoices with pagination and filters
+      const invoices = await this.prisma.invoice.findMany({
+        where: filters,
+        include: {
+          Account_type: {
+            select: { name: true },
+          },
         },
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-      skip: (page - 1) * limit,
-      take: limit,
-    });
+        orderBy: {
+          createdAt: 'desc',
+        },
+        skip: (page - 1) * limit,
+        take: limit,
+      });
 
-    // Count total records for pagination
-    const totalRecords = await this.prisma.invoice.count({
-      where: filters,
-    });
+      // Count total records for pagination
+      const totalRecords = await this.prisma.invoice.count({
+        where: filters,
+      });
 
-    const formatted = invoices.map((invoice) => ({
-      invoice_number: invoice.invoice_number,
-      issueAt: invoice.issueAt,
-      dueAt: invoice.dueAt,
-      account_type: invoice.Account_type ? invoice.Account_type.name : null,
-      totalPrice: invoice.totalPrice,
-      paid: invoice.paid,
-      due: invoice.due,
-      status: invoice.status,
-    }));
+      const formatted = invoices.map((invoice) => ({
+        id: invoice.id,
+        invoice_number: invoice.invoice_number,
+        issueAt: invoice.issueAt,
+        dueAt: invoice.dueAt,
+        account_type: invoice.Account_type ? invoice.Account_type.name : null,
+        totalPrice: invoice.totalPrice,
+        paid: invoice.paid,
+        due: invoice.due,
+        status: invoice.status,
+      }));
 
-    return {
-      success: true,
-      message: 'Invoices fetched successfully',
-      data: formatted,
-      pagination: {
-        currentPage: page,
-        totalPages: Math.ceil(totalRecords / limit),
-        totalRecords,
-      },
-    };
+      return {
+        success: true,
+        message: 'Invoices fetched successfully',
+        data: formatted,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(totalRecords / limit),
+          totalRecords,
+        },
+      };
+    } catch (error) {
+      return handlePrismaError(error);
+    }
   }
 
   // ------- FIND ONE -------
@@ -425,6 +431,7 @@ export class InvoiceService {
       grandTotal += total;
 
       items.push({
+        id: item.id,
         no: index + 1,
         itemType: item.ItemType?.name ?? null,
         item: item.name,
@@ -438,6 +445,7 @@ export class InvoiceService {
     }
 
     return {
+      id: invoice.id,
       invoice_number: invoice.invoice_number,
       issueAt: invoice.issueAt,
       dueAt: invoice.dueAt,
@@ -800,5 +808,24 @@ export class InvoiceService {
           'Invoice and associated items have been soft deleted and stock updated.',
       };
     });
+  }
+
+  async hardDelete(id: string) {
+    try {
+      // Permanently delete the invoice
+      const deleted = await this.prisma.invoice.delete({
+        where: {
+          id,
+        },
+      });
+
+      return {
+        success: true,
+        message: 'Invoice permanently deleted',
+        data: deleted,
+      };
+    } catch (error) {
+      return handlePrismaError(error);
+    }
   }
 }

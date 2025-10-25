@@ -14,8 +14,8 @@ import { CreateCreditNoteDto } from './dto/create-credit-note.dto';
 import { UpdateCreditNoteDto } from './dto/update-credit-note.dto';
 import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 
-@UseGuards(JwtAuthGuard)
 @Controller('credit-notes')
+@UseGuards(JwtAuthGuard)
 export class CreditNotesController {
   constructor(private readonly creditNotesService: CreditNotesService) { }
 
