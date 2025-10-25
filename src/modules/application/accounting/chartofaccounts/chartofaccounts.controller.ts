@@ -1,34 +1,44 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
-import { ChartofaccountsService } from './chartofaccounts.service';
-import { CreateChartofaccountDto } from './dto/create-chartofaccount.dto';
-import { UpdateChartofaccountDto } from './dto/update-chartofaccount.dto';
+import { Controller, Get, Post, Body, Param, Delete, Patch, UseGuards, Req } from '@nestjs/common';
+import { ChartOfAccountService } from 'src/modules/application/accounting/chartofaccounts/chartofaccounts.service';
+import { CreateChartOfAccountDto } from 'src/modules/application/accounting/chartofaccounts/dto/create-chartofaccount.dto';
+import { UpdateChartOfAccountDto } from 'src/modules/application/accounting/chartofaccounts/dto/update-chartofaccount.dto';
+import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 
-@Controller('chartofaccounts')
-export class ChartofaccountsController {
-  constructor(private readonly chartofaccountsService: ChartofaccountsService) {}
+@Controller('chart-of-account')
+@UseGuards(JwtAuthGuard)
+export class ChartOfAccountController {
+  constructor(private readonly chartService: ChartOfAccountService) {}
 
   @Post()
-  create(@Body() createChartofaccountDto: CreateChartofaccountDto) {
-    return this.chartofaccountsService.create(createChartofaccountDto);
+  create(@Body() dto: CreateChartOfAccountDto, @Req() req) {
+    const { workspace_id: workspaceId, id: userId, owner_id: ownerId } = req.user;
+    return this.chartService.create(dto, workspaceId, userId, ownerId);
   }
-
   @Get()
-  findAll() {
-    return this.chartofaccountsService.findAll();
+  findAll(@Req() req) {
+    const { workspace_id: workspaceId, id: userId, owner_id: ownerId } = req.user;
+    return this.chartService.findAll(workspaceId, userId, ownerId);
   }
 
+  @Get("list")
+  findAllList(@Req() req) {
+    const { workspace_id: workspaceId, id: userId, owner_id: ownerId } = req.user;
+    return this.chartService.findAllList(workspaceId, userId, ownerId);
+  }
+
+  
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.chartofaccountsService.findOne(+id);
+    return this.chartService.findOne(id);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateChartofaccountDto: UpdateChartofaccountDto) {
-    return this.chartofaccountsService.update(+id, updateChartofaccountDto);
+  update(@Param('id') id: string, @Body() dto: UpdateChartOfAccountDto) {
+    return this.chartService.update(id, dto);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.chartofaccountsService.remove(+id);
+    return this.chartService.remove(id);
   }
 }

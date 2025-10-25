@@ -1,12 +1,14 @@
 import {
-  Injectable,
-  NotFoundException,
   BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+import { SojebStorage } from 'src/common/lib/Disk/SojebStorage';
+import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateRevenueDto } from './dto/create-revenue.dto';
 import { UpdateRevenueDto } from './dto/update-revenue.dto';
-import { PrismaService } from 'src/prisma/prisma.service';
-import { SojebStorage } from 'src/common/lib/Disk/SojebStorage';
 
 @Injectable()
 export class RevenueService {
@@ -15,271 +17,285 @@ export class RevenueService {
   /**
    * Create a new revenue record with optional file upload
    */
-  async create(
-    dto: CreateRevenueDto,
-    ownerId: string,
-    workspaceId: string,
-    userId: string,
-    file?: Express.Multer.File,
-  ) {
-    try {
-      // Validate related entities if provided
-      if (dto.account) {
-        const bankAccount = await this.prisma.bankAccount.findUnique({
-          where: { id: dto.account },
+async create(
+  dto: CreateRevenueDto,
+  ownerId: string,
+  workspaceId: string,
+  userId: string,
+  file?: Express.Multer.File,
+) {
+  try {
+    // Validate related entities
+    if (dto.bank_account_id) {
+      const bankAccount = await this.prisma.bankAccount.findUnique({
+        where: { id: dto.bank_account_id },
+      });
+      if (!bankAccount) {
+        throw new BadRequestException({
+          field: 'bank_account_id',
+          message: 'Bank account not found',
         });
-        if (!bankAccount) {
-          throw new NotFoundException('Bank account not found');
-        }
       }
+    }
 
-      if (dto.customer) {
-        const customer = await this.prisma.customer.findUnique({
-          where: { id: dto.customer },
+    if (dto.customer_id) {
+      const customer = await this.prisma.customer.findUnique({
+        where: { id: dto.customer_id },
+      });
+      if (!customer) {
+        throw new BadRequestException({
+          field: 'customer_id',
+          message: 'Customer not found',
         });
-        if (!customer) {
-          throw new NotFoundException('Customer not found');
-        }
       }
+    }
 
-      if (dto.category) {
-        const category = await this.prisma.invoiceCategory.findUnique({
-          where: { id: dto.category },
+    if (dto.invoice_category_id) {
+      const category = await this.prisma.invoiceCategory.findUnique({
+        where: { id: dto.invoice_category_id },
+      });
+      if (!category) {
+        throw new BadRequestException({
+          field: 'invoice_category_id',
+          message: 'Invoice category not found',
         });
-        if (!category) {
-          throw new NotFoundException('Invoice category not found');
-        }
       }
+    }
 
-      // Handle file upload if provided
-      let fileUrl: string | null = null;
-      if (file) {
-        const fileName = `${userId}-${Date.now()}-${file.originalname}`;
-        await SojebStorage.put(`revenues/${fileName}`, file.buffer);
-        fileUrl = `revenues/${fileName}`;
-      }
+    //  Handle file upload
+    let fileUrl: string | null = null;
+    if (file) {
+      const fileName = `${userId}-${Date.now()}-${file.originalname}`;
+      await SojebStorage.put(`revenues/${fileName}`, file.buffer);
+      fileUrl = `revenues/${fileName}`;
+    }
 
-      // Create the revenue record and update bank account balance in a transaction
-      const revenue = await this.prisma.$transaction(async (tx) => {
-        // Create revenue
-        const newRevenue = await tx.revenue.create({
-          data: {
-            date: new Date(dto.date),
-            amount: dto.amount,
-            account: dto.account,
-            customer: dto.customer,
-            category: dto.category,
-            reference: dto.reference,
-            description: dto.description,
-            files: fileUrl || dto.files,
-            owner_id: ownerId || userId,
-            workspace_id: workspaceId,
-            user_id: userId,
-          },
-          include: {
-            bank_account: true,
-            customer_data: true,
-            invoice_category: true,
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-              },
-            },
-          },
-        });
-
-        // Update bank account balance if account is provided and amount exists
-        if (dto.account && dto.amount) {
-          await tx.bankAccount.update({
-            where: { id: dto.account },
-            data: {
-              opening_balance: {
-                increment: dto.amount,
-              },
-            },
-          });
+    //  Create revenue in transaction
+    const revenue = await this.prisma.$transaction(async (tx) => {
+      const newRevenue = await tx.revenue.create({
+        data: {
+          date: new Date(dto.date),
+          amount: dto.amount,
+          bank_account_id: dto.bank_account_id,
+          customer_id: dto.customer_id,
+          invoice_category_id: dto.invoice_category_id,
+          reference: dto.reference,
+          description: dto.description,
+          files: fileUrl || dto.files,
+          owner_id: ownerId || userId,
+          workspace_id: workspaceId,
+          user_id: userId,
         }
-
-        return newRevenue;
       });
 
-      return {
-        success: true,
-        message: 'Revenue created successfully',
-        data: revenue,
-        uploadedFile: fileUrl || undefined,
-      };
-    } catch (error) {
+      // Update bank balance
+      if (dto.bank_account_id && dto.amount) {
+        await tx.bankAccount.update({
+          where: { id: dto.bank_account_id },
+          data: {
+            opening_balance: { increment: dto.amount },
+          },
+        });
+      }
+
+      return newRevenue;
+    });
+
+    // ✅ Final return
+    return {
+      success: true,
+      message: 'Revenue created successfully',
+      data: revenue,
+    };
+  } catch (error) {
+    // 🔹 Error handling
+    if (error instanceof BadRequestException || error instanceof NotFoundException) {
       throw error;
     }
+
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      throw new BadRequestException({
+        message: 'Database constraint error',
+        code: error.code,
+        meta: error.meta,
+      });
+    }
+
+    console.error('Revenue Create Error:', error);
+
+    throw new InternalServerErrorException({
+      message: 'Something went wrong while creating revenue',
+      error: error.message,
+    });
   }
+}
+
+
 
   /**
    * Get all revenue records with filtering and pagination
    */
-  async findAll(
-    ownerId: string,
-    workspaceId: string,
-    userId: string,
-    query: {
-      page?: number;
-      limit?: number;
-      customer?: string;
-      account?: string;
-      category?: string;
-      dateFrom?: string;
-      dateTo?: string;
-      search?: string;
-    },
-  ) {
-    try {
-      const page = query.page ? parseInt(query.page.toString()) : 1;
-      const limit = query.limit ? parseInt(query.limit.toString()) : 10;
-      const skip = (page - 1) * limit;
+ async findAll(
+  ownerId: string,
+  workspaceId: string,
+  userId: string,
+  query: {
+    page?: number;
+    limit?: number;
+    customer?: string;
+    account?: string;
+    category?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    search?: string;
+  },
+) {
+  try {
+    const page = query.page ? parseInt(query.page.toString()) : 1;
+    const limit = query.limit ? parseInt(query.limit.toString()) : 10;
+    const skip = (page - 1) * limit;
 
-      // Build filter conditions - Use userId as fallback if ownerId is null
-      const where: any = {
-        owner_id: ownerId || userId,
-        user_id: userId || ownerId,
-        workspace_id: workspaceId,
-        deleted_at: null,
-      };
+    // 🔹 Filter conditions
+    const where: any = {
+      owner_id: ownerId || userId,
+      user_id: userId || ownerId,
+      workspace_id: workspaceId,
+      deleted_at: null,
+    };
 
-      if (query.customer) {
-        where.customer = query.customer;
-      }
+    if (query.customer) where.customer_id = query.customer;
+    if (query.account) where.bank_account_id = query.account;
+    if (query.category) where.invoice_category_id = query.category;
 
-      if (query.account) {
-        where.account = query.account;
-      }
-
-      if (query.category) {
-        where.category = query.category;
-      }
-
-      if (query.dateFrom || query.dateTo) {
-        where.date = {};
-        if (query.dateFrom) {
-          where.date.gte = new Date(query.dateFrom);
-        }
-        if (query.dateTo) {
-          where.date.lte = new Date(query.dateTo);
-        }
-      }
-
-      if (query.search) {
-        where.OR = [
-          { reference: { contains: query.search, mode: 'insensitive' } },
-          { description: { contains: query.search, mode: 'insensitive' } },
-          {
-            bank_account: {
-              bank_name: { contains: query.search, mode: 'insensitive' },
-            },
-          },
-          {
-            customer_data: {
-              name: { contains: query.search, mode: 'insensitive' },
-            },
-          },
-          {
-            invoice_category: {
-              name: { contains: query.search, mode: 'insensitive' },
-            },
-          },
-        ];
-      }
-
-      // Get total count
-      const total = await this.prisma.revenue.count({ where });
-
-      // Get revenues with relations
-      const revenues = await this.prisma.revenue.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: {
-          created_at: 'desc',
-        },
-        include: {
-          bank_account: {
-            select: {
-              id: true,
-              bank_name: true,
-            },
-          },
-          customer_data: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
-          invoice_category: {
-            select: {
-              id: true,
-              name: true,
-
-            },
-          },
-        },
-      });
-
-      return {
-        success: true,
-        message: 'Revenues fetched successfully',
-        data: revenues,
-        meta: {
-          total,
-          page,
-          limit,
-          totalPages: Math.ceil(total / limit),
-        },
-      };
-    } catch (error) {
-      throw error;
+    if (query.dateFrom || query.dateTo) {
+      where.date = {};
+      if (query.dateFrom) where.date.gte = new Date(query.dateFrom);
+      if (query.dateTo) where.date.lte = new Date(query.dateTo);
     }
+
+    if (query.search) {
+      where.OR = [
+        { reference: { contains: query.search, mode: 'insensitive' } },
+        { description: { contains: query.search, mode: 'insensitive' } },
+        {
+          bank_account: {
+            bank_name: { contains: query.search, mode: 'insensitive' },
+          },
+        },
+        {
+          customer_data: {
+            name: { contains: query.search, mode: 'insensitive' },
+          },
+        },
+        {
+          invoice_category: {
+            name: { contains: query.search, mode: 'insensitive' },
+          },
+        },
+      ];
+    }
+
+    // 🔹 Count total
+    const total = await this.prisma.revenue.count({ where });
+
+    // 🔹 Fetch paginated results
+    const revenues = await this.prisma.revenue.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy: { created_at: 'desc' },
+      include: {
+        bank_account: { select: { id: true, bank_name: true } },
+        customer_data: { select: { id: true, name: true } },
+        invoice_category: { select: { id: true, name: true } },
+      },
+    });
+
+    // 🔹 Format data
+    const formattedData = revenues.map((item) => ({
+      id: item.id,
+      date: item.date,
+      amount: Number(item.amount),
+      bank_account_id: item.bank_account_id,
+      customer_id: item.customer_id,
+      invoice_category_id: item.invoice_category_id,
+      reference: item.reference,
+      description: item.description,
+      files: item.files,
+    }));
+
+    // ✅ Return response
+    return {
+      success: true,
+      message: 'Revenues fetched successfully',
+      data: formattedData,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  } catch (error) {
+    console.error('FindAll Revenue Error:', error);
+    throw new InternalServerErrorException({
+      message: 'Something went wrong while fetching revenues',
+      error: error.message,
+    });
   }
+}
+
 
   /**
    * Get a single revenue by ID
    */
-  async findOne(id: string, ownerId: string, workspaceId: string, userId: string) {
-    try {
-      const revenue = await this.prisma.revenue.findFirst({
-        where: {
-          id,
-          owner_id: ownerId || userId,
-          workspace_id: workspaceId,
-          deleted_at: null,
-        },
-        include: {
-          bank_account: true,
-          customer_data: true,
-          invoice_category: true,
-          user: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
-          },
-        },
-      });
+async findOne(id: string, ownerId: string, workspaceId: string, userId: string) {
+  try {
+    const revenue = await this.prisma.revenue.findFirst({
+      where: {
+        id,
+        owner_id: ownerId || userId,
+        workspace_id: workspaceId,
+        deleted_at: null,
+      },
+      include: {
+        bank_account: true,
+        customer_data: true,
+        invoice_category: true,
+      },
+    });
 
-      if (!revenue) {
-        throw new NotFoundException('Revenue not found');
-      }
-
-      return {
-        success: true,
-        message: 'Revenue fetched successfully',
-        data: revenue,
-      };
-    } catch (error) {
-      throw error;
+    if (!revenue) {
+      throw new NotFoundException('Revenue not found');
     }
+
+    // ✅ Return only specific formatted data
+    return {
+      success: true,
+      message: 'Revenue fetched successfully',
+      data: {
+        id: revenue.id,
+        date: revenue.date,
+        amount: Number(revenue.amount),
+        bank_account_id: revenue.bank_account_id,
+        customer_id: revenue.customer_id,
+        invoice_category_id: revenue.invoice_category_id,
+        reference: revenue.reference,
+        description: revenue.description,
+        files: revenue.files,
+      },
+    };
+  } catch (error) {
+    if (error instanceof NotFoundException) throw error;
+
+    console.error('FindOne Revenue Error:', error);
+    throw new InternalServerErrorException({
+      message: 'Something went wrong while fetching revenue',
+      error: error.message,
+    });
   }
+}
+
 
   /**
    * Update a revenue record with optional file upload
@@ -308,27 +324,27 @@ export class RevenueService {
       }
 
       // Validate related entities if provided
-      if (dto.account) {
+      if (dto.bank_account_id) {
         const bankAccount = await this.prisma.bankAccount.findUnique({
-          where: { id: dto.account },
+          where: { id: dto.bank_account_id },
         });
         if (!bankAccount) {
           throw new NotFoundException('Bank account not found');
         }
       }
 
-      if (dto.customer) {
+      if (dto.customer_id) {
         const customer = await this.prisma.customer.findUnique({
-          where: { id: dto.customer },
+          where: { id: dto.customer_id },
         });
         if (!customer) {
           throw new NotFoundException('Customer not found');
         }
       }
 
-      if (dto.category) {
+      if (dto.invoice_category_id) {
         const category = await this.prisma.invoiceCategory.findUnique({
-          where: { id: dto.category },
+          where: { id: dto.invoice_category_id },
         });
         if (!category) {
           throw new NotFoundException('Invoice category not found');
@@ -356,9 +372,9 @@ export class RevenueService {
       // Update the revenue record and adjust bank account balances in a transaction
       const updatedRevenue = await this.prisma.$transaction(async (tx) => {
         // Determine if we need to update bank account balances
-        const oldAccount = existingRevenue.account;
+        const oldAccount = existingRevenue.bank_account_id;
         const oldAmount = existingRevenue.amount || 0;
-        const newAccount = dto.account !== undefined ? dto.account : oldAccount;
+        const newAccount = dto.bank_account_id !== undefined ? dto.bank_account_id : oldAccount;
         const newAmount = dto.amount !== undefined ? dto.amount : oldAmount;
 
         // Update the revenue
@@ -367,9 +383,9 @@ export class RevenueService {
           data: {
             ...(dto.date && { date: new Date(dto.date) }),
             ...(dto.amount !== undefined && { amount: dto.amount }),
-            ...(dto.account !== undefined && { account: dto.account }),
-            ...(dto.customer !== undefined && { customer: dto.customer }),
-            ...(dto.category !== undefined && { category: dto.category }),
+            ...(dto.bank_account_id !== undefined && { bank_account_id: dto.bank_account_id }),
+            ...(dto.customer_id !== undefined && { customer_id: dto.customer_id }),
+            ...(dto.invoice_category_id !== undefined && { invoice_category_id: dto.invoice_category_id }),
             ...(dto.reference !== undefined && { reference: dto.reference }),
             ...(dto.description !== undefined && {
               description: dto.description,
@@ -393,7 +409,7 @@ export class RevenueService {
         });
 
         // Handle bank account balance updates
-        const accountChanged = dto.account !== undefined && newAccount !== oldAccount;
+        const accountChanged = dto.bank_account_id !== undefined && newAccount !== oldAccount;
         const amountChanged = dto.amount !== undefined && newAmount !== oldAmount;
 
         if (accountChanged || amountChanged) {
@@ -491,9 +507,9 @@ export class RevenueService {
         });
 
         // Subtract amount from bank account balance if account and amount exist
-        if (revenue.account && revenue.amount) {
+        if (revenue.bank_account_id && revenue.amount) {
           await tx.bankAccount.update({
-            where: { id: revenue.account },
+            where: { id: revenue.bank_account_id },
             data: {
               opening_balance: {
                 decrement: revenue.amount,

@@ -14,33 +14,70 @@ async create(
   workspace_id: string,
   user_id: string,
 ) {
-  // Example of checking for unique email before creating
-  const existingCustomer = await this.prisma.customer.findUnique({
-    where: { email: createCustomerDto.email }, 
-  });
+  try {
+    // ✅ 1. Check for existing customer (email must be unique)
+    const existingCustomer = await this.prisma.customer.findUnique({
+      where: { email: createCustomerDto.email },
+    });
 
-  if (existingCustomer) {
+    if (existingCustomer) {
+      return {
+        success: false,
+        message: 'A customer with this email already exists.',
+      };
+    }
+
+    //  2. Create new customer
+    const customer = await this.prisma.customer.create({
+      data: {
+        ...createCustomerDto,
+        workspace_id,
+        owner_id: owner_id || user_id,
+        user_id: user_id || owner_id,
+      },
+    });
+
+    return {
+      success: true,
+      message: 'Customer created successfully!',
+      customer,
+    };
+  } catch (error: any) {
+
+    // 3. Handle specific Prisma errors
+    if (error.code === 'P2002') {
+      // Unique constraint failed
+      return {
+        success: false,
+        message: `Duplicate value found for field: ${error.meta?.target?.join(', ') || 'unknown field'}.`,
+      };
+    }
+
+    if (error.code === 'P2003') {
+      // Foreign key constraint failed
+      return {
+        success: false,
+        message: 'Invalid reference: The workspace_id or owner_id does not exist.',
+      };
+    }
+
+    if (error.code === 'P2011') {
+      // Null constraint violation
+      return {
+        success: false,
+        message: 'Missing required fields. Please fill all mandatory values.',
+      };
+    }
+
+    //  4. Handle general runtime errors
     return {
       success: false,
-      message: 'A customer with this email already exists.',
+      message: 'An unexpected error occurred while creating the customer.',
+      error: error.message,
     };
   }
-
-  // If no conflict, create the customer
-  const customer = await this.prisma.customer.create({
-    data: {
-      ...createCustomerDto,
-      workspace_id: workspace_id,
-      owner_id: owner_id || user_id,
-    },
-  });
-
-  return {
-    success: true,
-    message: 'Customer created successfully!',
-    customer,
-  };
 }
+
 
 
   // Get all customers with pagination and selected fields

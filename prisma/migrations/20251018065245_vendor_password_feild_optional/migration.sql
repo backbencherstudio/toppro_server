@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Vendor" ALTER COLUMN "password" DROP NOT NULL,
+ALTER COLUMN "balance" DROP NOT NULL;

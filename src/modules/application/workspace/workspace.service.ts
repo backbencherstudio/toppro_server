@@ -1,23 +1,25 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import appConfig from 'src/config/app.config';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateWorkspaceDto } from './dto/create-workspace.dto';
 import { UpdateWorkspaceDto } from './dto/update-workspace.dto';
-import appConfig from 'src/config/app.config';
 
 @Injectable()
 export class WorkspaceService {
   constructor(
     private jwtService: JwtService,
     private readonly prisma: PrismaService,
-  ) { }
+  ) {}
 
   async create(data: CreateWorkspaceDto, userId: string, ownerId: string) {
     console.log('WorkspaceService', userId, ownerId);
     const ownerForWorkspace = ownerId || userId;
 
     // Ensure workspace code is unique (schema enforces global uniqueness)
-    const exists = await this.prisma.workspace.findUnique({ where: { code: data.code } });
+    const exists = await this.prisma.workspace.findUnique({
+      where: { code: data.code },
+    });
     if (exists) {
       throw new BadRequestException('Workspace code already exists');
     }
@@ -42,8 +44,7 @@ export class WorkspaceService {
           owner_id: ownerForWorkspace,
           workspace_id: ws.id,
         },
-      }
-    );
+      });
 
       return ws;
     });
@@ -63,6 +64,44 @@ export class WorkspaceService {
     });
     return { success: true, workspaces };
   }
+
+async findAllWorkspaces(ownerId: string, userId: string) {
+  try {
+    // Fetch workspaces
+    const workspaces = await this.prisma.workspace.findMany({
+      where: {
+        owner_id: ownerId || userId,
+      },
+    });
+
+    // Check if workspaces exist
+    if (!workspaces || workspaces.length === 0) {
+      throw new BadRequestException(
+        'No workspaces found for the specified owner',
+      );
+    }
+
+    // Return success response
+    return {
+      success: true,
+      message: 'Workspaces retrieved successfully',
+      workspaces,
+    };
+  } catch (error) {
+    // Handle known Prisma errors or other exceptions
+    if (error instanceof BadRequestException) {
+      throw error; // Re-throw known exceptions
+    }
+
+    console.error('Error fetching workspaces:', error);
+
+    // Throw generic internal server error
+    throw new InternalServerErrorException(
+      'Failed to retrieve workspaces. Please try again later.',
+    );
+  }
+}
+
 
   async findOne(id: string, ownerId: string, userId: string) {
     const workspace = await this.prisma.workspace.findUnique({
@@ -150,7 +189,7 @@ export class WorkspaceService {
         owner_id: user.owner_id == null ? user.id : user.owner_id,
         workspace_id: user.workspace_id,
         email: user.email,
-        name: user.name
+        name: user.name,
       },
     };
   }

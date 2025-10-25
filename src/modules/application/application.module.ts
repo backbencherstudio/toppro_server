@@ -30,7 +30,6 @@ import { SubscriptionSettingsModule } from './subscription plan/subscription-set
 import { ModulePriceModule } from './subscription plan/module-price/module-price.module';
 import { ComboPlanModule } from './subscription plan/combo-plan/combo-plan.module';
 import { BankaccountModule } from './accounting/bankaccount/bankaccount.module';
-import { ChartofaccountsModule } from './accounting/chartofaccounts/chartofaccounts.module';
 import { BasicPlanModule } from './subscription plan/basic-plan/basic-plan.module';
 import { CouponModule } from './subscription plan/coupon/coupon.module';
 import { CompanySettingsModule } from './settings/company-settings/company-settings.module';
@@ -38,6 +37,8 @@ import { CurrencySettingsModule } from './settings/currency-settings/currency-se
 import { DashboardModule } from './crm/dashboard/dashboard.module';
 import { RevenueModule } from './accounting/income/revenue/revenue.module';
 import { CreditNotesModule } from './accounting/income/credit-notes/credit-notes.module';
+import { ChartOfAccountModule } from 'src/modules/application/accounting/chartofaccounts/chartofaccounts.module';
+import { TransferModule } from './accounting/transfer/transfer.module';
 @Module({
   imports: [
     NotificationModule,
@@ -71,7 +72,7 @@ import { CreditNotesModule } from './accounting/income/credit-notes/credit-notes
     ModulePriceModule,
     ComboPlanModule,
     BankaccountModule,
-    ChartofaccountsModule,
+    ChartOfAccountModule,
     BasicPlanModule,
     CouponModule,
     CompanySettingsModule,
@@ -79,6 +80,7 @@ import { CreditNotesModule } from './accounting/income/credit-notes/credit-notes
     DashboardModule,
     RevenueModule,
     CreditNotesModule,
+    TransferModule,
   ],
 })
 export class ApplicationModule { }

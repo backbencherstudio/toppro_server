@@ -1,17 +1,31 @@
-import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { Float } from 'aws-sdk/clients/batch';
+import { IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class CreateCustomerDto {
   @IsString()
+  @IsOptional()
   name: string;
 
   @IsString()
+  @IsOptional()
   contact: string;
 
   @IsString()
+  @IsOptional()
   email: string;
 
   @IsString()
+  @IsOptional()
   password: string;
+
+  @IsString()
+  @IsOptional()
+  customer_no: string;
+
+
+  @IsOptional()
+  @IsNumber()
+  balance: number;
 
   @IsOptional()
   @IsString()
