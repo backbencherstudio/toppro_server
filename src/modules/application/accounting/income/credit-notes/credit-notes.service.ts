@@ -1,12 +1,12 @@
 import {
+  BadRequestException,
   Injectable,
   NotFoundException,
-  BadRequestException,
 } from '@nestjs/common';
+import { handlePrismaError } from 'src/common/utils/prisma-error-handler';
+import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateCreditNoteDto } from './dto/create-credit-note.dto';
 import { UpdateCreditNoteDto } from './dto/update-credit-note.dto';
-import { PrismaService } from 'src/prisma/prisma.service';
-import { handlePrismaError } from 'src/common/utils/prisma-error-handler';
 
 @Injectable()
 export class CreditNotesService {
@@ -67,8 +67,6 @@ export class CreditNotesService {
       success: true,
       message: 'Credit note created successfully',
       data: created,
-
-      
     };
   }
 
@@ -115,43 +113,53 @@ export class CreditNotesService {
     workspaceId: string,
     userId: string,
   ) {
-    const existing = await (this.prisma as any).creditNote.findFirst({
-      where: { id, workspace_id: workspaceId, owner_id: ownerId || userId },
-    });
-    if (!existing) throw new NotFoundException('Credit note not found');
-
-    // If invoice_id or amount is changing, validate
-    const newInvoiceId =
-      dto.invoice_id !== undefined ? dto.invoice_id : existing.invoice_id;
-    const newAmount = dto.amount !== undefined ? dto.amount : existing.amount;
-
-    if (newInvoiceId) {
-      const invoice = await this.prisma.invoice.findUnique({
-        where: { id: newInvoiceId },
+    try {
+      const existing = await (this.prisma as any).creditNote.findFirst({
+        where: { id, workspace_id: workspaceId, owner_id: ownerId || userId },
       });
-      if (!invoice) throw new NotFoundException('Invoice not found');
+      if (!existing) throw new NotFoundException('Credit note not found');
 
-      const invoiceDue = invoice.due || 0;
-      if ((newAmount || 0) > invoiceDue) {
-        throw new BadRequestException(
-          'Credit note amount exceeds invoice due amount',
-        );
+      // If invoice_id or amount is changing, validate
+      const newInvoiceId =
+        dto.invoice_id !== undefined ? dto.invoice_id : existing.invoice_id;
+      const newAmount = dto.amount !== undefined ? dto.amount : existing.amount;
+
+      if (newInvoiceId) {
+        const invoice = await this.prisma.invoice.findUnique({
+          where: { id: newInvoiceId },
+        });
+        if (!invoice) throw new NotFoundException('Invoice not found');
+
+        const invoiceDue = invoice.due || 0;
+        if ((newAmount || 0) > invoiceDue) {
+          throw new BadRequestException(
+            'Credit note amount exceeds invoice due amount',
+          );
+        }
       }
+
+      const updated = await (this.prisma as any).creditNote.update({
+        where: { id },
+        data: {
+          ...(dto.invoice_id !== undefined && { invoice_id: dto.invoice_id }),
+          ...(dto.amount !== undefined && { amount: dto.amount }),
+          ...(dto.date && { date: new Date(dto.date) }),
+          ...(dto.description !== undefined && {
+            description: dto.description,
+          }),
+          ...(dto.status !== undefined && { status: dto.status }),
+          updated_at: new Date(),
+        },
+      });
+
+      return {
+        success: true,
+        message: 'Credit note updated successfully',
+        data: updated,
+      };
+    } catch (error) {
+      return handlePrismaError(error);
     }
-
-    const updated = await (this.prisma as any).creditNote.update({
-      where: { id },
-      data: {
-        ...(dto.invoice_id !== undefined && { invoice_id: dto.invoice_id }),
-        ...(dto.amount !== undefined && { amount: dto.amount }),
-        ...(dto.date && { date: new Date(dto.date) }),
-        ...(dto.description !== undefined && { description: dto.description }),
-        ...(dto.status !== undefined && { status: dto.status }),
-        updated_at: new Date(),
-      },
-    });
-
-    return updated;
   }
 
   async remove(
@@ -166,6 +174,6 @@ export class CreditNotesService {
     if (!existing) throw new NotFoundException('Credit note not found');
 
     await (this.prisma as any).creditNote.delete({ where: { id } });
-    return { success: true };
+    return { success: true, message: 'Credit note deleted successfully' };
   }
 }
