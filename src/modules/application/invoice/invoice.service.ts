@@ -329,9 +329,14 @@ export class InvoiceService {
       const formatted = invoices.map((invoice) => ({
         id: invoice.id,
         invoice_number: invoice.invoice_number,
+        customer: invoice.customer_id,
+        item_category: invoice.item_category_id,
         issueAt: invoice.issueAt,
         dueAt: invoice.dueAt,
-        account_type: invoice.Account_type ? invoice.Account_type.name : null,
+        account_type: invoice.Account_type?.name,
+        account_type_id: invoice.account_type_id,
+        billing_type_id: invoice.billing_type_id,
+        invoice_category_id: invoice.invoice_category_id,
         totalPrice: invoice.totalPrice,
         paid: invoice.paid,
         due: invoice.due,
@@ -368,8 +373,10 @@ export class InvoiceService {
         deleted_at: null,
       },
       include: {
+
         InvoiceItem: {
           include: {
+            // Account_type: { select: { id: true, name: true } },
             Tax: { select: { name: true, rate: true } },
             ItemType: { select: { name: true } },
           },
@@ -451,6 +458,14 @@ export class InvoiceService {
       dueAt: invoice.dueAt,
       status: invoice.status,
       account_type: invoice.Account_type?.name,
+      account_type_id: invoice.account_type_id,
+      customer_id: invoice.customer_id,
+      billing_type_id: invoice.billing_type_id,
+      invoice_category_id: invoice.invoice_category_id,
+      item_category_id: invoice.item_category_id,
+      invoice_category: invoice.invoice_category_id,
+
+      
 
       billedTo: {
         name: invoice.Customer?.billingName ?? invoice.Customer?.name,
