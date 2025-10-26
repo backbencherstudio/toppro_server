@@ -67,7 +67,7 @@ export class HelpDeskTicketService {
       customerUserId = req.user.id;  // Owner's userId will be the customer
       // Use email directly from JWT payload if present to avoid extra DB read
       customerEmail = req.user.email;
-  
+
       let ownerWorkspaceId = req.user.workspace_id;
 
       if (!customerEmail || !ownerWorkspaceId) {
@@ -126,11 +126,12 @@ export class HelpDeskTicketService {
         descriptions: {
           create: {
             description,
+            creatorId: req.user.id,
             attachments: {
               create: fileUploads
             }
           }
-        }, 
+        },
         notes: notes || null
       },
       include: {
@@ -224,25 +225,123 @@ export class HelpDeskTicketService {
 
 
   // Update HelpDeskTicket (no description, attachments, or notes modifications)
+  // async updateHelpDeskTicket(
+  //   req: any,
+  //   userType: UserType,
+  //   id: string,
+  //   updateDto: UpdateHelpdeskTicketDto
+  // ) {
+  //   // Fetch ticket by Ticket's id
+  //   const ticket = await this.prisma.helpDeskTicket.findUnique({
+  //     where: { id },
+  //   });
+
+  //   if (!ticket) {
+  //     throw new NotFoundException('Ticket not found');
+  //   }
+
+  //   // OWNER: Only creator can edit and workspace must match owner's workspace
+  //   if (userType === 'OWNER') {
+  //     const ownerId = req.user.id;
+  //     let ownerWorkspaceId = req.user.workspace_id as string | null;
+  //     if (!ownerWorkspaceId) {
+  //       const owner = await this.prisma.user.findUnique({
+  //         where: { id: ownerId },
+  //         select: { workspace_id: true },
+  //       });
+  //       ownerWorkspaceId = owner?.workspace_id || null;
+  //     }
+
+  //     if (!ownerWorkspaceId) {
+  //       throw new ForbiddenException('Owner does not have a workspace assigned');
+  //     }
+
+  //     if (ticket.workspaceId !== ownerWorkspaceId || ticket.createdBy !== ownerId) {
+  //       throw new ForbiddenException('You do not have access to this ticket');
+  //     }
+  //   }
+
+  //   // Build update payload
+  //   const { categoryId, status, subject, customerId, email, workspaceId, notes } = updateDto as any;
+  //   const updateData: any = {};
+
+  //   // Common allowed fields
+  //   if (typeof categoryId !== 'undefined') updateData.categoryId = categoryId;
+  //   if (typeof status !== 'undefined') updateData.status = status;
+  //   if (typeof subject !== 'undefined') updateData.subject = subject;
+  //   if (typeof notes !== 'undefined') updateData.notes = notes;
+
+  //   if (userType === 'SUPERADMIN') {
+  //     // Admin can update customerId, email, workspaceId
+  //     let targetCustomerId = typeof customerId !== 'undefined' ? customerId : ticket.customerId;
+  //     let targetWorkspaceId = typeof workspaceId !== 'undefined' ? workspaceId : ticket.workspaceId;
+
+  //     if (typeof customerId !== 'undefined' || typeof workspaceId !== 'undefined') {
+  //       // Load the (new or existing) customer to validate OWNER type and workspace relation
+  //       const customer = await this.prisma.user.findUnique({
+  //         where: { id: targetCustomerId },
+  //         select: { id: true, type: true, workspace_id: true },
+  //       });
+  //       if (!customer) {
+  //         throw new NotFoundException('Customer not found');
+  //       }
+  //       if (customer.type !== 'OWNER') {
+  //         throw new BadRequestException('Only users with type "OWNER" can be assigned as a customer');
+  //       }
+
+  //       if (typeof customerId !== 'undefined' && typeof workspaceId === 'undefined') {
+  //         // If admin changed customer but not workspace, sync workspace to the new owner's workspace
+  //         targetWorkspaceId = customer.workspace_id;
+  //       }
+
+  //       if (typeof workspaceId !== 'undefined' && targetWorkspaceId !== customer.workspace_id) {
+  //         // If workspaceId is explicitly provided, ensure it matches the owner's workspace
+  //         throw new BadRequestException('workspaceId does not belong to the specified owner');
+  //       }
+
+  //       // Set updates after validation
+  //       if (typeof customerId !== 'undefined') updateData.customerId = targetCustomerId;
+  //       if (typeof workspaceId !== 'undefined' || (typeof customerId !== 'undefined' && targetWorkspaceId !== ticket.workspaceId)) {
+  //         updateData.workspaceId = targetWorkspaceId;
+  //       }
+
+  //       // If customer changed and email not explicitly provided, sync email from owner
+  //       if (typeof customerId !== 'undefined' && typeof email === 'undefined') {
+  //         updateData.email = customer.workspace_id ? (await this.prisma.user.findUnique({ where: { id: targetCustomerId }, select: { email: true } })).email : ticket.email;
+  //       }
+  //     }
+
+  //     if (typeof email !== 'undefined') {
+  //       updateData.email = email;
+  //     }
+
+  //   }
+
+  //   // OWNER cannot update customerId/email/workspaceId; they are ignored implicitly
+
+  //   const updatedTicket = await this.prisma.helpDeskTicket.update({
+  //     where: { id: id },
+  //     data: updateData,
+  //   });
+
+  //   return updatedTicket;
+  // }
+
   async updateHelpDeskTicket(
     req: any,
     userType: UserType,
     id: string,
-    updateDto: UpdateHelpdeskTicketDto
+    updateDto: UpdateHelpdeskTicketDto,
   ) {
-    // Fetch ticket by Ticket's id
-    const ticket = await this.prisma.helpDeskTicket.findUnique({
-      where: { id },
-    });
+    // 1️⃣ Ticket fetch
+    const ticket = await this.prisma.helpDeskTicket.findUnique({ where: { id } });
+    if (!ticket) throw new NotFoundException('Ticket not found');
 
-    if (!ticket) {
-      throw new NotFoundException('Ticket not found');
-    }
-
-    // OWNER: Only creator can edit and workspace must match owner's workspace
+    // 2️⃣ OWNER validation
     if (userType === 'OWNER') {
       const ownerId = req.user.id;
       let ownerWorkspaceId = req.user.workspace_id as string | null;
+
       if (!ownerWorkspaceId) {
         const owner = await this.prisma.user.findUnique({
           where: { id: ownerId },
@@ -251,80 +350,83 @@ export class HelpDeskTicketService {
         ownerWorkspaceId = owner?.workspace_id || null;
       }
 
-      if (!ownerWorkspaceId) {
+      if (!ownerWorkspaceId)
         throw new ForbiddenException('Owner does not have a workspace assigned');
-      }
 
-      if (ticket.workspaceId !== ownerWorkspaceId || ticket.createdBy !== ownerId) {
+      if (ticket.workspaceId !== ownerWorkspaceId || ticket.createdBy !== ownerId)
         throw new ForbiddenException('You do not have access to this ticket');
-      }
     }
 
-    // Build update payload
-    const { categoryId, status, subject, customerId, email, workspaceId, notes } = updateDto as any;
+    // 3️⃣ Build update payload
+    const { categoryId, status, subject, customerId, email, workspaceId, notes } = updateDto;
     const updateData: any = {};
 
-    // Common allowed fields
-    if (typeof categoryId !== 'undefined') updateData.categoryId = categoryId;
-    if (typeof status !== 'undefined') updateData.status = status;
-    if (typeof subject !== 'undefined') updateData.subject = subject;
-    if (typeof notes !== 'undefined') updateData.notes = notes;
+    if (categoryId !== undefined) updateData.categoryId = categoryId;
+    if (status !== undefined) updateData.status = status;
+    if (subject !== undefined) updateData.subject = subject;
+    if (notes !== undefined) updateData.notes = notes;
 
+    // 4️⃣ SUPERADMIN logic
     if (userType === 'SUPERADMIN') {
-      // Admin can update customerId, email, workspaceId
-      let targetCustomerId = typeof customerId !== 'undefined' ? customerId : ticket.customerId;
-      let targetWorkspaceId = typeof workspaceId !== 'undefined' ? workspaceId : ticket.workspaceId;
+      let targetCustomerId = customerId ?? ticket.customerId;
+      let targetWorkspaceId = workspaceId ?? ticket.workspaceId;
 
-      if (typeof customerId !== 'undefined' || typeof workspaceId !== 'undefined') {
-        // Load the (new or existing) customer to validate OWNER type and workspace relation
+      // if customerId/workspaceId changed
+      if (customerId !== undefined || workspaceId !== undefined) {
+        // Load customer
         const customer = await this.prisma.user.findUnique({
           where: { id: targetCustomerId },
-          select: { id: true, type: true, workspace_id: true },
+          select: { id: true, type: true },
         });
-        if (!customer) {
-          throw new NotFoundException('Customer not found');
-        }
-        if (customer.type !== 'OWNER') {
+        if (!customer) throw new NotFoundException('Customer not found');
+        if (customer.type !== 'OWNER')
           throw new BadRequestException('Only users with type "OWNER" can be assigned as a customer');
+
+        // ✅ Validate workspace belongs to that owner
+        if (workspaceId !== undefined) {
+          const workspace = await this.prisma.workspace.findUnique({
+            where: { id: workspaceId },
+            select: { owner_id: true },
+          });
+          if (!workspace) throw new NotFoundException('Workspace not found');
+          if (workspace.owner_id !== customer.id) {
+            throw new BadRequestException('workspaceId does not belong to the specified owner');
+          }
+        } else {
+          // if workspaceId not provided, sync from the owner's workspace
+          const ownerWorkspace = await this.prisma.workspace.findFirst({
+            where: { owner_id: customer.id },
+            select: { id: true },
+          });
+          targetWorkspaceId = ownerWorkspace?.id || ticket.workspaceId;
         }
 
-        if (typeof customerId !== 'undefined' && typeof workspaceId === 'undefined') {
-          // If admin changed customer but not workspace, sync workspace to the new owner's workspace
-          targetWorkspaceId = customer.workspace_id;
-        }
+        // Apply updates
+        if (customerId !== undefined) updateData.customerId = targetCustomerId;
+        if (workspaceId !== undefined) updateData.workspaceId = targetWorkspaceId;
 
-        if (typeof workspaceId !== 'undefined' && targetWorkspaceId !== customer.workspace_id) {
-          // If workspaceId is explicitly provided, ensure it matches the owner's workspace
-          throw new BadRequestException('workspaceId does not belong to the specified owner');
-        }
-
-        // Set updates after validation
-        if (typeof customerId !== 'undefined') updateData.customerId = targetCustomerId;
-        if (typeof workspaceId !== 'undefined' || (typeof customerId !== 'undefined' && targetWorkspaceId !== ticket.workspaceId)) {
-          updateData.workspaceId = targetWorkspaceId;
-        }
-
-        // If customer changed and email not explicitly provided, sync email from owner
-        if (typeof customerId !== 'undefined' && typeof email === 'undefined') {
-          updateData.email = customer.workspace_id ? (await this.prisma.user.findUnique({ where: { id: targetCustomerId }, select: { email: true } })).email : ticket.email;
+        // sync email if not explicitly provided
+        if (customerId !== undefined && email === undefined) {
+          const owner = await this.prisma.user.findUnique({
+            where: { id: targetCustomerId },
+            select: { email: true },
+          });
+          updateData.email = owner?.email || ticket.email;
         }
       }
 
-      if (typeof email !== 'undefined') {
-        updateData.email = email;
-      }
-
+      if (email !== undefined) updateData.email = email;
     }
 
-    // OWNER cannot update customerId/email/workspaceId; they are ignored implicitly
-
+    // 5️⃣ Save update
     const updatedTicket = await this.prisma.helpDeskTicket.update({
-      where: { id: id },
+      where: { id },
       data: updateData,
     });
 
     return updatedTicket;
   }
+
 
   async deleteHelpDeskTicket(req: any, userType: UserType, id: string) {
     // Fetch ticket by Ticket's id
@@ -371,6 +473,119 @@ export class HelpDeskTicketService {
   generateRandomTicketId() {
     return (Math.floor(Math.random() * 90000) + 10000).toString();  // Converts to string
   }
+
+  // async addDescriptionToTicket(
+  //   req: any,
+  //   ticketId: string,
+  //   descriptionText: string,
+  //   file?: Express.Multer.File
+  // ) {
+  //   // Check if ticket exists
+  //   const ticket = await this.prisma.helpDeskTicket.findUnique({
+  //     where: { id: ticketId },
+  //   });
+  //   if (!ticket) throw new NotFoundException('Ticket not found');
+
+  //   // Upload file if exists
+  //   let attachments = [];
+  //   if (file) {
+  //     attachments = await this.uploadService.uploadFilesToDescription(
+  //       ticketId,
+  //       req.user.id,
+  //       ticket.workspaceId || '',
+  //       req.user.id,
+  //       [file],
+  //     );
+  //   }
+
+  //   // Create description + attachments
+  //   const description = await this.prisma.ticketDescriptionWithAttachment.create({
+  //     data: {
+  //       ticketId: ticketId,
+  //       description: descriptionText,
+  //       attachments: {
+  //         create: attachments,
+  //       },
+  //     },
+  //     include: { attachments: true },
+  //   });
+
+  //   const response = {
+  //     ...description,
+  //     createdBy: { id: req.user.id, name: req.user.name, email: req.user.email },
+  //   };
+  //   return response;
+  // }
+
+  async addDescriptionToTicket(
+    req: any,
+    ticketId: string,
+    descriptionText: string,
+    file?: Express.Multer.File,
+  ) {
+    const ticket = await this.prisma.helpDeskTicket.findUnique({
+      where: { id: ticketId },
+    });
+    if (!ticket) throw new NotFoundException('Ticket not found');
+
+    let attachments = [];
+    if (file) {
+      attachments = await this.uploadService.uploadFilesToDescription(
+        ticketId,
+        req.user.id,
+        ticket.workspaceId || '',
+        req.user.id,
+        [file],
+      );
+    }
+
+    const description = await this.prisma.ticketDescriptionWithAttachment.create({
+      data: {
+        ticketId,
+        description: descriptionText,
+        creatorId: req.user.id, // ✅ Added
+        attachments: {
+          create: attachments,
+        },
+      },
+      include: {
+        attachments: true,
+        creator: {
+          select: { id: true, name: true, email: true },
+        },
+      },
+    });
+
+    return description;
+  }
+
+
+  async getAllDescriptionsOfTicket(ticketId: string, req?: any) {
+    const ticket = await this.prisma.helpDeskTicket.findUnique({
+      where: { id: ticketId },
+    });
+    if (!ticket) throw new NotFoundException('Ticket not found');
+
+    const descriptions = await this.prisma.ticketDescriptionWithAttachment.findMany({
+      where: { ticketId },
+      orderBy: { createdAt: 'asc' },
+      include: { attachments: true },
+    });
+
+    // map JWT user info for each description (or fallback to DB fetch if needed)
+    const response = descriptions.map(d => ({
+      ...d,
+      createdBy: {
+        id: req?.user?.id || 'unknown',
+        name: req?.user?.name || 'Unknown User',
+        email: req?.user?.email || '',
+      },
+    }));
+
+    return response;
+  }
+
+
 
 
 
