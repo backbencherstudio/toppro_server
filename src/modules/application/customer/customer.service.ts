@@ -72,7 +72,7 @@ export class CustomerService {
           name: true,
           contact: true,
           email: true,
-          // balance: true,  // Assuming balance is a field in the Customer model
+          balance: true,
         },
       }),
       this.prisma.customer.count(), // Get the total number of customers for pagination
@@ -84,6 +84,8 @@ export class CustomerService {
     const range = `Showing ${from} to ${to} of ${total} entries`;
 
     return {
+      success: true,
+      message: 'Customers retrieved successfully',
       data: customers,
       pagination: {
         total,

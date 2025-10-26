@@ -75,6 +75,24 @@ export class InvoiceController {
     );
   }
 
+  // get all invoices
+  @Get('all-paid-invoice')
+  async findAllPaidInvoices(
+    @Req() req: any,
+  ) {
+    const {
+      owner_id: ownerId,
+      workspace_id: workspaceId,
+      id: userId,
+    } = req.user;
+
+    return this.invoiceService.findAllPaidInvoices(
+      ownerId,
+      workspaceId,
+      userId,
+    );
+  }
+
   // invoice single view
   @Get(':id')
   async findOne(@Param('id') id: string, @Req() req: any) {

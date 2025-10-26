@@ -357,6 +357,46 @@ export class InvoiceService {
       return handlePrismaError(error);
     }
   }
+  async findAllPaidInvoices(
+    ownerId: string,
+    workspaceId: string,
+    userId: string,
+  ) {
+    try {
+
+
+      // Fetch invoices with pagination and filters
+      const invoices = await this.prisma.invoice.findMany({
+        where:{
+          owner_id: ownerId || userId,
+          workspace_id: workspaceId,
+          status: 'PAID',
+          deleted_at: null,
+        },
+
+      });
+
+      const formatted = invoices.map((invoice) => ({
+        id: invoice.id,
+        invoice_number: invoice.invoice_number,
+        customer: invoice.customer_id,
+        issueAt: invoice.issueAt,
+        dueAt: invoice.dueAt,
+        totalPrice: invoice.totalPrice,
+        paid: invoice.paid,
+        due: invoice.due,
+        status: invoice.status,
+      }));
+
+      return {
+        success: true,
+        message: 'All Paid Invoices fetched successfully',
+        data: formatted,
+      };
+    } catch (error) {
+      return handlePrismaError(error);
+    }
+  }
 
   // ------- FIND ONE -------
   async findOne(

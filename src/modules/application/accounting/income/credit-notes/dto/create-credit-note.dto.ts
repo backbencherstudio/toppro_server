@@ -17,6 +17,18 @@ export class CreateCreditNoteDto {
 
     @IsOptional()
     @IsString()
+    bank_account_id?: string;
+
+    @IsOptional()
+    @IsString()
+    customer_id?: string;
+
+    @IsOptional()
+    @IsString()
+    reference?: string;
+
+    @IsOptional()
+    @IsString()
     description?: string;
 
     @IsOptional()
