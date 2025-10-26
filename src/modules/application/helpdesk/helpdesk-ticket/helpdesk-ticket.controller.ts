@@ -1,4 +1,4 @@
-import { Controller, Post, Put, Delete, Query, Param, Body, Req, UseGuards, UseInterceptors, UploadedFiles, Get, UploadedFile } from '@nestjs/common';
+import { Controller, Post, Put, Delete, Query, Param, Body, Req, UseGuards, UseInterceptors, UploadedFiles, Get, UploadedFile, NotFoundException, Patch } from '@nestjs/common';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { HelpDeskTicketService } from './helpdesk-ticket.service';
 import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
@@ -53,6 +53,17 @@ export class HelpDeskTicketController {
       search);
   }
 
+  @UseGuards(JwtAuthGuard)
+  @Get(':id')
+  async getTicketById(@Param('id') id: string, @Req() req: any) {
+    const ticket = await this.helpDeskTicketService.getTicketById(id);
+
+    if (!ticket) throw new NotFoundException('Ticket not found');
+
+    return ticket;
+  }
+
+
   @Put(':Id/update')
   @UseGuards(JwtAuthGuard)
   async updateTicket(
@@ -95,12 +106,32 @@ export class HelpDeskTicketController {
   }
 
   @Get(':id/description')
-@UseGuards(JwtAuthGuard)
-async getAllDescriptions(
-  @Param('id') ticketId: string,
-) {
-  return this.helpDeskTicketService.getAllDescriptionsOfTicket(ticketId);
-}
+  @UseGuards(JwtAuthGuard)
+  async getAllDescriptions(
+    @Param('id') ticketId: string,
+  ) {
+    return this.helpDeskTicketService.getAllDescriptionsOfTicket(ticketId);
+  }
+
+  // GET notes of a specific ticket
+  @UseGuards(JwtAuthGuard)
+  @Get(':id/notes')
+  async getTicketNotes(@Param('id') id: string) {
+    const notes = await this.helpDeskTicketService.getTicketNotes(id);
+    return { notes };
+  }
+
+  // PATCH update notes of a specific ticket
+  @UseGuards(JwtAuthGuard)
+  @Patch(':id/notes')
+  async updateTicketNotes(
+    @Param('id') id: string,
+    @Req() req: any,
+    @Body('notes') notes: string,
+  ) {
+    const updatedNotes = await this.helpDeskTicketService.updateTicketNotes(req, id, notes);
+    return { notes: updatedNotes };
+  }
 
 
 }
