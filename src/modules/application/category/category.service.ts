@@ -9,6 +9,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { handlePrismaError } from 'src/common/utils/prisma-error-handler';
 import { CreateCategoryDto } from 'src/modules/application/category/dto/create-category.dto';
 import { UpdateCategoryDto } from 'src/modules/application/category/dto/update-category.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -172,7 +173,16 @@ export class CategoryService {
     const data = await this.prisma.invoiceCategory.findMany({
       where: { owner_id: ownerId || userId, workspace_id: workspaceId },
     });
-    return { success: true, data };
+
+    if (!data || data.length === 0) {
+      throw new NotFoundException('No invoice categories found');
+    }
+
+    return {
+      success: true,
+      message: 'Invoice categories retrieved successfully',
+      data: data,
+    };
   }
 
   async updateInvoiceCategory(
@@ -185,6 +195,10 @@ export class CategoryService {
       where: { id },
       data: dto,
     });
+
+    if (!updated) {
+      throw new NotFoundException('Invoice category not found');
+    }
     return {
       success: true,
       message: 'Invoice category updated',
@@ -198,6 +212,12 @@ export class CategoryService {
     workspaceId: string,
   ) {
     const deleted = await this.prisma.invoiceCategory.delete({ where: { id } });
+
+    if (!deleted) {
+      throw new NotFoundException('Invoice category not found');
+    }
+
+
     return {
       success: true,
       message: 'Invoice category deleted',
@@ -222,46 +242,19 @@ export class CategoryService {
         },
       });
 
+      if (!created) {
+        throw new InternalServerErrorException(
+          'Failed to create bill category. Please try again.',
+        );
+      }
+
       return {
         success: true,
         message: 'Bill category created successfully!',
         data: created,
       };
     } catch (error: any) {
-      console.error('❌ Error creating bill category:', error);
-
-      // ✅ Prisma unique constraint error (duplicate name, slug, etc.)
-      if (error.code === 'P2002') {
-        throw new ConflictException(
-          `Duplicate value for field: ${error.meta?.target?.join(', ') || 'unknown'}.`,
-        );
-      }
-
-      // ✅ Foreign key constraint (owner_id or workspace_id invalid)
-      if (error.code === 'P2003') {
-        throw new BadRequestException(
-          'Invalid reference: workspace_id or owner_id not found.',
-        );
-      }
-
-      // ✅ Missing required field or null constraint
-      if (error.code === 'P2011') {
-        throw new BadRequestException(
-          'Missing required fields. Please fill all mandatory values.',
-        );
-      }
-
-      // ✅ General Prisma or database connection issue
-      if (error.code === 'P1001' || error.code === 'P1010') {
-        throw new InternalServerErrorException(
-          'Database connection issue. Please try again later.',
-        );
-      }
-
-      // ✅ Fallback for unexpected errors
-      throw new InternalServerErrorException(
-        `Unexpected error occurred: ${error.message}`,
-      );
+      handlePrismaError(error); 
     }
   }
 
@@ -269,6 +262,10 @@ export class CategoryService {
     const data = await this.prisma.billCategory.findFirst({
       where: { id, owner_id: ownerId, workspace_id: workspaceId },
     });
+
+    if (!data) {
+      throw new NotFoundException('Bill category not found');
+    }
     return { success: true, data };
   }
 
@@ -280,6 +277,11 @@ export class CategoryService {
     const data = await this.prisma.billCategory.findMany({
       where: { owner_id: ownerId || userId, workspace_id: workspaceId },
     });
+
+    if (!data || data.length === 0) {
+      throw new NotFoundException('No bill categories found');
+    }
+
     return { success: true, data };
   }
 
@@ -514,7 +516,11 @@ export class CategoryService {
     try {
       const updated = await this.prisma.unit.update({
         where: { id },
-        data: { ...dto, owner_id: ownerId || userId, workspace_id: workspaceId },
+        data: {
+          ...dto,
+          owner_id: ownerId || userId,
+          workspace_id: workspaceId,
+        },
       });
 
       return {
@@ -621,107 +627,108 @@ export class CategoryService {
     return { success: true, data };
   }
 
-async findAllItemTypes(ownerId: string, workspaceId: string, userId: string) {
-  try {
-    const data = await this.prisma.itemType.findMany({
-      where: {
-        owner_id: ownerId || userId,
-        workspace_id: workspaceId,
-      },
-    });
+  async findAllItemTypes(ownerId: string, workspaceId: string, userId: string) {
+    try {
+      const data = await this.prisma.itemType.findMany({
+        where: {
+          owner_id: ownerId || userId,
+          workspace_id: workspaceId,
+        },
+      });
 
-    if (!data || data.length === 0) {
-      throw new NotFoundException('No item types found');
-    }
+      if (!data || data.length === 0) {
+        throw new NotFoundException('No item types found');
+      }
 
-    return {
-      success: true,
-      message: 'Item types fetched successfully',
-      data,
-    };
-  } catch (error) {
-    // Known not-found or bad request
-    if (error instanceof NotFoundException || error instanceof BadRequestException) {
-      throw error;
-    }
+      return {
+        success: true,
+        message: 'Item types fetched successfully',
+        data,
+      };
+    } catch (error) {
+      // Known not-found or bad request
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      ) {
+        throw error;
+      }
 
-    // Prisma-specific error
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      throw new BadRequestException({
-        message: 'Database error occurred while fetching item types',
-        code: error.code,
-        meta: error.meta,
+      // Prisma-specific error
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        throw new BadRequestException({
+          message: 'Database error occurred while fetching item types',
+          code: error.code,
+          meta: error.meta,
+        });
+      }
+
+      // Unknown/unexpected error
+      console.error('findAllItemTypes Error:', error);
+      throw new InternalServerErrorException({
+        message: 'Something went wrong while fetching item types',
+        error: error.message,
       });
     }
-
-    // Unknown/unexpected error
-    console.error('findAllItemTypes Error:', error);
-    throw new InternalServerErrorException({
-      message: 'Something went wrong while fetching item types',
-      error: error.message,
-    });
   }
-}
 
+  async updateItemType(
+    id: string,
+    dto: UpdateCategoryDto,
+    ownerId: string,
+    workspaceId: string,
+    userId: string,
+  ) {
+    try {
+      const existing = await this.prisma.itemType.findUnique({ where: { id } });
+      if (!existing) {
+        return {
+          success: false,
+          message: 'Item type not found',
+        };
+      }
 
-async updateItemType(
-  id: string,
-  dto: UpdateCategoryDto,
-  ownerId: string,
-  workspaceId: string,
-  userId: string,
-) {
-  try {
-    const existing = await this.prisma.itemType.findUnique({ where: { id } });
-    if (!existing) {
+      const updated = await this.prisma.itemType.update({
+        where: { id },
+        data: {
+          ...dto,
+          owner_id: ownerId || userId,
+          workspace_id: workspaceId,
+        },
+      });
+
+      return {
+        success: true,
+        message: 'Item type updated successfully',
+        data: updated,
+      };
+    } catch (error) {
+      // Prisma-specific error handling
+      if (error.code === 'P2002') {
+        // Unique constraint failed
+        return {
+          success: false,
+          message: 'Duplicate entry — item type with this name already exists',
+        };
+      }
+
+      if (error.code === 'P2025') {
+        // Record not found
+        return {
+          success: false,
+          message: 'Item type not found or already deleted',
+        };
+      }
+
+      // General fallback
+      console.error('Update ItemType Error:', error);
       return {
         success: false,
-        message: 'Item type not found',
+        message: 'Something went wrong while updating the item type',
+        error: error.message,
       };
     }
-
-    const updated = await this.prisma.itemType.update({
-      where: { id },
-      data: {
-        ...dto,
-        owner_id: ownerId || userId,
-        workspace_id: workspaceId,
-      },
-    });
-
-    return {
-      success: true,
-      message: 'Item type updated successfully',
-      data: updated,
-    };
-  } catch (error) {
-    // Prisma-specific error handling
-    if (error.code === 'P2002') {
-      // Unique constraint failed
-      return {
-        success: false,
-        message: 'Duplicate entry — item type with this name already exists',
-      };
-    }
-
-    if (error.code === 'P2025') {
-      // Record not found
-      return {
-        success: false,
-        message: 'Item type not found or already deleted',
-      };
-    }
-
-    // General fallback
-    console.error('Update ItemType Error:', error);
-    return {
-      success: false,
-      message: 'Something went wrong while updating the item type',
-      error: error.message,
-    };
   }
-}
-
 
   async removeItemType(id: string, ownerId: string, workspaceId: string) {
     const deleted = await this.prisma.itemType.delete({ where: { id } });
@@ -753,45 +760,44 @@ async updateItemType(
     return { success: true, data };
   }
 
-async findAllAccountTypes(
-  ownerId: string,
-  workspaceId: string,
-  userId: string,
-) {
-  try {
-    const data = await this.prisma.accountType.findMany({
-      where: {
-        owner_id: ownerId || userId,
-        workspace_id: workspaceId,
-      },
-    });
+  async findAllAccountTypes(
+    ownerId: string,
+    workspaceId: string,
+    userId: string,
+  ) {
+    try {
+      const data = await this.prisma.accountType.findMany({
+        where: {
+          owner_id: ownerId || userId,
+          workspace_id: workspaceId,
+        },
+      });
 
-    if (!data || data.length === 0) {
+      if (!data || data.length === 0) {
+        return {
+          success: false,
+          message: 'No account types found for this workspace.',
+          data: [],
+        };
+      }
+
       return {
-        success: false,
-        message: 'No account types found for this workspace.',
-        data: [],
+        success: true,
+        message: 'Account types retrieved successfully.',
+        data,
       };
+    } catch (error) {
+      console.error('Prisma error (findAllAccountTypes):', error);
+      throw new HttpException(
+        {
+          success: false,
+          message: 'Database query failed while fetching account types.',
+          error: error.message,
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
-
-    return {
-      success: true,
-      message: 'Account types retrieved successfully.',
-      data,
-    };
-  } catch (error) {
-    console.error('Prisma error (findAllAccountTypes):', error);
-    throw new HttpException(
-      {
-        success: false,
-        message: 'Database query failed while fetching account types.',
-        error: error.message,
-      },
-      HttpStatus.INTERNAL_SERVER_ERROR,
-    );
   }
-}
-
 
   async updateAccountType(
     id: string,

@@ -333,7 +333,7 @@ model Invoice {
   totalPrice          Float? //amount
   paid                Float?    @default(0)
   due                 Float?    @default(0)
-  status              String?   @default("DRAFT")
+  status              Status    @default(DRAFT)
 
   owner_id     String?
   workspace_id String?

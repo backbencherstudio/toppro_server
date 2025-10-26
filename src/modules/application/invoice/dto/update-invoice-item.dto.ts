@@ -31,6 +31,10 @@ export class UpdateInvoiceItemDto {
 
   @IsOptional()
   @IsString()
+  Account_type_id?: string;
+
+  @IsOptional()
+  @IsString()
   unit_id?: string;
 
   @Type(() => Number)
