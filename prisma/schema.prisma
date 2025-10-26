@@ -127,15 +127,16 @@ model User {
   HelpDeskTicketCustomer HelpDeskTicket[]   @relation("CustomerTickets")
   HelpDeskTicketCreator  HelpDeskTicket[]   @relation("CreatorTickets")
 
-  BankAccount      BankAccount[]
-  Coupon           Coupon[]
-  ChartOfAccount   ChartOfAccount[]
-  CompanySettings  CompanySettings[]
-  CurrencySettings CurrencySettings[]
-  Revenue          Revenue[]
-  CreditNote       CreditNote[]
-  Transfer         Transfer[]
+  BankAccount                     BankAccount[]
+  Coupon                          Coupon[]
+  ChartOfAccount                  ChartOfAccount[]
+  CompanySettings                 CompanySettings[]
+  CurrencySettings                CurrencySettings[]
+  Revenue                         Revenue[]
+  CreditNote                      CreditNote[]
+  Transfer                        Transfer[]
   TicketDescriptionWithAttachment TicketDescriptionWithAttachment[]
+  ReceiptSummary                  ReceiptSummary[]
 
   @@map("users")
 }
@@ -187,6 +188,7 @@ model Workspace {
   Revenue          Revenue[]
   CreditNote       CreditNote[]
   Transfer         Transfer[]
+  ReceiptSummary   ReceiptSummary[]
 
   @@map("workspaces")
 }
@@ -355,9 +357,10 @@ model Invoice {
   InvoiceItem      InvoiceItem[]
   CreditNote       CreditNote?
 
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  deleted_at DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  deleted_at     DateTime?
+  ReceiptSummary ReceiptSummary[]
 
   @@map("invoices")
 }
@@ -456,6 +459,37 @@ model Items {
   stock           Stock[]
 
   @@map("items")
+}
+
+model ReceiptSummary {
+  id     String    @id @default(cuid())
+  date   DateTime?
+  amount Float
+
+  bank_account_id String?
+  bankAccount     BankAccount? @relation(fields: [bank_account_id], references: [id], onDelete: SetNull)
+
+  invoice_id String?
+  invoice    Invoice? @relation(fields: [invoice_id], references: [id], onDelete: SetNull)
+
+  reference   String?
+  description String?
+  file        String?
+
+  payment_type String  @default("manual")
+  ordered      String?
+
+  owner_id     String
+  user_id      String
+  workspace_id String
+
+  user      User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("receipt_summaries")
 }
 
 model Purchase {
@@ -609,12 +643,13 @@ model BankAccount {
   owner_id            String?
   chart_of_account_id String?
 
-  user           User?           @relation(fields: [user_id], references: [id])
-  workspace      Workspace?      @relation(fields: [workspace_id], references: [id])
-  ChartOfAccount ChartOfAccount? @relation(fields: [chart_of_account_id], references: [id])
+  user           User?            @relation(fields: [user_id], references: [id])
+  workspace      Workspace?       @relation(fields: [workspace_id], references: [id])
+  ChartOfAccount ChartOfAccount?  @relation(fields: [chart_of_account_id], references: [id])
   Revenue        Revenue[]
-  transfersFrom  Transfer[]      @relation("FromAccount")
-  transfersTo    Transfer[]      @relation("ToAccount")
+  transfersFrom  Transfer[]       @relation("FromAccount")
+  transfersTo    Transfer[]       @relation("ToAccount")
+  ReceiptSummary ReceiptSummary[]
 
   @@map("bank_accounts")
 }
@@ -2089,7 +2124,7 @@ model TicketDescriptionWithAttachment {
   ticket   HelpDeskTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
   creatorId String
-  creator   User @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  creator   User   @relation(fields: [creatorId], references: [id], onDelete: Cascade)
 
   @@map("ticket_descriptions_with_attachments")
 }
