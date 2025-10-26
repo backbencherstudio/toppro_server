@@ -46,8 +46,8 @@ export class CustomerController {
 
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolePermissionGuard)
-  @PermissionsGuard(Permissions.customer_view)
-  @PermissionsGuard(Permissions.customer_manage)
+  // @PermissionsGuard(Permissions.customer_view)
+  // @PermissionsGuard(Permissions.customer_manage)
   findOne(@Param('id') id: string, @Req() req) {
     const { owner_id: ownerId, workspace_id: workspaceId, id: userId } = req.user;
     return this.customerService.findOne(id, ownerId, workspaceId, userId);
@@ -55,8 +55,8 @@ export class CustomerController {
 
   @Put(':id')
   @UseGuards(JwtAuthGuard, RolePermissionGuard)
-  @PermissionsGuard(Permissions.customer_update)
-  @PermissionsGuard(Permissions.customer_manage)
+  // @PermissionsGuard(Permissions.customer_update)
+  // @PermissionsGuard(Permissions.customer_manage)
   update(
     @Param('id') id: string,
     @Body() updateCustomerDto: UpdateCustomerDto,

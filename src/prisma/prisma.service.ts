@@ -1,9 +1,9 @@
 // external imports
 import {
-  Logger,
   Injectable,
-  OnModuleInit,
+  Logger,
   OnModuleDestroy,
+  OnModuleInit,
 } from '@nestjs/common';
 import { Prisma, PrismaClient } from '@prisma/client';
 // internal imports
@@ -34,7 +34,7 @@ export class PrismaService
   }
 
   async onModuleInit() {
-    await this.$connect();
+    // await this.$connect();
   }
 
   async onModuleDestroy() {

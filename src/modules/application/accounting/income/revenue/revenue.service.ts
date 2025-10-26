@@ -4,8 +4,8 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
 import { SojebStorage } from 'src/common/lib/Disk/SojebStorage';
+import { handlePrismaError } from 'src/common/utils/prisma-error-handler';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateRevenueDto } from './dto/create-revenue.dto';
 import { UpdateRevenueDto } from './dto/update-revenue.dto';
@@ -25,19 +25,6 @@ async create(
   file?: Express.Multer.File,
 ) {
   try {
-    // Validate related entities
-    if (dto.bank_account_id) {
-      const bankAccount = await this.prisma.bankAccount.findUnique({
-        where: { id: dto.bank_account_id },
-      });
-      if (!bankAccount) {
-        throw new BadRequestException({
-          field: 'bank_account_id',
-          message: 'Bank account not found',
-        });
-      }
-    }
-
     if (dto.customer_id) {
       const customer = await this.prisma.customer.findUnique({
         where: { id: dto.customer_id },
@@ -50,19 +37,7 @@ async create(
       }
     }
 
-    if (dto.invoice_category_id) {
-      const category = await this.prisma.invoiceCategory.findUnique({
-        where: { id: dto.invoice_category_id },
-      });
-      if (!category) {
-        throw new BadRequestException({
-          field: 'invoice_category_id',
-          message: 'Invoice category not found',
-        });
-      }
-    }
-
-    //  Handle file upload
+    // Upload file
     let fileUrl: string | null = null;
     if (file) {
       const fileName = `${userId}-${Date.now()}-${file.originalname}`;
@@ -70,7 +45,7 @@ async create(
       fileUrl = `revenues/${fileName}`;
     }
 
-    //  Create revenue in transaction
+    // Transaction
     const revenue = await this.prisma.$transaction(async (tx) => {
       const newRevenue = await tx.revenue.create({
         data: {
@@ -85,10 +60,10 @@ async create(
           owner_id: ownerId || userId,
           workspace_id: workspaceId,
           user_id: userId,
-        }
+        },
       });
 
-      // Update bank balance
+      // ✅ Update Bank Balance
       if (dto.bank_account_id && dto.amount) {
         await tx.bankAccount.update({
           where: { id: dto.bank_account_id },
@@ -98,37 +73,29 @@ async create(
         });
       }
 
+      // ✅ Update Customer Balance (MAIN PART)
+      if (dto.customer_id && dto.amount) {
+        await tx.customer.update({
+          where: { id: dto.customer_id },
+          data: {
+            balance: { increment: dto.amount },
+          },
+        });
+      }
+
       return newRevenue;
     });
 
-    // ✅ Final return
     return {
       success: true,
       message: 'Revenue created successfully',
       data: revenue,
     };
   } catch (error) {
-    // 🔹 Error handling
-    if (error instanceof BadRequestException || error instanceof NotFoundException) {
-      throw error;
-    }
-
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      throw new BadRequestException({
-        message: 'Database constraint error',
-        code: error.code,
-        meta: error.meta,
-      });
-    }
-
-    console.error('Revenue Create Error:', error);
-
-    throw new InternalServerErrorException({
-      message: 'Something went wrong while creating revenue',
-      error: error.message,
-    });
+    return handlePrismaError(error);
   }
 }
+
 
 
 

@@ -1,4 +1,5 @@
-import { Controller, Post, Body, Get, Param, Put, Delete, UseGuards, ForbiddenException, Req, Res, Query } from '@nestjs/common';
+import { Body, Controller, Delete, ForbiddenException, Get, Param, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
+import { handlePrismaError } from 'src/common/utils/prisma-error-handler';
 import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 import { HelpDeskCategoryService } from './helpdesk-category.service';
 
@@ -30,12 +31,16 @@ export class HelpDeskCategoryController {
     @Body() { name, color }: { name: string; color: string },
     @Req() req: any,  
   ) {
-    const user = req.user;
+    try{
+      const user = req.user;
     if (user.type !== 'SUPERADMIN') {
       throw new ForbiddenException('You do not have permission to update the HelpDesk Category');
     }
 
     return this.helpDeskCategoryService.updateHelpDeskCategory(user.id, id, name, color);
+    }catch(error){
+      return handlePrismaError(error);
+    }
   }
 
   // Only Admin (SUPERADMIN or OWNER) can delete categories

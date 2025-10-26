@@ -5,7 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, Status } from '@prisma/client';
 import { handlePrismaError } from 'src/common/utils/prisma-error-handler';
 import { UpdateInvoiceDto } from 'src/modules/application/invoice/dto/update-invoice.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -644,39 +644,35 @@ export class InvoiceService {
 
   // Helper method to resolve lines and compute total
 
-  async updateStatus(
-    id: string,
-    status: string,
-    ownerId: string,
-    workspaceId: string,
-    userId: string,
-  ) {
-    // Find the invoice by ID and ensure it exists
+async updateStatus(
+  id: string,
+  status: Status,
+  ownerId: string,
+  workspaceId: string,
+  userId: string,
+) {
+  try {
     const invoice = await this.prisma.invoice.findUnique({
-      where: {
-        id,
-        owner_id: ownerId || userId,
-        workspace_id: workspaceId,
-      },
+      where: { id },
     });
 
     if (!invoice) {
       throw new NotFoundException('Invoice not found');
     }
 
+    // Only allow valid transitions
     if (invoice.status === 'PAID') {
       throw new BadRequestException('Invoice already paid');
     }
 
-    if (invoice.status === 'SENT') {
-      throw new BadRequestException('Invoice already sent');
+    if (invoice.status === 'SENT' && status !== 'PAID') {
+      throw new BadRequestException('Cannot change SENT invoice to this status');
     }
 
-    if (invoice.status.toUpperCase() !== 'SENT') {
-      throw new BadRequestException('Status must be SENT');
+    if (invoice.status === 'DRAFT' && status !== 'SENT') {
+      throw new BadRequestException('Draft invoice can only be sent');
     }
 
-    // Update only the status field
     const updatedInvoice = await this.prisma.invoice.update({
       where: { id },
       data: { status },
@@ -684,10 +680,27 @@ export class InvoiceService {
 
     return {
       success: true,
-      message: 'Invoice Sent  successfully',
+      message: `Invoice status updated to ${status}`,
       data: updatedInvoice,
     };
+  } catch (error: any) {
+    if (error instanceof BadRequestException || error instanceof NotFoundException) {
+      return {
+        success: false,
+        message: error.message,
+        error: error.getStatus ? error.getStatus() : 'Bad Request',
+        statusCode: error.getStatus ? error.getStatus() : 400,
+      };
+    }
+    return {
+      success: false,
+      message: error.message || 'Internal Server Error',
+      error: error.name || 'InternalServerError',
+      statusCode: 500,
+    };
   }
+}
+
 
   async deleteInvoiceItems(
     invoiceId: string,
