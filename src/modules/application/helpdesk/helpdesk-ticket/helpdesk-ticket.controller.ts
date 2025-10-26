@@ -1,5 +1,5 @@
-import { Controller, Post, Put, Delete, Query, Param, Body, Req, UseGuards, UseInterceptors, UploadedFiles, Get } from '@nestjs/common';
-import { FilesInterceptor } from '@nestjs/platform-express';
+import { Controller, Post, Put, Delete, Query, Param, Body, Req, UseGuards, UseInterceptors, UploadedFiles, Get, UploadedFile } from '@nestjs/common';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { HelpDeskTicketService } from './helpdesk-ticket.service';
 import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 import { CreateTicketDto } from './dto/create-helpdesk-ticket.dto';
@@ -76,6 +76,31 @@ export class HelpDeskTicketController {
     const { type: userType } = req.user;
     return this.helpDeskTicketService.deleteHelpDeskTicket(req, userType as UserType, id);
   }
+
+  @Post(':id/description')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(FileInterceptor('file'))
+  async addDescription(
+    @Req() req: any,
+    @Param('id') ticketId: string,
+    @Body('description') description: string,
+    @UploadedFile() file?: Express.Multer.File
+  ) {
+    return this.helpDeskTicketService.addDescriptionToTicket(
+      req,
+      ticketId,
+      description,
+      file,
+    );
+  }
+
+  @Get(':id/description')
+@UseGuards(JwtAuthGuard)
+async getAllDescriptions(
+  @Param('id') ticketId: string,
+) {
+  return this.helpDeskTicketService.getAllDescriptionsOfTicket(ticketId);
+}
 
 
 }
