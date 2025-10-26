@@ -126,6 +126,7 @@ export class HelpDeskTicketService {
         descriptions: {
           create: {
             description,
+            creatorId: req.user.id,
             attachments: {
               create: fileUploads
             }
@@ -473,19 +474,60 @@ export class HelpDeskTicketService {
     return (Math.floor(Math.random() * 90000) + 10000).toString();  // Converts to string
   }
 
+  // async addDescriptionToTicket(
+  //   req: any,
+  //   ticketId: string,
+  //   descriptionText: string,
+  //   file?: Express.Multer.File
+  // ) {
+  //   // Check if ticket exists
+  //   const ticket = await this.prisma.helpDeskTicket.findUnique({
+  //     where: { id: ticketId },
+  //   });
+  //   if (!ticket) throw new NotFoundException('Ticket not found');
+
+  //   // Upload file if exists
+  //   let attachments = [];
+  //   if (file) {
+  //     attachments = await this.uploadService.uploadFilesToDescription(
+  //       ticketId,
+  //       req.user.id,
+  //       ticket.workspaceId || '',
+  //       req.user.id,
+  //       [file],
+  //     );
+  //   }
+
+  //   // Create description + attachments
+  //   const description = await this.prisma.ticketDescriptionWithAttachment.create({
+  //     data: {
+  //       ticketId: ticketId,
+  //       description: descriptionText,
+  //       attachments: {
+  //         create: attachments,
+  //       },
+  //     },
+  //     include: { attachments: true },
+  //   });
+
+  //   const response = {
+  //     ...description,
+  //     createdBy: { id: req.user.id, name: req.user.name, email: req.user.email },
+  //   };
+  //   return response;
+  // }
+
   async addDescriptionToTicket(
     req: any,
     ticketId: string,
     descriptionText: string,
-    file?: Express.Multer.File
+    file?: Express.Multer.File,
   ) {
-    // Check if ticket exists
     const ticket = await this.prisma.helpDeskTicket.findUnique({
       where: { id: ticketId },
     });
     if (!ticket) throw new NotFoundException('Ticket not found');
 
-    // Upload file if exists
     let attachments = [];
     if (file) {
       attachments = await this.uploadService.uploadFilesToDescription(
@@ -497,24 +539,26 @@ export class HelpDeskTicketService {
       );
     }
 
-    // Create description + attachments
     const description = await this.prisma.ticketDescriptionWithAttachment.create({
       data: {
-        ticketId: ticketId,
+        ticketId,
         description: descriptionText,
+        creatorId: req.user.id, // ✅ Added
         attachments: {
           create: attachments,
         },
       },
-      include: { attachments: true },
+      include: {
+        attachments: true,
+        creator: {
+          select: { id: true, name: true, email: true },
+        },
+      },
     });
 
-    const response = {
-      ...description,
-      createdBy: { id: req.user.id, name: req.user.name, email: req.user.email },
-    };
-    return response;
+    return description;
   }
+
 
   async getAllDescriptionsOfTicket(ticketId: string, req?: any) {
     const ticket = await this.prisma.helpDeskTicket.findUnique({
