@@ -30,9 +30,10 @@ async create(
 }
 
 
-  @Get()
-  findAll(@Query('workspace_id') workspace_id: string) {
-    return this.service.findAll(workspace_id);
+  @Get("/:invoice_id")
+  findAll(@Param('invoice_id') invoice_id: string, @Req() req: any) {
+    const { id: userId, owner_id: ownerId, workspace_id: workspaceId } = req.user;
+    return this.service.findAll(invoice_id, ownerId, workspaceId, userId);
   }
 
   @Get(':id')

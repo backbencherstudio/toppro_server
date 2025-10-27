@@ -8,7 +8,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 export class ReceiptSummaryService {
   constructor(private prisma: PrismaService) {}
 
- async create(
+  async create(
     dto: CreateReceiptSummaryDto,
     owner_id: string,
     workspace_id: string,
@@ -20,7 +20,10 @@ export class ReceiptSummaryService {
       // Sanitize and normalize incoming data
       dto.amount = Number(dto.amount);
       if (isNaN(dto.amount) || dto.amount <= 0) {
-        return { success: false, message: 'Amount must be a valid number greater than 0' };
+        return {
+          success: false,
+          message: 'Amount must be a valid number greater than 0',
+        };
       }
 
       if (dto.date) dto.date = new Date(dto.date).toISOString();
@@ -73,9 +76,9 @@ export class ReceiptSummaryService {
       const receipt = await this.prisma.receiptSummary.create({
         data: {
           ...dto,
-          owner_id,
+          owner_id: owner_id || user_id,
           workspace_id,
-          user_id,
+          user_id: user_id || owner_id,
           invoice_id: invoice_id || null,
         },
       });
@@ -98,7 +101,7 @@ export class ReceiptSummaryService {
       return {
         success: true,
         message: 'Receipt summary created successfully',
-        receipt,
+        data: receipt,
       };
     } catch (error) {
       console.error('❌ Prisma Error:', error);
@@ -106,20 +109,42 @@ export class ReceiptSummaryService {
     }
   }
 
-
-  findAll(workspace_id: string) {
-    return this.prisma.receiptSummary.findMany({
-      where: { workspace_id },
-      orderBy: { created_at: 'desc' },
-    });
+  async findAll(
+    invoice_id: string,
+    owner_id: string,
+    workspace_id: string,
+    user_id: string,
+  ) {
+    try {
+      const records = await this.prisma.receiptSummary.findMany({
+        where: {
+          // invoice_id,
+          owner_id: owner_id || user_id,
+          workspace_id,
+          user_id: user_id || owner_id,
+        },
+        orderBy: { created_at: 'desc' },
+      });
+      return {
+        success: true,
+        message: 'Receipt summaries retrieved successfully',
+        data: records,
+      };
+    } catch (error) {
+      return handlePrismaError(error);
+    }
   }
 
   async findOne(id: string) {
-    const record = await this.prisma.receiptSummary.findUnique({
-      where: { id },
-    });
-    if (!record) throw new NotFoundException('Receipt not found');
-    return record;
+    try {
+      const record = await this.prisma.receiptSummary.findUnique({
+        where: { id },
+      });
+      if (!record) throw new NotFoundException('Receipt not found');
+      return record;
+    } catch (error) {
+      return handlePrismaError(error);
+    }
   }
 
   async update(id: string, dto: UpdateReceiptSummaryDto) {

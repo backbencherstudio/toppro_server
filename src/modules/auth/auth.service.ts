@@ -801,6 +801,8 @@ export class AuthService {
         },
       });
 
+      console.log(' User created successfully:', user.id);
+
       return {
         success: true,
         message: 'User registered successfully',

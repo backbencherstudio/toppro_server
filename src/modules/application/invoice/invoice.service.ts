@@ -481,6 +481,7 @@ export class InvoiceService {
         id: item.id,
         no: index + 1,
         itemType: item.ItemType?.name ?? null,
+        itemType_id: item.item_type_id,
         item: item.name,
         quantity,
         rate,
@@ -543,7 +544,6 @@ export class InvoiceService {
 
   // --------- UPDATE ------------
 
-  // Main function to update the invoice
   async update(
     id: string,
     dto: UpdateInvoiceDto,
