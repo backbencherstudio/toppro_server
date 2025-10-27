@@ -23,7 +23,7 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api');
   app.enableCors();
-  // ✅ Helmet with CSP to allow external images
+  //  Helmet with CSP to allow external images
   app.use(
     helmet({
       contentSecurityPolicy: {
@@ -48,6 +48,7 @@ async function bootstrap() {
   });
   app.useGlobalPipes(new ValidationPipe({
     transform: true,
+    whitelist: true,
     transformOptions: { enableImplicitConversion: true },
   }));
   app.useGlobalFilters(new CustomExceptionFilter());

@@ -479,12 +479,12 @@ model ReceiptSummary {
   payment_type String  @default("manual")
   ordered      String?
 
-  owner_id     String
-  user_id      String
-  workspace_id String
+  owner_id     String?
+  user_id      String?
+  workspace_id String?
 
-  user      User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  workspace Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  user      User?      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  workspace Workspace? @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt

@@ -18,7 +18,6 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import { memoryStorage } from 'multer';
 import { AuthService } from './auth.service';
-import appConfig from '../../config/app.config';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -80,6 +79,8 @@ export class AuthController {
     // console.log('req.user', req.user);
     const { name, email, phone_number, address, password, roleId, status } =
       data;
+
+      console.log("wordspace id",req.user )
 
     if (!workspace_id) {
       throw new HttpException('Workspace ID missing', HttpStatus.BAD_REQUEST);
