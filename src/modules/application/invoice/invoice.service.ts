@@ -504,8 +504,8 @@ export class InvoiceService {
       invoice_category_id: invoice.invoice_category_id,
       item_category_id: invoice.item_category_id,
       invoice_category: invoice.invoice_category_id,
-
-      
+      createdAt: invoice.createdAt,
+      updatedAt: invoice.updatedAt,
 
       billedTo: {
         name: invoice.Customer?.billingName ?? invoice.Customer?.name,

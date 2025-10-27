@@ -8,7 +8,7 @@ export class CouponService {
   constructor(private prisma: PrismaService) { }
 
   async create(createCouponDto: CreateCouponDto, userId: string) {
-    return this.prisma.coupon.create({
+    const coupon = await this.prisma.coupon.create({
       data: {
         ...createCouponDto,
         isActive: true, // Always set to true by default
@@ -16,7 +16,18 @@ export class CouponService {
         owner_id: userId
       }
     });
-  }
+
+    if (!coupon) {
+      throw new NotFoundException('Failed to create coupon');
+    }
+
+    return {
+      success: true,
+      message: 'Coupon created successfully!',
+      data: coupon,
+    };
+  
+}
 
   async findAll() {
     return this.prisma.coupon.findMany({
