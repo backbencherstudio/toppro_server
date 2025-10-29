@@ -148,10 +148,10 @@ model Workspace {
   deleted_at DateTime?
 
   name        String
-  code        String  @unique
+  code        String?
   description String?
   super_id    String?
-  owner_id    String
+  owner_id    String?
 
   status           Int?               @default(1) @db.SmallInt
   User             User[]
