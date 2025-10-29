@@ -10,19 +10,19 @@ export class WorkspaceService {
   constructor(
     private jwtService: JwtService,
     private readonly prisma: PrismaService,
-  ) {}
+  ) { }
 
   async create(data: CreateWorkspaceDto, userId: string, ownerId: string) {
     console.log('WorkspaceService', userId, ownerId);
     const ownerForWorkspace = ownerId || userId;
 
     // Ensure workspace code is unique (schema enforces global uniqueness)
-    const exists = await this.prisma.workspace.findUnique({
-      where: { code: data.code },
-    });
-    if (exists) {
-      throw new BadRequestException('Workspace code already exists');
-    }
+    // const exists = await this.prisma.workspace.findUnique({
+    //   where: { id: data.id },
+    // });
+    // if (exists) {
+    //   throw new BadRequestException('Workspace code already exists');
+    // }
 
     const workspace = await this.prisma.$transaction(async (tx) => {
       const ws = await tx.workspace.create({
@@ -52,7 +52,12 @@ export class WorkspaceService {
     return {
       success: true,
       message: 'Workspace created successfully',
-      workspace,
+      data: {
+        name: workspace.name,
+        id: workspace.id,
+        created_at: workspace.created_at,
+        updated_at: workspace.updated_at,
+      },
     };
   }
 
@@ -62,52 +67,52 @@ export class WorkspaceService {
         owner_id: ownerId || userId,
       },
     });
-    return { success: true, workspaces };
+    return { success: true, message: "All workspaces found successfully", data: workspaces };
   }
 
-async findAllWorkspaces(ownerId: string, userId: string) {
-  try {
-    // Fetch workspaces
-    const workspaces = await this.prisma.workspace.findMany({
-      where: {
-        owner_id: ownerId || userId,
-      },
-    });
+  async findAllWorkspaces(ownerId: string, userId: string) {
+    try {
+      // Fetch workspaces
+      const workspaces = await this.prisma.workspace.findMany({
+        where: {
+          owner_id: ownerId || userId,
+        },
+      });
 
-    // Check if workspaces exist
-    if (!workspaces || workspaces.length === 0) {
-      throw new BadRequestException(
-        'No workspaces found for the specified owner',
+      // Check if workspaces exist
+      if (!workspaces || workspaces.length === 0) {
+        throw new BadRequestException(
+          'No workspaces found for the specified owner',
+        );
+      }
+
+      // Return success response
+      return {
+        success: true,
+        message: 'Workspaces retrieved successfully',
+        workspaces,
+      };
+    } catch (error) {
+      // Handle known Prisma errors or other exceptions
+      if (error instanceof BadRequestException) {
+        throw error; // Re-throw known exceptions
+      }
+
+      console.error('Error fetching workspaces:', error);
+
+      // Throw generic internal server error
+      throw new InternalServerErrorException(
+        'Failed to retrieve workspaces. Please try again later.',
       );
     }
-
-    // Return success response
-    return {
-      success: true,
-      message: 'Workspaces retrieved successfully',
-      workspaces,
-    };
-  } catch (error) {
-    // Handle known Prisma errors or other exceptions
-    if (error instanceof BadRequestException) {
-      throw error; // Re-throw known exceptions
-    }
-
-    console.error('Error fetching workspaces:', error);
-
-    // Throw generic internal server error
-    throw new InternalServerErrorException(
-      'Failed to retrieve workspaces. Please try again later.',
-    );
   }
-}
 
 
   async findOne(id: string, ownerId: string, userId: string) {
     const workspace = await this.prisma.workspace.findUnique({
       where: { id, owner_id: ownerId || userId },
     });
-    return { success: true, workspace };
+    return { success: true, message: "Workspace found successfully", data: workspace };
   }
 
   async update(
@@ -120,7 +125,7 @@ async findAllWorkspaces(ownerId: string, userId: string) {
       where: { id, owner_id: ownerId || userId },
       data,
     });
-    return { success: true, message: 'Workspace updated', workspace };
+    return { success: true, message: "Workspace Updated successfully", data: workspace };
   }
 
   async remove(id: string, ownerId: string, userId: string) {
