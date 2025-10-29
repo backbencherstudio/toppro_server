@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { Prisma, Status } from '@prisma/client';
 import { handlePrismaError } from 'src/common/utils/prisma-error-handler';
+import { CreateInvoiceItemDto } from 'src/modules/application/invoice/dto/create-invoice-item.dto';
 import { UpdateInvoiceDto } from 'src/modules/application/invoice/dto/update-invoice.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateInvoiceDto } from './dto/create-invoice.dto';
@@ -14,6 +15,8 @@ import { CreateInvoiceDto } from './dto/create-invoice.dto';
 @Injectable()
 export class InvoiceService {
   constructor(private prisma: PrismaService) {}
+
+  // ======= Helper to compute invoice totals and prepare InvoiceItem create data =======
 
   private async resolveLinesAndCompute(
     tx: Prisma.TransactionClient,
@@ -178,15 +181,17 @@ export class InvoiceService {
     return { lineCreates, grandTotal, subTotal, totalDiscount, totalTax };
   }
 
-  // ------- CREATE -------
+  // ======= CREATE INVOICE =======
   async create(
     dto: CreateInvoiceDto,
     ownerId: string,
     workspaceId: string,
     userId: string,
   ) {
-    // if (!dto.items?.length) {
-    //   throw new BadRequestException('At least one item is required');
+
+    console.log('CreateInvoiceDto received in service:', dto);
+    // if (!dto.items || dto.items.length === 0) {
+    //   throw new BadRequestException('At least one invoice item is required');
     // }
 
     try {
@@ -199,66 +204,57 @@ export class InvoiceService {
             workspaceId,
             userId,
             dto.customer_id,
-            // dto.item_category_id
           );
 
-        // console.log('dto.item_category_id:>>', dto.item_category_id);
-
-        const data: any = {
-          invoice_number: dto.invoice_number ? dto.invoice_number : undefined,
-          issueAt: dto.issueAt ? new Date(dto.issueAt) : undefined,
-          dueAt: dto.dueAt ? new Date(dto.dueAt) : undefined,
-          Billing_category: { connect: { id: dto.billing_type_id } },
-          Item_category: { connect: { id: dto.item_category_id } },
-          Invoice_category: { connect: { id: dto.invoice_category_id } },
-          // Account_type: { connect: { id: dto.account_type_id } },
-          Customer: { connect: { id: dto.customer_id } },
-          owner_id: ownerId || userId,
-          Workspace: { connect: { id: workspaceId } },
-          User: { connect: { id: userId } },
-          InvoiceItem: {
-            create: lineCreates,
-          },
-          totalPrice: grandTotal,
-          subTotal: subTotal,
-          totalDiscount: totalDiscount,
-          totalTax: totalTax,
-          due: grandTotal,
-          paid: 0,
-          status: 'DRAFT',
-        };
-
         const invoice = await tx.invoice.create({
-          data,
-          include: {
-            InvoiceItem: true,
+          data: {
+            invoice_number: dto.invoice_number,
+            issueAt: dto.issueAt ? new Date(dto.issueAt) : undefined,
+            dueAt: dto.dueAt ? new Date(dto.dueAt) : undefined,
+            Customer: dto.customer_id
+              ? { connect: { id: dto.customer_id } }
+              : undefined,
+            Billing_category: dto.billing_type_id
+              ? { connect: { id: dto.billing_type_id } }
+              : undefined,
+            Item_category: dto.item_category_id
+              ? { connect: { id: dto.item_category_id } }
+              : undefined,
+            Invoice_category: dto.invoice_category_id
+              ? { connect: { id: dto.invoice_category_id } }
+              : undefined,
+            owner_id: ownerId,
+            Workspace: { connect: { id: workspaceId } },
+            User: userId ? { connect: { id: userId } } : undefined,
+            totalPrice: grandTotal,
+            subTotal,
+            totalDiscount,
+            totalTax,
+            due: grandTotal,
+            paid: 0,
+            // status: dto.status,
+            InvoiceItem: {
+              create: lineCreates,
+            },
           },
+          include: { InvoiceItem: true },
         });
 
-        // Update stock quantity (-) mainus
+        // Update stock for each invoice item
         for (const item of invoice.InvoiceItem) {
           const stock = await tx.stock.findUnique({
             where: { item_id: item.item_id },
           });
-
           if (stock) {
             await tx.stock.update({
               where: { id: stock.id },
-              data: {
-                quantity: stock.quantity - item.quantity,
-              },
+              data: { quantity: stock.quantity - (item.quantity ?? 0) },
             });
 
             await tx.invoiceItem.update({
               where: { id: item.id },
-              data: {
-                stock_id: stock.id,
-              },
+              data: { stock_id: stock.id },
             });
-          } else {
-            throw new BadRequestException(
-              'Stock not found for item: ' + item.item_id,
-            );
           }
         }
 
@@ -277,7 +273,8 @@ export class InvoiceService {
         data: result,
       };
     } catch (error) {
-      return handlePrismaError(error);
+      console.error(error);
+      throw new BadRequestException('Failed to create invoice');
     }
   }
 
@@ -667,14 +664,16 @@ export class InvoiceService {
 
       // 6️⃣ Update stock for new or updated invoice items
       for (const line of lineCreates) {
+        // Unchecked create inputs include `item_id`/`quantity` directly
+        if (!line.item_id) continue;
         const stock = await tx.stock.findUnique({
-          where: { item_id: line.Item.connect.id },
+          where: { item_id: line.item_id },
         });
         if (stock) {
           await tx.stock.update({
             where: { id: stock.id },
             data: {
-              quantity: stock.quantity - line.quantity, // Deduct the quantity
+              quantity: stock.quantity - (line.quantity ?? 0), // Deduct the quantity
             },
           });
         }

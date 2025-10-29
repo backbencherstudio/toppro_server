@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import appConfig from 'src/config/app.config';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -17,12 +21,12 @@ export class WorkspaceService {
     const ownerForWorkspace = ownerId || userId;
 
     // Ensure workspace code is unique (schema enforces global uniqueness)
-    const exists = await this.prisma.workspace.findUnique({
-      where: { code: data.code },
-    });
-    if (exists) {
-      throw new BadRequestException('Workspace code already exists');
-    }
+    // const exists = await this.prisma.workspace.findUnique({
+    //   where: { id: data.id },
+    // });
+    // if (exists) {
+    //   throw new BadRequestException('Workspace code already exists');
+    // }
 
     const workspace = await this.prisma.$transaction(async (tx) => {
       const ws = await tx.workspace.create({
@@ -52,7 +56,12 @@ export class WorkspaceService {
     return {
       success: true,
       message: 'Workspace created successfully',
-      workspace,
+      data: {
+        name: workspace.name,
+        id: workspace.id,
+        created_at: workspace.created_at,
+        updated_at: workspace.updated_at,
+      },
     };
   }
 
@@ -62,52 +71,63 @@ export class WorkspaceService {
         owner_id: ownerId || userId,
       },
     });
-    return { success: true, workspaces };
-  }
-
-async findAllWorkspaces(ownerId: string, userId: string) {
-  try {
-    // Fetch workspaces
-    const workspaces = await this.prisma.workspace.findMany({
-      where: {
-        owner_id: ownerId || userId,
-      },
-    });
-
-    // Check if workspaces exist
-    if (!workspaces || workspaces.length === 0) {
-      throw new BadRequestException(
-        'No workspaces found for the specified owner',
-      );
-    }
-
-    // Return success response
     return {
       success: true,
-      message: 'Workspaces retrieved successfully',
-      workspaces,
+      message: 'All workspaces found successfully',
+      data: workspaces,
     };
-  } catch (error) {
-    // Handle known Prisma errors or other exceptions
-    if (error instanceof BadRequestException) {
-      throw error; // Re-throw known exceptions
-    }
-
-    console.error('Error fetching workspaces:', error);
-
-    // Throw generic internal server error
-    throw new InternalServerErrorException(
-      'Failed to retrieve workspaces. Please try again later.',
-    );
   }
-}
 
+  async findAllWorkspaces(ownerId: string, userId: string) {
+    try {
+      // Fetch workspaces
+      const workspaces = await this.prisma.workspace.findMany({
+        where: {
+          owner_id: ownerId || userId,
+        },
+      });
+
+      // Check if workspaces exist
+      if (!workspaces || workspaces.length === 0) {
+        throw new BadRequestException(
+          'No workspaces found for the specified owner',
+        );
+      }
+
+      // Return success response
+      return {
+        success: true,
+        message: 'Workspaces retrieved successfully',
+        workspaces,
+      };
+    } catch (error) {
+      // Handle known Prisma errors or other exceptions
+      if (error instanceof BadRequestException) {
+        throw error; // Re-throw known exceptions
+      }
+
+      console.error('Error fetching workspaces:', error);
+
+      // Throw generic internal server error
+      throw new InternalServerErrorException(
+        'Failed to retrieve workspaces. Please try again later.',
+      );
+    }
+  }
 
   async findOne(id: string, ownerId: string, userId: string) {
     const workspace = await this.prisma.workspace.findUnique({
-      where: { id, owner_id: ownerId || userId },
+      where: { id },
     });
-    return { success: true, workspace };
+
+    if (!workspace) {
+      throw new BadRequestException('Workspace not found');
+    }
+    return {
+      success: true,
+      message: 'Workspace found successfully',
+      data: workspace,
+    };
   }
 
   async update(
@@ -117,17 +137,29 @@ async findAllWorkspaces(ownerId: string, userId: string) {
     userId: string,
   ) {
     const workspace = await this.prisma.workspace.update({
-      where: { id, owner_id: ownerId || userId },
+      where: { id},
       data,
     });
-    return { success: true, message: 'Workspace updated', workspace };
+    return {
+      success: true,
+      message: 'Workspace Updated successfully',
+      data: workspace,
+    };
   }
 
   async remove(id: string, ownerId: string, userId: string) {
-    await this.prisma.workspace.delete({
-      where: { id, owner_id: ownerId || userId },
+    const workspace = await this.prisma.workspace.delete({
+      where: { id },
     });
-    return { success: true, message: 'Workspace deleted' };
+
+    if (!workspace) {
+      throw new BadRequestException('Workspace not found');
+    }
+    return {
+      success: true,
+      message: 'Workspace deleted',
+      data: workspace,
+    };
   }
 
   // workspace.service.ts
@@ -137,6 +169,10 @@ async findAllWorkspaces(ownerId: string, userId: string) {
         owner_id: ownerId || userId,
       },
     });
+
+    if (!count) {
+      throw new BadRequestException('No workspaces found');
+    }
 
     return {
       success: true,

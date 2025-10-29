@@ -202,7 +202,8 @@ export class PurchaseService {
       throw new BadRequestException('At least one item is required');
     }
 
-    return this.prisma.$transaction(async (tx) => {
+try{
+      const result = await this.prisma.$transaction(async (tx) => {
       const { lineCreates, grandTotal } = await this.resolveLinesAndCompute(
         tx,
         dto.items,
@@ -293,8 +294,19 @@ export class PurchaseService {
         },
       };
     });
-  }
 
+    console.log('Created purchase:', result);
+
+    return {
+      success: true,
+      message: 'Purchase created successfully',
+      data: result,
+    };
+  } catch (error) {
+    console.error('Error creating purchase:', error);
+    throw new BadRequestException('Failed to create purchase');
+}
+  }
   // ------- LIST -------
   async findAll(ownerId: string, workspaceId: string, userId?: string) {
     const rows = await this.prisma.purchase.findMany({
