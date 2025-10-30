@@ -774,7 +774,7 @@ export class AuthService {
         },
       });
 
-      console.log(' User created successfully:', user.id);
+      // console.log(' User created successfully:', user.id);
 
       return {
         success: true,

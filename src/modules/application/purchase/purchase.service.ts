@@ -425,7 +425,7 @@ try{
       // 2️⃣ Update the purchase header (relations and fields)
       const headerData: any = {};
       const rel: [keyof UpdatePurchaseDto, string][] = [
-        ['account_type_id', 'AccountType'],
+        // ['account_type_id', 'AccountType'],
         ['vendor_id', 'Vendor'],
         ['billing_type_id', 'BillingType'],
         ['category_id', 'Category'],
@@ -778,6 +778,28 @@ try{
       return { success: true };
     });
   }
+
+  // ------- PURCHASE DELETE -------
+  async deletePurchase(
+    id: string,
+    userId: string,
+  ) {
+ const deletedPurchase = await this.prisma.purchase.delete({
+      where: {
+        id,
+        user_id: userId,
+      },
+    });
+    if (!deletedPurchase) {
+      throw new NotFoundException('Purchase not found or not authorized');
+    }
+    return {
+      success: true,
+      message: 'Purchase deleted successfully',
+      data: deletedPurchase,
+    };
+  }
+
 
   // ------- PURCHASE REPORT -------
 
