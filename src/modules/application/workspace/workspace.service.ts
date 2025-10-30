@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import appConfig from 'src/config/app.config';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -10,7 +14,7 @@ export class WorkspaceService {
   constructor(
     private jwtService: JwtService,
     private readonly prisma: PrismaService,
-  ) { }
+  ) {}
 
   async create(data: CreateWorkspaceDto, userId: string, ownerId: string) {
     console.log('WorkspaceService', userId, ownerId);
@@ -67,7 +71,11 @@ export class WorkspaceService {
         owner_id: ownerId || userId,
       },
     });
-    return { success: true, message: "All workspaces found successfully", data: workspaces };
+    return {
+      success: true,
+      message: 'All workspaces found successfully',
+      data: workspaces,
+    };
   }
 
   async findAllWorkspaces(ownerId: string, userId: string) {
@@ -107,12 +115,19 @@ export class WorkspaceService {
     }
   }
 
-
   async findOne(id: string, ownerId: string, userId: string) {
     const workspace = await this.prisma.workspace.findUnique({
-      where: { id, owner_id: ownerId || userId },
+      where: { id },
     });
-    return { success: true, message: "Workspace found successfully", data: workspace };
+
+    if (!workspace) {
+      throw new BadRequestException('Workspace not found');
+    }
+    return {
+      success: true,
+      message: 'Workspace found successfully',
+      data: workspace,
+    };
   }
 
   async update(
@@ -122,17 +137,29 @@ export class WorkspaceService {
     userId: string,
   ) {
     const workspace = await this.prisma.workspace.update({
-      where: { id, owner_id: ownerId || userId },
+      where: { id},
       data,
     });
-    return { success: true, message: "Workspace Updated successfully", data: workspace };
+    return {
+      success: true,
+      message: 'Workspace Updated successfully',
+      data: workspace,
+    };
   }
 
   async remove(id: string, ownerId: string, userId: string) {
-    await this.prisma.workspace.delete({
-      where: { id, owner_id: ownerId || userId },
+    const workspace = await this.prisma.workspace.delete({
+      where: { id },
     });
-    return { success: true, message: 'Workspace deleted' };
+
+    if (!workspace) {
+      throw new BadRequestException('Workspace not found');
+    }
+    return {
+      success: true,
+      message: 'Workspace deleted',
+      data: workspace,
+    };
   }
 
   // workspace.service.ts
@@ -142,6 +169,10 @@ export class WorkspaceService {
         owner_id: ownerId || userId,
       },
     });
+
+    if (!count) {
+      throw new BadRequestException('No workspaces found');
+    }
 
     return {
       success: true,

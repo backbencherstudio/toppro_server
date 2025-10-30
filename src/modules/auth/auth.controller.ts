@@ -61,6 +61,44 @@ export class AuthController {
   // USER REGISTER ENDPOINT
   // ==========================
   @ApiOperation({ summary: 'Register a new USER under owner workspace' })
+  @Post('create/owner')
+  @UseGuards(JwtAuthGuard)
+  async registerOwner(
+    @Body() data: CreateUserDto,
+    @Req()
+    req: Request & {
+      user: {
+        id: string;
+        owner_id?: string;
+      };
+    },
+  ) {
+    const { id, owner_id } = req.user;
+
+    // console.log('req.user', req.user);
+    const { name, email, phone_number, address, password, roleId, status, workspace_name } =
+      data;
+
+
+
+    const result = await this.authService.registerOwner({
+      name,
+    email,
+    phone_number,
+    address,
+    password,
+    super_id : id,
+    workspace_name,
+    roleId,
+    status,
+    });
+
+    return result;
+  }
+  // ==========================
+  // USER REGISTER ENDPOINT
+  // ==========================
+  @ApiOperation({ summary: 'Register a new USER under owner workspace' })
   @Post('create/user')
   @UseGuards(JwtAuthGuard)
   async registerUser(

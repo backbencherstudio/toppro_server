@@ -1,10 +1,10 @@
 import { Type } from 'class-transformer';
 import {
-    IsDate,
-    IsNumber,
-    IsOptional,
-    IsString,
-    Min
+  IsDate,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Min
 } from 'class-validator';
 import { CreateInvoiceItemDto } from './create-invoice-item.dto';
 
@@ -40,8 +40,10 @@ export class CreateInvoiceDto {
   @IsString()
   item_category_id?: string;
 
-  @Type(() => CreateInvoiceItemDto)
-  items: CreateInvoiceItemDto[];
+@Type(() => CreateInvoiceItemDto)
+@IsOptional()
+items?: CreateInvoiceItemDto[];
+
 
   @IsOptional()
   @IsNumber()

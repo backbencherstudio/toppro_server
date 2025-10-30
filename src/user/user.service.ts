@@ -369,7 +369,7 @@ export class UserService {
     const users = await this.prisma.user.findMany({
       where: {
         workspace_id: workspaceId,
-        ...(ownerId ? { owner_id: ownerId } : {}), // ownerId না থাকলে skip
+        ...(ownerId ? { owner_id: ownerId } : {}),
         role_users: {
           some: {
             role: {

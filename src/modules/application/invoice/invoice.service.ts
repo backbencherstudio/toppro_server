@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { Prisma, Status } from '@prisma/client';
 import { handlePrismaError } from 'src/common/utils/prisma-error-handler';
+import { CreateInvoiceItemDto } from 'src/modules/application/invoice/dto/create-invoice-item.dto';
 import { UpdateInvoiceDto } from 'src/modules/application/invoice/dto/update-invoice.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateInvoiceDto } from './dto/create-invoice.dto';
@@ -14,6 +15,8 @@ import { CreateInvoiceDto } from './dto/create-invoice.dto';
 @Injectable()
 export class InvoiceService {
   constructor(private prisma: PrismaService) {}
+
+  // ======= Helper to compute invoice totals and prepare InvoiceItem create data =======
 
   private async resolveLinesAndCompute(
     tx: Prisma.TransactionClient,
@@ -178,97 +181,101 @@ export class InvoiceService {
     return { lineCreates, grandTotal, subTotal, totalDiscount, totalTax };
   }
 
-  // ------- CREATE -------
+  // ======= CREATE INVOICE =======
   async create(
     dto: CreateInvoiceDto,
     ownerId: string,
     workspaceId: string,
     userId: string,
   ) {
-    if (!dto.items?.length) {
-      throw new BadRequestException('At least one item is required');
-    }
 
-    return this.prisma.$transaction(async (tx) => {
-      const { lineCreates, grandTotal, subTotal, totalDiscount, totalTax } =
-        await this.resolveLinesAndCompute(
-          tx,
-          dto.items,
-          ownerId,
-          workspaceId,
-          userId,
-          dto.customer_id,
-          // dto.item_category_id
-        );
+    console.log('CreateInvoiceDto received in service:', dto);
+    // if (!dto.items || dto.items.length === 0) {
+    //   throw new BadRequestException('At least one invoice item is required');
+    // }
 
-      // console.log('dto.item_category_id:>>', dto.item_category_id);
+    try {
+      const result = await this.prisma.$transaction(async (tx) => {
+        const { lineCreates, grandTotal, subTotal, totalDiscount, totalTax } =
+          await this.resolveLinesAndCompute(
+            tx,
+            dto.items,
+            ownerId,
+            workspaceId,
+            userId,
+            dto.customer_id,
+          );
 
-      const data: any = {
-        invoice_number: dto.invoice_number ? dto.invoice_number : undefined,
-        issueAt: dto.issueAt ? new Date(dto.issueAt) : undefined,
-        dueAt: dto.dueAt ? new Date(dto.dueAt) : undefined,
-        Billing_category: { connect: { id: dto.billing_type_id } },
-        Item_category: { connect: { id: dto.item_category_id } },
-        Invoice_category: { connect: { id: dto.invoice_category_id } },
-        Account_type: { connect: { id: dto.account_type_id } },
-        Customer: { connect: { id: dto.customer_id } },
-        owner_id: ownerId || userId,
-        Workspace: { connect: { id: workspaceId } },
-        User: { connect: { id: userId } },
-        InvoiceItem: {
-          create: lineCreates,
-        },
-        totalPrice: grandTotal,
-        subTotal: subTotal,
-        totalDiscount: totalDiscount,
-        totalTax: totalTax,
-        due: grandTotal,
-        paid: 0,
-        status: 'DRAFT',
-      };
-
-      const invoice = await tx.invoice.create({
-        data,
-        include: {
-          InvoiceItem: true,
-        },
-      });
-
-      // Update stock quantity (-) mainus
-      for (const item of invoice.InvoiceItem) {
-        const stock = await tx.stock.findUnique({
-          where: { item_id: item.item_id },
+        const invoice = await tx.invoice.create({
+          data: {
+            invoice_number: dto.invoice_number,
+            issueAt: dto.issueAt ? new Date(dto.issueAt) : undefined,
+            dueAt: dto.dueAt ? new Date(dto.dueAt) : undefined,
+            Customer: dto.customer_id
+              ? { connect: { id: dto.customer_id } }
+              : undefined,
+            Billing_category: dto.billing_type_id
+              ? { connect: { id: dto.billing_type_id } }
+              : undefined,
+            Item_category: dto.item_category_id
+              ? { connect: { id: dto.item_category_id } }
+              : undefined,
+            Invoice_category: dto.invoice_category_id
+              ? { connect: { id: dto.invoice_category_id } }
+              : undefined,
+            owner_id: ownerId,
+            Workspace: { connect: { id: workspaceId } },
+            User: userId ? { connect: { id: userId } } : undefined,
+            totalPrice: grandTotal,
+            subTotal,
+            totalDiscount,
+            totalTax,
+            due: grandTotal,
+            paid: 0,
+            // status: dto.status,
+            InvoiceItem: {
+              create: lineCreates,
+            },
+          },
+          include: { InvoiceItem: true },
         });
 
-        if (stock) {
-          await tx.stock.update({
-            where: { id: stock.id },
-            data: {
-              quantity: stock.quantity - item.quantity,
-            },
+        // Update stock for each invoice item
+        for (const item of invoice.InvoiceItem) {
+          const stock = await tx.stock.findUnique({
+            where: { item_id: item.item_id },
           });
+          if (stock) {
+            await tx.stock.update({
+              where: { id: stock.id },
+              data: { quantity: stock.quantity - (item.quantity ?? 0) },
+            });
 
-          await tx.invoiceItem.update({
-            where: { id: item.id },
-            data: {
-              stock_id: stock.id,
-            },
-          });
-        } else {
-          throw new BadRequestException(
-            'Stock not found for item: ' + item.item_id,
-          );
+            await tx.invoiceItem.update({
+              where: { id: item.id },
+              data: { stock_id: stock.id },
+            });
+          }
         }
-      }
+
+        return {
+          ...invoice,
+          _summary: {
+            grand_total: Number(grandTotal.toFixed(2)),
+            lines_count: lineCreates.length,
+          },
+        };
+      });
 
       return {
-        ...invoice,
-        _summary: {
-          grand_total: Number(grandTotal.toFixed(2)),
-          lines_count: lineCreates.length,
-        },
+        success: true,
+        message: 'Invoice created successfully',
+        data: result,
       };
-    });
+    } catch (error) {
+      console.error(error);
+      throw new BadRequestException('Failed to create invoice');
+    }
   }
 
   async findAll(
@@ -363,17 +370,14 @@ export class InvoiceService {
     userId: string,
   ) {
     try {
-
-
       // Fetch invoices with pagination and filters
       const invoices = await this.prisma.invoice.findMany({
-        where:{
+        where: {
           owner_id: ownerId || userId,
           workspace_id: workspaceId,
           status: 'PAID',
           deleted_at: null,
         },
-
       });
 
       const formatted = invoices.map((invoice) => ({
@@ -413,7 +417,6 @@ export class InvoiceService {
         deleted_at: null,
       },
       include: {
-
         InvoiceItem: {
           include: {
             // Account_type: { select: { id: true, name: true } },
@@ -661,14 +664,16 @@ export class InvoiceService {
 
       // 6️⃣ Update stock for new or updated invoice items
       for (const line of lineCreates) {
+        // Unchecked create inputs include `item_id`/`quantity` directly
+        if (!line.item_id) continue;
         const stock = await tx.stock.findUnique({
-          where: { item_id: line.Item.connect.id },
+          where: { item_id: line.item_id },
         });
         if (stock) {
           await tx.stock.update({
             where: { id: stock.id },
             data: {
-              quantity: stock.quantity - line.quantity, // Deduct the quantity
+              quantity: stock.quantity - (line.quantity ?? 0), // Deduct the quantity
             },
           });
         }
@@ -684,63 +689,67 @@ export class InvoiceService {
 
   // Helper method to resolve lines and compute total
 
-async updateStatus(
-  id: string,
-  status: Status,
-  ownerId: string,
-  workspaceId: string,
-  userId: string,
-) {
-  try {
-    const invoice = await this.prisma.invoice.findUnique({
-      where: { id },
-    });
+  async updateStatus(
+    id: string,
+    status: Status,
+    ownerId: string,
+    workspaceId: string,
+    userId: string,
+  ) {
+    try {
+      const invoice = await this.prisma.invoice.findUnique({
+        where: { id },
+      });
 
-    if (!invoice) {
-      throw new NotFoundException('Invoice not found');
-    }
+      if (!invoice) {
+        throw new NotFoundException('Invoice not found');
+      }
 
-    // Only allow valid transitions
-    if (invoice.status === 'PAID') {
-      throw new BadRequestException('Invoice already paid');
-    }
+      // Only allow valid transitions
+      if (invoice.status === 'PAID') {
+        throw new BadRequestException('Invoice already paid');
+      }
 
-    if (invoice.status === 'SENT' && status !== 'PAID') {
-      throw new BadRequestException('Cannot change SENT invoice to this status');
-    }
+      if (invoice.status === 'SENT' && status !== 'PAID') {
+        throw new BadRequestException(
+          'Cannot change SENT invoice to this status',
+        );
+      }
 
-    if (invoice.status === 'DRAFT' && status !== 'SENT') {
-      throw new BadRequestException('Draft invoice can only be sent');
-    }
+      if (invoice.status === 'DRAFT' && status !== 'SENT') {
+        throw new BadRequestException('Draft invoice can only be sent');
+      }
 
-    const updatedInvoice = await this.prisma.invoice.update({
-      where: { id },
-      data: { status },
-    });
+      const updatedInvoice = await this.prisma.invoice.update({
+        where: { id },
+        data: { status },
+      });
 
-    return {
-      success: true,
-      message: `Invoice status updated to ${status}`,
-      data: updatedInvoice,
-    };
-  } catch (error: any) {
-    if (error instanceof BadRequestException || error instanceof NotFoundException) {
+      return {
+        success: true,
+        message: `Invoice status updated to ${status}`,
+        data: updatedInvoice,
+      };
+    } catch (error: any) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof NotFoundException
+      ) {
+        return {
+          success: false,
+          message: error.message,
+          error: error.getStatus ? error.getStatus() : 'Bad Request',
+          statusCode: error.getStatus ? error.getStatus() : 400,
+        };
+      }
       return {
         success: false,
-        message: error.message,
-        error: error.getStatus ? error.getStatus() : 'Bad Request',
-        statusCode: error.getStatus ? error.getStatus() : 400,
+        message: error.message || 'Internal Server Error',
+        error: error.name || 'InternalServerError',
+        statusCode: 500,
       };
     }
-    return {
-      success: false,
-      message: error.message || 'Internal Server Error',
-      error: error.name || 'InternalServerError',
-      statusCode: 500,
-    };
   }
-}
-
 
   async deleteInvoiceItems(
     invoiceId: string,
