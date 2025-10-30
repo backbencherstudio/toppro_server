@@ -9,6 +9,9 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { Role } from 'src/common/guard/role/role.enum';
+import { Roles } from 'src/common/guard/role/roles.decorator';
+import { RolesGuard } from 'src/common/guard/role/roles.guard';
 import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 import { CreateUserDto } from './dto/create_user-dto';
 import { LoginDto } from './dto/login_dto';
@@ -91,7 +94,7 @@ export class UserController {
       id: userId,
     } = req.user;
     return this.userService.getUsersWithCrmAccess(ownerId, workspaceId, userId);
-  };
+  }
 
   @Get('purchase/all')
   @UseGuards(JwtAuthGuard)
@@ -101,7 +104,11 @@ export class UserController {
       workspace_id: workspaceId,
       id: userId,
     } = req.user;
-    return this.userService.getUsersWithPurchaseAccess(ownerId, workspaceId, userId);
+    return this.userService.getUsersWithPurchaseAccess(
+      ownerId,
+      workspaceId,
+      userId,
+    );
   }
 
   // Endpoint to update a user's information

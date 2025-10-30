@@ -369,7 +369,7 @@ export class UserService {
     const users = await this.prisma.user.findMany({
       where: {
         workspace_id: workspaceId,
-        ...(ownerId ? { owner_id: ownerId } : {}),
+        owner_id: ownerId || userId,
         role_users: {
           some: {
             role: {
@@ -406,6 +406,8 @@ export class UserService {
       },
       orderBy: { created_at: 'desc' },
     });
+
+    // console.log('Users with CRM access:', users);
 
     // shape response (roles + permission titles)
     return {
