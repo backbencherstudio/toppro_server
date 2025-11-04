@@ -53,6 +53,10 @@ export class UpdateUserDto extends PartialType(CreateUserDto) {
   address?: string;
 
   @IsOptional()
+  @ApiProperty()
+  avatar?: string;
+
+  @IsOptional()
   @ApiProperty({
     description: 'Gender',
     example: 'male',

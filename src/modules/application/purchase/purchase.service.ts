@@ -342,58 +342,65 @@ try{
   }
 
   // ------- SINGLE -------
-  async findOne(
-    id: string,
-    ownerId: string,
-    workspaceId: string,
-    userId?: string,
-  ) {
-    const row = await this.prisma.purchase.findFirst({
-      where: {
-        id,
-        deleted_at: null,
-        owner_id: ownerId || userId,
-        workspace: { id: workspaceId },
+async findOne(
+  id: string,
+  ownerId: string,
+  workspaceId: string,
+  userId?: string,
+) {
+  const row = await this.prisma.purchase.findFirst({
+    where: {
+      id,
+      deleted_at: null,
+      owner_id: ownerId || userId,
+      workspace: { id: workspaceId },
+    },
+    include: {
+      Vendor: true,
+      purchaseItems: {
+        where: { deleted_at: null },
       },
-      include: {
-        purchaseItems: {
-          where: { deleted_at: null },
-        },
-      },
-    });
+    },
+  });
 
-    if (!row) throw new NotFoundException('Purchase not found');
+  if (!row) throw new NotFoundException('Purchase not found');
 
-    // Calculate the updated summary
-    const _summary = {
-      total_quantity: row.purchaseItems.reduce(
-        (total, item) => total + item.quantity,
-        0,
-      ),
-      total_rate: row.purchaseItems.reduce(
-        (total, item) => total + item.purchase_price,
-        0,
-      ),
-      total_discount: row.purchaseItems.reduce(
-        (total, item) => total + item.discount,
-        0,
-      ),
-      total_tax: row.purchaseItems.reduce(
-        (total, item) =>
-          total + (item.total - item.purchase_price - item.discount),
-        0,
-      ),
-      total_price: row.purchaseItems.reduce(
-        (total, item) => total + item.total,
-        0,
-      ),
-    };
+  // summary হিসাব
+  const _summary = {
+    total_quantity: row.purchaseItems.reduce(
+      (total, item) => total + item.quantity,
+      0,
+    ),
+    total_rate: row.purchaseItems.reduce(
+      (total, item) => total + item.purchase_price,
+      0,
+    ),
+    total_discount: row.purchaseItems.reduce(
+      (total, item) => total + item.discount,
+      0,
+    ),
+    total_tax: row.purchaseItems.reduce(
+      (total, item) =>
+        total + (item.total - item.purchase_price - item.discount),
+      0,
+    ),
+    total_price: row.purchaseItems.reduce(
+      (total, item) => total + item.total,
+      0,
+    ),
+  };
 
-    return {
-      ...row,
-      _summary,
-    };
-  }
+  // Output format
+  const { purchaseItems, ...rest } = row;
+
+  return {
+    ...rest,
+    items: purchaseItems,
+    _summary,
+  };
+}
+
+
 
   // ------- UPDATE (header patch + replace lines if provided) -------}
 

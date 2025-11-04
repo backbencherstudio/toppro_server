@@ -86,14 +86,14 @@ export class VendorController {
       workspace_id: workspaceId,
       id: userId,
     } = req.user;
-    console.log(
-      'Owner ID..............................:',
-      ownerId,
-      'Workspace ID:',
-      workspaceId,
-      'User ID:',
-      userId,
-    );
+    // console.log(
+    //   'Owner ID..............................:',
+    //   ownerId,
+    //   'Workspace ID:',
+    //   workspaceId,
+    //   'User ID:',
+    //   userId,
+    // );
     return this.vendorService.findAll(
       page,
       limit,
