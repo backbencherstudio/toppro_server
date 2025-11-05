@@ -92,6 +92,25 @@ export class InvoiceController {
       userId,
     );
   }
+  // get all invoices
+  @Get('customer-invoices/:customer_id')
+  async findAllcustomerInvoices(
+    @Req() req: any,
+    @Param("customer_id") customer_id:string
+  ) {
+    const {
+      owner_id: ownerId,
+      workspace_id: workspaceId,
+      id: userId,
+    } = req.user;
+
+    return this.invoiceService.findAllcustomerInvoices(
+      customer_id,
+      ownerId,
+      workspaceId,
+      userId,
+    );
+  }
 
   // invoice single view
   @Get(':id')

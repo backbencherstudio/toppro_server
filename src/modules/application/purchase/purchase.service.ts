@@ -809,37 +809,40 @@ async findOne(
 
 
   // ------- PURCHASE REPORT -------
+async getPurchaseReport(
+  startDate: string | null,
+  endDate: string | null,
+  vendor: string,
+  ownerId: string,
+  workspaceId: string,
+  userId: string,
+) {
+  
+  const end = endDate ? new Date(endDate) : new Date();
+  const start = startDate
+    ? new Date(startDate)
+    : new Date(new Date().setMonth(end.getMonth() - 1)); // last 1 month
 
-  async getPurchaseReport(
-    startDate: string,
-    endDate: string,
-    vendor: string,
-    ownerId: string,
-    workspaceId: string,
-    userId: string,
-  ) {
-    const start = new Date(startDate).toISOString();
-    const end = new Date(endDate).toISOString();
-
-    const purchases = await this.prisma.purchase.findMany({
-      where: {
-        owner_id: ownerId || userId,
-        workspace_id: workspaceId,
-        purchase_date: {
-          gte: start,
-          lte: end,
-        },
-
-        vendor_id: vendor !== 'all_vendor' ? vendor : undefined,
+  const purchases = await this.prisma.purchase.findMany({
+    where: {
+      owner_id: ownerId || userId,
+      workspace_id: workspaceId,
+      purchase_date: {
+        gte: start.toISOString(),
+        lte: end.toISOString(),
       },
-      select: {
-        purchase_date: true,
-        due: true,
-      },
-    });
-    const dailyReport = this.aggregateDailyReport(purchases);
-    return dailyReport;
-  }
+      vendor_id: vendor !== 'all_vendor' ? vendor : undefined,
+    },
+    select: {
+      purchase_date: true,
+      due: true,
+    },
+  });
+
+  const dailyReport = this.aggregateDailyReport(purchases);
+  return dailyReport;
+}
+
 
   private aggregateDailyReport(purchases: any[]) {
     const dailyReport = {};

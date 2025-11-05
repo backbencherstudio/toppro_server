@@ -21,7 +21,6 @@ import { AuthService } from './auth.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { LocalAuthGuard } from './guards/local-auth.guard';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -392,7 +391,7 @@ export class AuthController {
   ) {
     try {
       // const email = data.email;
-      const user_id = req.user.userId;
+      const user_id = req.user.id;
 
       const oldPassword = data.old_password;
       const newPassword = data.new_password;
