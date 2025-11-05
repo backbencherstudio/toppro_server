@@ -34,46 +34,43 @@ export class InvoiceController {
   }
 
   // get all invoices
-  @Get('all')
-  async findAll(
-    @Req() req: any,
-    @Query()
-    query: {
-      issueDate?: string;
-      customer?: string;
-      status?: string;
-      accountType?: string;
-      page?: number;
-      limit?: number;
-    },
-  ) {
-    const {
-      owner_id: ownerId,
-      workspace_id: workspaceId,
-      id: userId,
-    } = req.user;
+@Get('all')
+async findAll(
+  @Req() req: any,
+  @Query()
+  query: {
+    issueDate?: string;
+    customer?: string;
+    status?: string;
+    accountType?: string;
+    page?: string;
+    limit?: string;
+  },
+) {
+  const { owner_id: ownerId, workspace_id: workspaceId, id: userId } = req.user;
 
-    const {
-      issueDate,
-      customer,
-      status,
-      accountType,
-      page = '1',
-      limit = '10',
-    } = query;
+  const {
+    issueDate,
+    customer,
+    status,
+    accountType,
+    page = '1',
+    limit = '10',
+  } = query;
 
-    return this.invoiceService.findAll(
-      ownerId,
-      workspaceId,
-      userId,
-      issueDate,
-      customer,
-      status,
-      accountType,
-      Number(page),
-      Number(limit),
-    );
-  }
+  return this.invoiceService.findAll(
+    ownerId,
+    workspaceId,
+    userId,
+    issueDate,
+    customer,
+    status,
+    accountType,
+    Number(page),
+    Number(limit),
+  );
+}
+
 
   // get all invoices
   @Get('all-paid-invoice')

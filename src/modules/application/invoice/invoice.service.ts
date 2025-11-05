@@ -276,92 +276,88 @@ export class InvoiceService {
     }
   }
 
-  async findAll(
-    ownerId: string,
-    workspaceId: string,
-    userId: string,
-    issueDate?: string,
-    customer?: string,
-    status?: string,
-    accountType?: string,
-    page: number = 1,
-    limit: number = 10,
-  ) {
-    try {
-      // Build the filters
-      const filters: any = {
-        owner_id: ownerId || userId,
-        workspace_id: workspaceId,
-        deleted_at: null,
-      };
+async findAll(
+  ownerId: string,
+  workspaceId: string,
+  userId: string,
+  issueDate?: string,
+  customer?: string,
+  status?: string,
+  accountType?: string,
+  page: number = 1,
+  limit: number = 10,
+) {
+  try {
+    const filters: any = {
+      owner_id: ownerId || userId,
+      workspace_id: workspaceId,
+      deleted_at: null,
+    };
 
-      if (issueDate) {
-        filters.issueAt = new Date(issueDate);
-      }
-
-      if (customer) {
-        filters.customer_id = customer;
-      }
-
-      if (status) {
-        filters.status = status;
-      }
-
-      if (accountType) {
-        filters.account_type_id = accountType;
-      }
-
-      // Fetch invoices with pagination and filters
-      const invoices = await this.prisma.invoice.findMany({
-        where: filters,
-        include: {
-          Account_type: {
-            select: { name: true },
-          },
-        },
-        orderBy: {
-          createdAt: 'desc',
-        },
-        skip: (page - 1) * limit,
-        take: limit,
-      });
-
-      // Count total records for pagination
-      const totalRecords = await this.prisma.invoice.count({
-        where: filters,
-      });
-
-      const formatted = invoices.map((invoice) => ({
-        id: invoice.id,
-        invoice_number: invoice.invoice_number,
-        customer: invoice.customer_id,
-        item_category: invoice.item_category_id,
-        issueAt: invoice.issueAt,
-        dueAt: invoice.dueAt,
-        account_type: invoice.Account_type?.name,
-        account_type_id: invoice.account_type_id,
-        billing_type_id: invoice.billing_type_id,
-        invoice_category_id: invoice.invoice_category_id,
-        totalPrice: invoice.totalPrice,
-        paid: invoice.paid,
-        due: invoice.due,
-        status: invoice.status,
-      }));
-
-      return {
-        success: true,
-        message: 'Invoices fetched successfully',
-        data: formatted,
-        pagination: {
-          currentPage: page,
-          totalPages: Math.ceil(totalRecords / limit),
-          totalRecords,
-        },
-      };
-    } catch (error) {
-      return handlePrismaError(error);
+    if (issueDate) {
+      const start = new Date(issueDate);
+      const end = new Date(issueDate);
+      end.setHours(23, 59, 59, 999);
+      filters.issueAt = { gte: start, lte: end };
     }
+
+    if (customer) filters.customer_id = customer;
+    if (status) filters.status = status;
+    if (accountType) filters.account_type_id = accountType;
+
+    // ✅ Count total records first
+    const totalRecords = await this.prisma.invoice.count({ where: filters });
+
+    // ✅ Calculate pagination
+    const totalPages = Math.ceil(totalRecords / limit);
+    const skip = (page - 1) * limit;
+
+    // ✅ Fetch paginated invoices
+    const invoices = await this.prisma.invoice.findMany({
+      where: filters,
+      include: {
+        Account_type: { select: { name: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit,
+    });
+
+    const formatted = invoices.map((invoice) => ({
+      id: invoice.id,
+      invoice_number: invoice.invoice_number,
+      customer_id: invoice.customer_id,
+      item_category_id: invoice.item_category_id,
+      issueAt: invoice.issueAt,
+      dueAt: invoice.dueAt,
+      account_type: invoice.Account_type?.name,
+      account_type_id: invoice.account_type_id,
+      billing_type_id: invoice.billing_type_id,
+      invoice_category_id: invoice.invoice_category_id,
+      totalPrice: invoice.totalPrice,
+      paid: invoice.paid,
+      due: invoice.due,
+      status: invoice.status,
+    }));
+
+    return {
+      success: true,
+      message: 'Invoices fetched successfully',
+      data: formatted,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalRecords,
+        perPage: limit,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+      },
+    };
+  } catch (error) {
+    return handlePrismaError(error);
   }
+}
+
   async findAllPaidInvoices(
     ownerId: string,
     workspaceId: string,
