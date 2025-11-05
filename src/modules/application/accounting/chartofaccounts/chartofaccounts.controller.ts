@@ -1,4 +1,15 @@
-import { Controller, Get, Post, Body, Param, Delete, Patch, UseGuards, Req } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Delete,
+  Patch,
+  UseGuards,
+  Req,
+  Query,
+} from '@nestjs/common';
 import { ChartOfAccountService } from 'src/modules/application/accounting/chartofaccounts/chartofaccounts.service';
 import { CreateChartOfAccountDto } from 'src/modules/application/accounting/chartofaccounts/dto/create-chartofaccount.dto';
 import { UpdateChartOfAccountDto } from 'src/modules/application/accounting/chartofaccounts/dto/update-chartofaccount.dto';
@@ -11,22 +22,39 @@ export class ChartOfAccountController {
 
   @Post()
   create(@Body() dto: CreateChartOfAccountDto, @Req() req) {
-    const { workspace_id: workspaceId, id: userId, owner_id: ownerId } = req.user;
+    const {
+      workspace_id: workspaceId,
+      id: userId,
+      owner_id: ownerId,
+    } = req.user;
     return this.chartService.create(dto, workspaceId, userId, ownerId);
   }
   @Get()
-  findAll(@Req() req) {
-    const { workspace_id: workspaceId, id: userId, owner_id: ownerId } = req.user;
-    return this.chartService.findAll(workspaceId, userId, ownerId);
+  findAll(@Req() req, @Query('page') page = 1, @Query('limit') limit = 10) {
+    const {
+      workspace_id: workspaceId,
+      id: userId,
+      owner_id: ownerId,
+    } = req.user;
+    return this.chartService.findAll(
+      workspaceId,
+      userId,
+      ownerId,
+      Number(page),
+      Number(limit),
+    );
   }
 
-  @Get("list")
+  @Get('list')
   findAllList(@Req() req) {
-    const { workspace_id: workspaceId, id: userId, owner_id: ownerId } = req.user;
+    const {
+      workspace_id: workspaceId,
+      id: userId,
+      owner_id: ownerId,
+    } = req.user;
     return this.chartService.findAllList(workspaceId, userId, ownerId);
   }
 
-  
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.chartService.findOne(id);

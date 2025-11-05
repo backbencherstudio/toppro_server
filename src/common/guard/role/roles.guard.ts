@@ -25,8 +25,15 @@ export class RolesGuard implements CanActivate {
     }
 
     const { user } = context.switchToHttp().getRequest();
+
+    if (!user) {
+      throw new HttpException(
+        'User not found in request',
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
     
-    const userDetails = await UserRepository.getUserDetails(user.userId);
+    const userDetails = await UserRepository.getUserDetails(user.id);
     
     if (!userDetails) {
       return false;

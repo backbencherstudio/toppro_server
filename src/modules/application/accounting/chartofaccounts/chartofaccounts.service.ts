@@ -63,18 +63,28 @@ export class ChartOfAccountService {
   /**
    *  Get all accounts
    */
-async findAll(workspace_id: string, user_id: string, owner_id: string) {
+async findAll(
+  workspace_id: string,
+  user_id: string,
+  owner_id: string,
+  page: number,
+  limit: number,
+) {
+  // Step 1: সব chart data নিয়ে আসি
   const charts = await this.prisma.chartOfAccount.findMany({
     where: {
       workspace_id,
       OR: [{ owner_id }, { user_id }],
+      deletedAt: null,
     },
+    orderBy: { createdAt: 'desc' },
   });
 
-  return {
-    success: true,
-    message: 'Chart of accounts retrieved successfully',
-    data: charts.map((chart) => ({
+  // Step 2: group by parent_account_name
+  const grouped = charts.reduce((acc, chart) => {
+    const parent = chart.parent_account_name || 'Uncategorized';
+    if (!acc[parent]) acc[parent] = [];
+    acc[parent].push({
       id: chart.id,
       code: chart.code,
       name: chart.name,
@@ -87,9 +97,34 @@ async findAll(workspace_id: string, user_id: string, owner_id: string) {
       createdAt: chart.createdAt,
       updatedAt: chart.updatedAt,
       deletedAt: chart.deletedAt,
-    })),
+    });
+    return acc;
+  }, {} as Record<string, any[]>);
+
+  // Step 3: pagination apply per group
+  const paginatedGroups = Object.entries(grouped).map(([parentName, charts]) => {
+    const total = charts.length;
+    const start = (page - 1) * limit;
+    const end = start + limit;
+    const paginatedData = charts.slice(start, end);
+
+    return {
+      parent_account_name: parentName,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+      items: paginatedData,
+    };
+  });
+
+  return {
+    success: true,
+    message: 'Chart of accounts retrieved successfully',
+    data: paginatedGroups,
   };
 }
+
 async findAllList(workspace_id: string, user_id: string, owner_id: string) {
   const charts = await this.prisma.chartOfAccount.findMany({
     where: {

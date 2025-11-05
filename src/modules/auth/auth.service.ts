@@ -5,6 +5,11 @@ import * as bcrypt from 'bcrypt';
 
 //internal imports
 import { UserType, Workspace } from '@prisma/client';
+import {
+  EmailAlreadyExistsException,
+  InvalidRegistrationDataException,
+  PendingRegistrationExistsException,
+} from '../../common/exception/registration-exceptions';
 import { DateHelper } from '../../common/helper/date.helper';
 import { SojebStorage } from '../../common/lib/Disk/SojebStorage';
 import { UcodeRepository } from '../../common/repository/ucode/ucode.repository';
@@ -13,7 +18,6 @@ import appConfig from '../../config/app.config';
 import { MailService } from '../../mail/mail.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { EmailAlreadyExistsException, PendingRegistrationExistsException, InvalidRegistrationDataException } from '../../common/exception/registration-exceptions';
 
 @Injectable()
 export class AuthService {
@@ -21,7 +25,7 @@ export class AuthService {
     private jwtService: JwtService,
     private prisma: PrismaService,
     private mailService: MailService,
-  ) { }
+  ) {}
 
   async me(email: string) {
     try {
@@ -330,14 +334,6 @@ export class AuthService {
         throw new Error('Owner ID and Super ID must be provided.');
       }
 
-      // Log for debugging
-      // console.log('Creating workspace for owner:', {
-      //   ownerName,
-      //   owner_id,
-      //   super_id,
-      //   workspace_name,
-      // });
-
       // Create the workspace for the OWNER
       const workspace = await this.prisma.workspace.create({
         data: {
@@ -348,8 +344,6 @@ export class AuthService {
           code: this.generateWorkspaceCode(),
         },
       });
-
-      // console.log('Workspace created successfully:', workspace);
 
       return workspace;
     } catch (error) {
@@ -433,7 +427,7 @@ export class AuthService {
     }
   }
 
-  // auth.service.ts
+  // local owner in outdoor
   async createOwner(dto: any) {
     try {
       const { email, password, name, workspace_name } = dto;
@@ -508,126 +502,129 @@ export class AuthService {
       // 7️⃣ Return response
       return {
         success: true,
-        message: 'Registration submitted! Please check your email to verify your account and complete registration.',
+        message:
+          'Registration submitted! Please check your email to verify your account and complete registration.',
       };
     } catch (error) {
       // Re-throw custom exceptions to preserve their HTTP status and structure
-      if (error instanceof EmailAlreadyExistsException ||
+      if (
+        error instanceof EmailAlreadyExistsException ||
         error instanceof PendingRegistrationExistsException ||
-        error instanceof InvalidRegistrationDataException) {
+        error instanceof InvalidRegistrationDataException
+      ) {
         throw error;
       }
       throw new Error('Error creating owner: ' + error.message);
     }
   }
 
-  // async register({
-  //   name,
-  //   first_name,
-  //   last_name,
-  //   email,
-  //   phone_number,
-  //   address,
-  //   password,
-  //   type,
-  //   status,
-  //   owner_id,
-  //   super_id,
-  //   workspace_id,
-  //   roleId,
-  // }: {
-  //   name: string;
-  //   first_name: string;
-  //   last_name: string;
-  //   email: string;
-  //   phone_number: string;
-  //   address: string;
-  //   password: string;
-  //   type: string;
-  //   status?: number;
-  //   owner_id?: string;
-  //   super_id?: string;
-  //   workspace_id?: string;
-  //   roleId?: string;
-  // }): Promise<any> {
-  //   console.log(
-  //     'register service',
-  //     type,
-  //     owner_id,
-  //     super_id,
-  //     workspace_id,
-  //     name,
-  //   );
-  //   try {
-  //     // Check if email already exists
-  //     const existingUser = await this.prisma.user.findUnique({
-  //       where: { email },
-  //     });
+  async register({
+    name,
+    first_name,
+    last_name,
+    email,
+    phone_number,
+    address,
+    password,
+    type,
+    status,
+    owner_id,
+    super_id,
+    workspace_id,
+    roleId,
+  }: {
+    name: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone_number: string;
+    address: string;
+    password: string;
+    type: string;
+    status?: number;
+    owner_id?: string;
+    super_id?: string;
+    workspace_id?: string;
+    roleId?: string;
+  }): Promise<any> {
+    console.log(
+      'register service',
+      type,
+      owner_id,
+      super_id,
+      workspace_id,
+      name,
+    );
+    try {
+      // Check if email already exists
+      const existingUser = await this.prisma.user.findUnique({
+        where: { email },
+      });
 
-  //     if (existingUser) {
-  //       return { success: false, message: 'Email already exists' };
-  //     }
+      if (existingUser) {
+        return { success: false, message: 'Email already exists' };
+      }
 
-  //     // Hash the password before saving
-  //     const hashedPassword = await bcrypt.hash(password, 10);
+      // Hash the password before saving
+      const hashedPassword = await bcrypt.hash(password, 10);
 
-  //     // Create the User with appropriate fields based on the type
-  //     const user = await this.prisma.user.create({
-  //       data: {
-  //         name,
-  //         first_name,
-  //         last_name,
-  //         email,
-  //         phone_number,
-  //         address,
-  //         password: hashedPassword,
-  //         status,
-  //         type: UserType[type.toUpperCase() as keyof typeof UserType],
+      // Create the User with appropriate fields based on the type
+      const user = await this.prisma.user.create({
+        data: {
+          name,
+          first_name,
+          last_name,
+          email,
+          phone_number,
+          address,
+          password: hashedPassword,
+          status,
+          type: UserType[type.toUpperCase() as keyof typeof UserType],
 
-  //         ...(type === 'OWNER' && {
-  //           super_id: super_id,
-  //           // workspace_id: workspace_id, // later assign
-  //         }),
+          ...(type === 'OWNER' && {
+            super_id: super_id,
+            // workspace_id: workspace_id, // later assign
+          }),
 
-  //         ...(type === 'USER' && {
-  //           owner_id: owner_id,
-  //           // super_id: super_id,
-  //           workspace_id: workspace_id,
-  //           ...(roleId && {
-  //             roles: {
-  //               connect: { id: roleId },
-  //             },
-  //           }),
-  //         }),
-  //       },
-  //     });
+          ...(type === 'USER' && {
+            owner_id: owner_id,
+            // super_id: super_id,
+            workspace_id: workspace_id,
+            ...(roleId && {
+              roles: {
+                connect: { id: roleId },
+              },
+            }),
+          }),
+        },
+      });
 
-  //     // If the user is of type 'OWNER', send a verification email
-  //     if (type === 'OWNER') {
-  //       // Generate a verification token for email
-  //       const token = await UcodeRepository.createVerificationToken({
-  //         userId: user.id,
-  //         email: user.email,
-  //       });
+      // If the user is of type 'OWNER', send a verification email
+      if (type === 'OWNER') {
+        // Generate a verification token for email
+        const token = await UcodeRepository.createVerificationToken({
+          userId: user.id,
+          email: user.email,
+        });
 
-  //       // Send the verification email with the token
-  //       await this.mailService.sendVerificationLink({
-  //         email: user.email,
-  //         name: user.name,
-  //         token: token.token,
-  //         type: type,
-  //       });
-  //     }
+        // Send the verification email with the token
+        await this.mailService.sendVerificationLink({
+          email: user.email,
+          name: user.name,
+          token: token.token,
+          // type: type,
+        });
+      }
 
-  //     return {
-  //       success: true,
-  //       message: 'User registered successfully',
-  //       data: user,
-  //     };
-  //   } catch (error) {
-  //     throw new Error('Error registering user: ' + error.message);
-  //   }
-  // }
+      return {
+        success: true,
+        message: 'User registered successfully',
+        data: user,
+      };
+    } catch (error) {
+      throw new Error('Error registering user: ' + error.message);
+    }
+  }
 
   // ==========================
   // REGISTER OWNER
@@ -641,6 +638,7 @@ export class AuthService {
     super_id,
     workspace_name,
     roleId,
+    status,
   }: {
     name: string;
     email: string;
@@ -650,9 +648,10 @@ export class AuthService {
     super_id: string;
     workspace_name?: string;
     roleId?: string;
+    status?: number;
   }): Promise<any> {
     try {
-      // Check if email exists
+      //  Check if email already exists
       const existingUser = await this.prisma.user.findUnique({
         where: { email },
       });
@@ -660,77 +659,51 @@ export class AuthService {
         throw new EmailAlreadyExistsException(email, '/auth/register-owner');
       }
 
-      // Check if there's already a pending registration for this email
-      const pendingReg = await this.prisma.ucode.findFirst({
-        where: {
-          email,
-          expired_at: { gte: new Date() },
-        },
-      });
-
-      if (pendingReg) {
-        // Option 1: Block duplicate registration (commented out)
-        // return {
-        //   success: false,
-        //   message: 'A verification email has already been sent. Please check your inbox or use the resend verification endpoint.',
-        // };
-
-        // Option 2: Delete old pending registration and allow re-registration
-        console.log('🔄 Deleting old pending registration to allow new one...');
-        await this.prisma.ucode.delete({
-          where: { id: pendingReg.id },
-        });
-        console.log(
-          '✅ Old registration deleted. Proceeding with new registration...',
-        );
-      }
-
-      // Hash password
+      //  Hash password
       const hashedPassword = await bcrypt.hash(password, 10);
 
-      // Store registration data temporarily (DON'T create user yet!)
-      const registrationData = {
-        name,
-        email,
-        phone_number,
-        address,
-        password: hashedPassword,
-        type: 'OWNER',
-        super_id,
-        workspace_name: workspace_name || `${name}'s Workspace`,
-        roleId,
-      };
-
-      // Create pending registration with token
-      const pendingRegistration =
-        await UcodeRepository.createPendingRegistration({
-          email,
-          registrationData,
+      // Atomic transaction → workspace + user
+      const result = await this.prisma.$transaction(async (tx) => {
+        // ➤ Create workspace first
+        const workspace = await tx.workspace.create({
+          data: {
+            name: workspace_name || `${name}'s Workspace`,
+            super_id,
+          },
         });
 
-      if (!pendingRegistration) {
-        throw new Error('Failed to create pending registration');
-      }
+        //  Create owner (verified instantly)
+        const user = await tx.user.create({
+          data: {
+            name,
+            email,
+            phone_number,
+            address,
+            password: hashedPassword,
+            type: 'OWNER',
+            super_id,
+            workspace_id: workspace.id,
+            roleId,
+            status: status ?? 1,
+            email_verified_at: new Date(),
+          },
+        });
 
-      // Send verification email
-      await this.mailService.sendVerificationLink({
-        email,
-        name,
-        token: pendingRegistration.token,
+        return { workspace, user };
       });
 
+      // Return success response
       return {
         success: true,
-        message:
-          'Registration submitted! Please check your email to verify your account and complete registration.',
+        message: 'Owner registered successfully!',
+        data: {
+          owner: result.user,
+          workspace: result.workspace,
+        },
       };
     } catch (error) {
-      // Re-throw custom exceptions to preserve their HTTP status and structure
-      if (error instanceof EmailAlreadyExistsException ||
-        error instanceof PendingRegistrationExistsException ||
-        error instanceof InvalidRegistrationDataException) {
-        throw error;
-      }
+      console.error('Registration Error:', error);
+      if (error instanceof EmailAlreadyExistsException) throw error;
       throw new Error('Error registering owner: ' + error.message);
     }
   }
@@ -753,14 +726,14 @@ export class AuthService {
     email: string;
     phone_number: string;
     address: string;
-    password?: string; // 👈 optional
+    password?: string;
     owner_id: string;
     workspace_id: string;
     roleId?: string;
     status?: number;
   }): Promise<any> {
     try {
-      // ✅ Check workspace validity
+      // Check workspace validity
       const workspace = await this.prisma.workspace.findUnique({
         where: { id: workspace_id },
       });
@@ -771,7 +744,7 @@ export class AuthService {
         };
       }
 
-      // ✅ Check email duplication
+      // Check email duplication
       const existingUser = await this.prisma.user.findUnique({
         where: { email },
       });
@@ -779,13 +752,13 @@ export class AuthService {
         throw new EmailAlreadyExistsException(email, '/auth/register-user');
       }
 
-      // ✅ Password hashing only if provided
+      //  Password hashing only if provided
       let hashedPassword: string | null = null;
       if (password && password.trim() !== '') {
         hashedPassword = await bcrypt.hash(password, 10);
       }
 
-      // ✅ Create user
+      //  Create user
       const user = await this.prisma.user.create({
         data: {
           name,
@@ -801,7 +774,7 @@ export class AuthService {
         },
       });
 
-      console.log(' User created successfully:', user.id);
+      // console.log(' User created successfully:', user.id);
 
       return {
         success: true,
@@ -810,9 +783,11 @@ export class AuthService {
       };
     } catch (error) {
       // Re-throw custom exceptions to preserve their HTTP status and structure
-      if (error instanceof EmailAlreadyExistsException ||
+      if (
+        error instanceof EmailAlreadyExistsException ||
         error instanceof PendingRegistrationExistsException ||
-        error instanceof InvalidRegistrationDataException) {
+        error instanceof InvalidRegistrationDataException
+      ) {
         throw error;
       }
       return {
@@ -958,9 +933,9 @@ export class AuthService {
             address: registrationData.address,
             password: registrationData.password, // Already hashed
             type: UserType.OWNER,
-            status: 1, // 👈 Active from the start!
+            status: 1,
             super_id: registrationData.super_id,
-            email_verified_at: new Date(), // Mark as verified
+            email_verified_at: new Date(),
             ...(registrationData.roleId && {
               roles: {
                 connect: { id: registrationData.roleId },
@@ -968,29 +943,29 @@ export class AuthService {
             }),
           },
         });
-        console.log('✅ User created:', owner.id);
+        // console.log('✅ User created:', owner.id);
 
         // Create workspace for owner
-        console.log('✅ Creating workspace...');
+        // console.log('✅ Creating workspace...');
         const workspace = await this.createWorkspace({
           ownerName: registrationData.name,
           owner_id: owner.id,
           super_id: registrationData.super_id,
           workspace_name: registrationData.workspace_name,
         });
-        console.log('✅ Workspace created:', workspace.id);
+        // console.log('✅ Workspace created:', workspace.id);
 
         // Update owner with workspace_id
-        console.log('✅ Linking user to workspace...');
+        // console.log('✅ Linking user to workspace...');
         await this.updateUserWorkspace(owner.id, workspace.id);
-        console.log('✅ User linked to workspace');
+        // console.log('✅ User linked to workspace');
 
         // Delete the pending registration token
-        console.log('✅ Deleting pending registration token...');
+        // console.log('✅ Deleting pending registration token...');
         await this.prisma.ucode.delete({
           where: { id: pendingRegistration.id },
         });
-        console.log('✅ Token deleted');
+        // console.log('✅ Token deleted');
 
         console.log('🎉 Email verification completed successfully!');
         return {

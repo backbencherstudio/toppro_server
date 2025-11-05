@@ -202,7 +202,8 @@ export class PurchaseService {
       throw new BadRequestException('At least one item is required');
     }
 
-    return this.prisma.$transaction(async (tx) => {
+try{
+      const result = await this.prisma.$transaction(async (tx) => {
       const { lineCreates, grandTotal } = await this.resolveLinesAndCompute(
         tx,
         dto.items,
@@ -293,8 +294,19 @@ export class PurchaseService {
         },
       };
     });
-  }
 
+    console.log('Created purchase:', result);
+
+    return {
+      success: true,
+      message: 'Purchase created successfully',
+      data: result,
+    };
+  } catch (error) {
+    console.error('Error creating purchase:', error);
+    throw new BadRequestException('Failed to create purchase');
+}
+  }
   // ------- LIST -------
   async findAll(ownerId: string, workspaceId: string, userId?: string) {
     const rows = await this.prisma.purchase.findMany({
@@ -330,58 +342,65 @@ export class PurchaseService {
   }
 
   // ------- SINGLE -------
-  async findOne(
-    id: string,
-    ownerId: string,
-    workspaceId: string,
-    userId?: string,
-  ) {
-    const row = await this.prisma.purchase.findFirst({
-      where: {
-        id,
-        deleted_at: null,
-        owner_id: ownerId || userId,
-        workspace: { id: workspaceId },
+async findOne(
+  id: string,
+  ownerId: string,
+  workspaceId: string,
+  userId?: string,
+) {
+  const row = await this.prisma.purchase.findFirst({
+    where: {
+      id,
+      deleted_at: null,
+      owner_id: ownerId || userId,
+      workspace: { id: workspaceId },
+    },
+    include: {
+      Vendor: true,
+      purchaseItems: {
+        where: { deleted_at: null },
       },
-      include: {
-        purchaseItems: {
-          where: { deleted_at: null },
-        },
-      },
-    });
+    },
+  });
 
-    if (!row) throw new NotFoundException('Purchase not found');
+  if (!row) throw new NotFoundException('Purchase not found');
 
-    // Calculate the updated summary
-    const _summary = {
-      total_quantity: row.purchaseItems.reduce(
-        (total, item) => total + item.quantity,
-        0,
-      ),
-      total_rate: row.purchaseItems.reduce(
-        (total, item) => total + item.purchase_price,
-        0,
-      ),
-      total_discount: row.purchaseItems.reduce(
-        (total, item) => total + item.discount,
-        0,
-      ),
-      total_tax: row.purchaseItems.reduce(
-        (total, item) =>
-          total + (item.total - item.purchase_price - item.discount),
-        0,
-      ),
-      total_price: row.purchaseItems.reduce(
-        (total, item) => total + item.total,
-        0,
-      ),
-    };
+  // summary হিসাব
+  const _summary = {
+    total_quantity: row.purchaseItems.reduce(
+      (total, item) => total + item.quantity,
+      0,
+    ),
+    total_rate: row.purchaseItems.reduce(
+      (total, item) => total + item.purchase_price,
+      0,
+    ),
+    total_discount: row.purchaseItems.reduce(
+      (total, item) => total + item.discount,
+      0,
+    ),
+    total_tax: row.purchaseItems.reduce(
+      (total, item) =>
+        total + (item.total - item.purchase_price - item.discount),
+      0,
+    ),
+    total_price: row.purchaseItems.reduce(
+      (total, item) => total + item.total,
+      0,
+    ),
+  };
 
-    return {
-      ...row,
-      _summary,
-    };
-  }
+  // Output format
+  const { purchaseItems, ...rest } = row;
+
+  return {
+    ...rest,
+    items: purchaseItems,
+    _summary,
+  };
+}
+
+
 
   // ------- UPDATE (header patch + replace lines if provided) -------}
 
@@ -413,7 +432,7 @@ export class PurchaseService {
       // 2️⃣ Update the purchase header (relations and fields)
       const headerData: any = {};
       const rel: [keyof UpdatePurchaseDto, string][] = [
-        ['account_type_id', 'AccountType'],
+        // ['account_type_id', 'AccountType'],
         ['vendor_id', 'Vendor'],
         ['billing_type_id', 'BillingType'],
         ['category_id', 'Category'],
@@ -767,38 +786,63 @@ export class PurchaseService {
     });
   }
 
-  // ------- PURCHASE REPORT -------
-
-  async getPurchaseReport(
-    startDate: string,
-    endDate: string,
-    vendor: string,
-    ownerId: string,
-    workspaceId: string,
+  // ------- PURCHASE DELETE -------
+  async deletePurchase(
+    id: string,
     userId: string,
   ) {
-    const start = new Date(startDate).toISOString();
-    const end = new Date(endDate).toISOString();
-
-    const purchases = await this.prisma.purchase.findMany({
+ const deletedPurchase = await this.prisma.purchase.delete({
       where: {
-        owner_id: ownerId || userId,
-        workspace_id: workspaceId,
-        purchase_date: {
-          gte: start,
-          lte: end,
-        },
-
-        vendor_id: vendor !== 'all_vendor' ? vendor : undefined,
-      },
-      select: {
-        purchase_date: true,
-        due: true,
+        id,
+        user_id: userId,
       },
     });
-    const dailyReport = this.aggregateDailyReport(purchases);
-    return dailyReport;
+    if (!deletedPurchase) {
+      throw new NotFoundException('Purchase not found or not authorized');
+    }
+    return {
+      success: true,
+      message: 'Purchase deleted successfully',
+      data: deletedPurchase,
+    };
   }
+
+
+  // ------- PURCHASE REPORT -------
+async getPurchaseReport(
+  startDate: string | null,
+  endDate: string | null,
+  vendor: string,
+  ownerId: string,
+  workspaceId: string,
+  userId: string,
+) {
+  
+  const end = endDate ? new Date(endDate) : new Date();
+  const start = startDate
+    ? new Date(startDate)
+    : new Date(new Date().setMonth(end.getMonth() - 1)); // last 1 month
+
+  const purchases = await this.prisma.purchase.findMany({
+    where: {
+      owner_id: ownerId || userId,
+      workspace_id: workspaceId,
+      purchase_date: {
+        gte: start.toISOString(),
+        lte: end.toISOString(),
+      },
+      vendor_id: vendor !== 'all_vendor' ? vendor : undefined,
+    },
+    select: {
+      purchase_date: true,
+      due: true,
+    },
+  });
+
+  const dailyReport = this.aggregateDailyReport(purchases);
+  return dailyReport;
+}
+
 
   private aggregateDailyReport(purchases: any[]) {
     const dailyReport = {};

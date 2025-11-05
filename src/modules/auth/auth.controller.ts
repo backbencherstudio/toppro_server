@@ -21,7 +21,6 @@ import { AuthService } from './auth.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { LocalAuthGuard } from './guards/local-auth.guard';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -61,6 +60,50 @@ export class AuthController {
   // USER REGISTER ENDPOINT
   // ==========================
   @ApiOperation({ summary: 'Register a new USER under owner workspace' })
+  @Post('create/owner')
+  @UseGuards(JwtAuthGuard)
+  async registerOwner(
+    @Body() data: CreateUserDto,
+    @Req()
+    req: Request & {
+      user: {
+        id: string;
+        owner_id?: string;
+      };
+    },
+  ) {
+    const { id, owner_id } = req.user;
+
+    // console.log('req.user', req.user);
+    const {
+      name,
+      email,
+      phone_number,
+      address,
+      password,
+      roleId,
+      status,
+      workspace_name,
+    } = data;
+
+    const result = await this.authService.registerOwner({
+      name,
+      email,
+      phone_number,
+      address,
+      password,
+      super_id: id,
+      workspace_name,
+      roleId,
+      status,
+    });
+
+    return result;
+  }
+  // ==========================
+  // USER REGISTER ENDPOINT
+  // ==========================
+  @ApiOperation({ summary: 'Register a new USER under owner workspace' })
   @Post('create/user')
   @UseGuards(JwtAuthGuard)
   async registerUser(
@@ -80,7 +123,7 @@ export class AuthController {
     const { name, email, phone_number, address, password, roleId, status } =
       data;
 
-      console.log("wordspace id",req.user )
+    console.log('wordspace id', req.user);
 
     if (!workspace_id) {
       throw new HttpException('Workspace ID missing', HttpStatus.BAD_REQUEST);
@@ -103,42 +146,37 @@ export class AuthController {
 
   // login user
   @ApiOperation({ summary: 'Login user' })
-  @UseGuards(LocalAuthGuard)
   @Post('login')
   async login(
     @Body() body: { email: string; password: string; token?: string },
-    @Req() req: Request,
     @Res() res: Response,
   ) {
     try {
-      // console.log(req.user);
-      const { email, password, token } = body; // Retrieve token and password from the request body
-      // const user_id = req.user.id;  // req.user contains the authenticated user's info
+      const { email, password, token } = body;
 
       const response = await this.authService.login({
         email,
         password,
         token,
-        // user_id: user_id,
       });
 
-      // If login failed (i.e., email not verified), return the response
       if (!response.success) {
-        return res.status(401).json(response); // Return the error message to the user
+        if (
+          response.message === 'User not found. Please register first.' ||
+          response.message === 'Invalid password'
+        ) {
+          return res.status(404).json(response);
+        } else {
+          return res.status(400).json(response);
+        }
       }
-      // store to secure cookies
-      // res.cookie('refresh_token', response.authorization.refresh_token, {
-      //   httpOnly: true,
-      //   secure: true,
-      //   maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-      // });
 
-      res.json(response);
+      return res.status(200).json(response);
     } catch (error) {
-      return {
+      return res.status(500).json({
         success: false,
         message: error.message,
-      };
+      });
     }
   }
 
@@ -353,7 +391,7 @@ export class AuthController {
   ) {
     try {
       // const email = data.email;
-      const user_id = req.user.userId;
+      const user_id = req.user.id;
 
       const oldPassword = data.old_password;
       const newPassword = data.new_password;

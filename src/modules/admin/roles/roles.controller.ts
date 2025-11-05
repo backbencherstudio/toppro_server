@@ -9,34 +9,40 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { Role } from 'src/common/guard/role/role.enum';
+import { Roles } from 'src/common/guard/role/roles.decorator';
+import { RolesGuard } from 'src/common/guard/role/roles.guard';
 import { AssignUserToRoleDto } from 'src/modules/admin/roles/dto/assign-user-to-role.dto';
 import { AssignUsersToRoleDto } from 'src/modules/admin/roles/dto/assign-users-to-role.dto';
 import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 import { CreateRoleDto } from './dto/create-role.dto'; // DTO for creating a role
 import { RolesService } from './roles.service';
-import { UpdateRoleDto } from './dto/update-role.dto';
 
 @Controller('roles')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(Role.OWNER, Role.SUPERADMIN)
 export class RolesController {
   constructor(private readonly rolesService: RolesService) {}
 
   // Update a role and its permissions
   @Put(':roleId')
-  @UseGuards(JwtAuthGuard)
   async updateRole(
     @Param('roleId') roleId: string,
     @Body() updateRoleDto: CreateRoleDto,
     @Req() req,
   ) {
     try {
-      const { owner_id: ownerId, workspace_id: workspaceId, id: userId } = req.user;
+      const {
+        owner_id: ownerId,
+        workspace_id: workspaceId,
+        id: userId,
+      } = req.user;
       const updatedRole = await this.rolesService.updateRole(
         roleId,
         updateRoleDto,
         ownerId,
         workspaceId,
         userId,
-
       );
 
       return updatedRole;
@@ -82,7 +88,6 @@ export class RolesController {
 
   // Endpoint to create a new role and assign permissions to that role
   @Post('create')
-  @UseGuards(JwtAuthGuard)
   async createRole(@Body() createRoleDto: CreateRoleDto, @Req() req) {
     const { owner_id: ownerId, workspace_id: workspaceId } = req.user;
     return this.rolesService.createRoleWithPermissions(
@@ -94,9 +99,8 @@ export class RolesController {
 
   // Endpoint to get all roles (name and ID)
   @Get('all/list')
-  @UseGuards(JwtAuthGuard)
   getAllRoles(@Req() req) {
-    const { owner_id: ownerId, workspace_id: workspaceId } = req.user ?? {};
+    const { owner_id: ownerId, workspace_id: workspaceId } = req.user;
     return this.rolesService.getAllRoles(ownerId, workspaceId);
   }
 

@@ -1,19 +1,19 @@
 // src/bank-account/bank-account.controller.ts
 import {
-  Controller,
-  Post,
   Body,
-  Patch,
-  Param,
+  Controller,
   Delete,
   Get,
-  UseGuards,
+  Param,
+  Patch,
+  Post,
   Req,
+  UseGuards,
 } from '@nestjs/common';
+import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 import { BankAccountService } from './bankaccount.service';
 import { CreateBankAccountDto } from './dto/create-bankaccount.dto';
 import { UpdateBankAccountDto } from './dto/update-bankaccount.dto';
-import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 
 @Controller('bank-accounts')
 @UseGuards(JwtAuthGuard)
@@ -37,7 +37,7 @@ export class BankAccountController {
   @Patch(':id')
   async update(
     @Param('id') id: string,
-    @Body() updateBankAccountDto: UpdateBankAccountDto,
+    @Body() updateBankAccountDto: UpdateBankAccountDto
   ) {
     return this.bankAccountService.update(id, updateBankAccountDto);
   }

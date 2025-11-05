@@ -66,6 +66,26 @@ export class RevenueController {
     const { id: userId, owner_id: ownerId, workspace_id: workspaceId } = req.user;
     return this.revenueService.findAll(ownerId, workspaceId, userId, query);
   }
+  // get all revenue records
+  @Get('customer-reveue/:customer_id')
+  async findAllCustomerRevenue(
+    @Req() req: any,
+    @Param("customer_id") customer_id:string,
+    @Query()
+    query: {
+      page?: number;
+      limit?: number;
+      customer?: string;
+      account?: string;
+      category?: string;
+      dateFrom?: string;
+      dateTo?: string;
+      search?: string;
+    },
+  ) {
+    const { id: userId, owner_id: ownerId, workspace_id: workspaceId } = req.user;
+    return this.revenueService.findAllCustomerRevenue(customer_id,ownerId, workspaceId, userId, query);
+  }
 
 
   // update specific revenue record

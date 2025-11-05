@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  NotFoundException,
   Param,
   Patch,
   Post,
@@ -15,6 +16,7 @@ import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 import { CreatePurchaseDto } from './dto/create-purchase.dto';
 import { UpdatePurchaseDto } from './dto/update-purchase.dto';
 import { PurchaseService } from './purchase.service';
+import { ApiOperation, ApiParam } from '@nestjs/swagger';
 
 @Controller('purchases')
 @UseGuards(JwtAuthGuard)
@@ -41,28 +43,33 @@ export class PurchaseController {
     return this.purchaseService.findAll(ownerId, workspaceId, userId);
   }
 
-@Get(':id')
-async findOne(@Param('id') id: string, @Req() req: any) {
-  const { owner_id: ownerId, workspace_id: workspaceId, id: userId } = req.user;
-  const purchase = await this.purchaseService.findOne(id, ownerId, workspaceId, userId);
+  @Get(':id')
+  @ApiOperation({
+    summary: 'Get a single purchase by ID (with vendor & items)',
+  })
+  @ApiParam({ name: 'id', required: true, description: 'Purchase ID' })
+  async findOne(@Param('id') id: string, @Req() req: any) {
+    const {
+      owner_id: ownerId,
+      workspace_id: workspaceId,
+      id: userId,
+    } = req.user;
 
-  // Calculate the updated summary after fetching the purchase details
-  const _summary = {
-    total_quantity: purchase.purchaseItems.reduce((total, item) => total + item.quantity, 0),
-    total_rate: purchase.purchaseItems.reduce((total, item) => total + item.purchase_price, 0),
-    total_discount: purchase.purchaseItems.reduce((total, item) => total + item.discount, 0),
-    total_tax: purchase.purchaseItems.reduce((total, item) => total + (item.total - item.purchase_price - item.discount), 0),
-    total_price: purchase.purchaseItems.reduce((total, item) => total + item.total, 0),
-  };
+    const purchase = await this.purchaseService.findOne(
+      id,
+      ownerId,
+      workspaceId,
+      userId,
+    );
 
-  // Add summary to the result
-  return {
-    ...purchase,
-    _summary,
-  };
-}
+    if (!purchase) throw new NotFoundException('Purchase not found');
 
-
+    return {
+      success: true,
+      message: 'Purchase fetched successfully',
+      data: purchase,
+    };
+  }
 
   @Patch(':id')
   async update(
@@ -129,14 +136,13 @@ async findOne(@Param('id') id: string, @Req() req: any) {
     return this.purchaseService.softDelete(id, ownerId, workspaceId, userId);
   }
 
-
   //purchase report
-    @Get('report/daily')
+  @Get('report/daily')
   async getDailyPurchaseReport(
     @Query('startDate') startDate: string,
     @Query('endDate') endDate: string,
     @Query('vendor') vendor: string,
-    @Req() req: any
+    @Req() req: any,
   ) {
     const {
       owner_id: ownerId,
@@ -150,7 +156,13 @@ async findOne(@Param('id') id: string, @Req() req: any) {
       vendor,
       ownerId,
       workspaceId,
-      userId
+      userId,
     );
+  }
+
+  @Delete('delete/:id')
+  async deletePurchase(@Param('id') id: string, @Req() req: any) {
+    const { id: userId } = req.user;
+    return this.purchaseService.deletePurchase(id, userId);
   }
 }

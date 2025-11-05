@@ -4,7 +4,6 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Permissions } from 'src/ability/permissions.enum'; // Permissions enum
-import { UpdateRoleDto } from 'src/modules/admin/roles/dto/update-role.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateRoleDto } from './dto/create-role.dto'; // CreateRoleDto for input validation
 
@@ -212,8 +211,8 @@ export class RolesService {
     return {
       success: true,
       message: 'Role created and permissions assigned successfully!',
-      // role: role,
-      // permissions: permissionData,
+      role: role,
+      permissions: permissionData,
     };
   }
 
@@ -363,13 +362,17 @@ export class RolesService {
     );
   }
 
-  // 📜 GET all roles (filtered by owner & workspace) with minimal fields
+  //  GET all roles (filtered by owner & workspace) with minimal fields
   async getAllRoles(ownerId: string, workspaceId: string) {
-    // if (!ownerId || !workspaceId) {
-    //   throw new BadRequestException('ownerId and workspaceId are required.');
-    // }
+    if (!ownerId || !workspaceId) {
+      throw new BadRequestException('ownerId and workspaceId are required.');
+    }
 
     const roles = await this.prisma.role.findMany({
+      where: {
+        owner_id: ownerId,
+        workspace_id: workspaceId,
+      },
       select: {
         id: true,
         title: true,

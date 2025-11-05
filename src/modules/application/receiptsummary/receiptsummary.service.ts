@@ -93,9 +93,17 @@ export class ReceiptSummaryService {
           data: {
             paid: newPaid,
             due: newDue,
-            status: newDue <= 0 ? 'PAID' : 'DRAFT',
+            status:
+              newDue <= 0 ? 'PAID' : newPaid > 0 ? 'PARTIALLY_PAID' : 'DRAFT',
           },
         });
+      }
+
+      if (!receipt) {
+        return {
+          success: false,
+          message: 'Failed to create receipt summary',
+        };
       }
 
       return {
@@ -104,7 +112,7 @@ export class ReceiptSummaryService {
         data: receipt,
       };
     } catch (error) {
-      console.error('❌ Prisma Error:', error);
+      console.error('Prisma Error:', error);
       return handlePrismaError(error);
     }
   }
@@ -125,6 +133,13 @@ export class ReceiptSummaryService {
         },
         orderBy: { created_at: 'desc' },
       });
+      if (!records) {
+        return {
+          success: false,
+          message: 'No receipt summaries found',
+          data: [],
+        };
+      }
       return {
         success: true,
         message: 'Receipt summaries retrieved successfully',
@@ -141,7 +156,11 @@ export class ReceiptSummaryService {
         where: { id },
       });
       if (!record) throw new NotFoundException('Receipt not found');
-      return record;
+      return {
+        success: true,
+        message: 'Receipt summary retrieved successfully',
+        data: record,
+      };
     } catch (error) {
       return handlePrismaError(error);
     }
@@ -149,14 +168,65 @@ export class ReceiptSummaryService {
 
   async update(id: string, dto: UpdateReceiptSummaryDto) {
     await this.findOne(id);
-    return this.prisma.receiptSummary.update({
+    const updatedReceipt = await this.prisma.receiptSummary.update({
       where: { id },
       data: dto,
     });
+    return {
+      success: true,
+      message: 'Receipt summary updated successfully',
+      data: updatedReceipt,
+    };
   }
 
   async remove(id: string) {
-    await this.findOne(id);
-    return this.prisma.receiptSummary.delete({ where: { id } });
+    try {
+      const receipt = await this.prisma.receiptSummary.findUnique({
+        where: { id },
+      });
+
+      if (!receipt) {
+        return { success: false, message: 'Receipt not found' };
+      }
+
+      // Delete the receipt
+      const deletedReceipt = await this.prisma.receiptSummary.delete({
+        where: { id },
+      });
+
+      // Update invoice if related
+      if (receipt.invoice_id) {
+        const invoice = await this.prisma.invoice.findUnique({
+          where: { id: receipt.invoice_id },
+        });
+
+        if (invoice) {
+          const newPaid = Math.max((invoice.paid || 0) - receipt.amount, 0);
+          const newDue = invoice.totalPrice - newPaid;
+
+          await this.prisma.invoice.update({
+            where: { id: receipt.invoice_id },
+            data: {
+              paid: newPaid,
+              due: newDue,
+              status:
+                newPaid <= 0
+                  ? 'DRAFT'
+                  : newPaid < invoice.totalPrice
+                    ? 'PARTIALLY_PAID'
+                    : 'PAID',
+            },
+          });
+        }
+      }
+
+      return {
+        success: true,
+        message: 'Receipt summary deleted successfully',
+        data: deletedReceipt,
+      };
+    } catch (error) {
+      return handlePrismaError(error);
+    }
   }
 }

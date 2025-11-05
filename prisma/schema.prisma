@@ -506,7 +506,7 @@ model Purchase {
   vendor_id       String?
   billing_type_id String?
   category_id     String?
-  purchase_no     String  @unique // <-- auto-generated like PUR0000001 (see service)
+  purchase_no     String?
   subTotal        Float?  @default(0)
   tax_id          String?
   total           Float?  @default(0)
