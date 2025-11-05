@@ -7,7 +7,6 @@ import {
 } from '@nestjs/common';
 import { Prisma, Status } from '@prisma/client';
 import { handlePrismaError } from 'src/common/utils/prisma-error-handler';
-import { CreateInvoiceItemDto } from 'src/modules/application/invoice/dto/create-invoice-item.dto';
 import { UpdateInvoiceDto } from 'src/modules/application/invoice/dto/update-invoice.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateInvoiceDto } from './dto/create-invoice.dto';
@@ -188,7 +187,6 @@ export class InvoiceService {
     workspaceId: string,
     userId: string,
   ) {
-
     console.log('CreateInvoiceDto received in service:', dto);
     // if (!dto.items || dto.items.length === 0) {
     //   throw new BadRequestException('At least one invoice item is required');
@@ -278,92 +276,88 @@ export class InvoiceService {
     }
   }
 
-  async findAll(
-    ownerId: string,
-    workspaceId: string,
-    userId: string,
-    issueDate?: string,
-    customer?: string,
-    status?: string,
-    accountType?: string,
-    page: number = 1,
-    limit: number = 10,
-  ) {
-    try {
-      // Build the filters
-      const filters: any = {
-        owner_id: ownerId || userId,
-        workspace_id: workspaceId,
-        deleted_at: null,
-      };
+async findAll(
+  ownerId: string,
+  workspaceId: string,
+  userId: string,
+  issueDate?: string,
+  customer?: string,
+  status?: string,
+  accountType?: string,
+  page: number = 1,
+  limit: number = 10,
+) {
+  try {
+    const filters: any = {
+      owner_id: ownerId || userId,
+      workspace_id: workspaceId,
+      deleted_at: null,
+    };
 
-      if (issueDate) {
-        filters.issueAt = new Date(issueDate);
-      }
-
-      if (customer) {
-        filters.customer_id = customer;
-      }
-
-      if (status) {
-        filters.status = status;
-      }
-
-      if (accountType) {
-        filters.account_type_id = accountType;
-      }
-
-      // Fetch invoices with pagination and filters
-      const invoices = await this.prisma.invoice.findMany({
-        where: filters,
-        include: {
-          Account_type: {
-            select: { name: true },
-          },
-        },
-        orderBy: {
-          createdAt: 'desc',
-        },
-        skip: (page - 1) * limit,
-        take: limit,
-      });
-
-      // Count total records for pagination
-      const totalRecords = await this.prisma.invoice.count({
-        where: filters,
-      });
-
-      const formatted = invoices.map((invoice) => ({
-        id: invoice.id,
-        invoice_number: invoice.invoice_number,
-        customer: invoice.customer_id,
-        item_category: invoice.item_category_id,
-        issueAt: invoice.issueAt,
-        dueAt: invoice.dueAt,
-        account_type: invoice.Account_type?.name,
-        account_type_id: invoice.account_type_id,
-        billing_type_id: invoice.billing_type_id,
-        invoice_category_id: invoice.invoice_category_id,
-        totalPrice: invoice.totalPrice,
-        paid: invoice.paid,
-        due: invoice.due,
-        status: invoice.status,
-      }));
-
-      return {
-        success: true,
-        message: 'Invoices fetched successfully',
-        data: formatted,
-        pagination: {
-          currentPage: page,
-          totalPages: Math.ceil(totalRecords / limit),
-          totalRecords,
-        },
-      };
-    } catch (error) {
-      return handlePrismaError(error);
+    if (issueDate) {
+      const start = new Date(issueDate);
+      const end = new Date(issueDate);
+      end.setHours(23, 59, 59, 999);
+      filters.issueAt = { gte: start, lte: end };
     }
+
+    if (customer) filters.customer_id = customer;
+    if (status) filters.status = status;
+    if (accountType) filters.account_type_id = accountType;
+
+    // ✅ Count total records first
+    const totalRecords = await this.prisma.invoice.count({ where: filters });
+
+    // ✅ Calculate pagination
+    const totalPages = Math.ceil(totalRecords / limit);
+    const skip = (page - 1) * limit;
+
+    // ✅ Fetch paginated invoices
+    const invoices = await this.prisma.invoice.findMany({
+      where: filters,
+      include: {
+        Account_type: { select: { name: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit,
+    });
+
+    const formatted = invoices.map((invoice) => ({
+      id: invoice.id,
+      invoice_number: invoice.invoice_number,
+      customer_id: invoice.customer_id,
+      item_category_id: invoice.item_category_id,
+      issueAt: invoice.issueAt,
+      dueAt: invoice.dueAt,
+      account_type: invoice.Account_type?.name,
+      account_type_id: invoice.account_type_id,
+      billing_type_id: invoice.billing_type_id,
+      invoice_category_id: invoice.invoice_category_id,
+      totalPrice: invoice.totalPrice,
+      paid: invoice.paid,
+      due: invoice.due,
+      status: invoice.status,
+    }));
+
+    return {
+      success: true,
+      message: 'Invoices fetched successfully',
+      data: formatted,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalRecords,
+        perPage: limit,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+      },
+    };
+  } catch (error) {
+    return handlePrismaError(error);
   }
+}
+
   async findAllPaidInvoices(
     ownerId: string,
     workspaceId: string,
@@ -395,6 +389,46 @@ export class InvoiceService {
       return {
         success: true,
         message: 'All Paid Invoices fetched successfully',
+        data: formatted,
+      };
+    } catch (error) {
+      return handlePrismaError(error);
+    }
+  }
+
+  // customer wise invoices
+  async findAllcustomerInvoices(
+    customer_id: string,
+    ownerId: string,
+    workspaceId: string,
+    userId: string,
+  ) {
+    try {
+      // Fetch invoices with pagination and filters
+      const invoices = await this.prisma.invoice.findMany({
+        where: {
+          owner_id: ownerId || userId,
+          workspace_id: workspaceId,
+          customer_id: customer_id,
+          deleted_at: null,
+        },
+      });
+
+      const formatted = invoices.map((invoice) => ({
+        id: invoice.id,
+        invoice_number: invoice.invoice_number,
+        customer: invoice.customer_id,
+        issueAt: invoice.issueAt,
+        dueAt: invoice.dueAt,
+        totalPrice: invoice.totalPrice,
+        paid: invoice.paid,
+        due: invoice.due,
+        status: invoice.status,
+      }));
+
+      return {
+        success: true,
+        message: 'All customers Invoices fetched successfully',
         data: formatted,
       };
     } catch (error) {
@@ -547,6 +581,7 @@ export class InvoiceService {
 
   // --------- UPDATE ------------
 
+  // Main function to update the invoice
   async update(
     id: string,
     dto: UpdateInvoiceDto,
@@ -664,16 +699,14 @@ export class InvoiceService {
 
       // 6️⃣ Update stock for new or updated invoice items
       for (const line of lineCreates) {
-        // Unchecked create inputs include `item_id`/`quantity` directly
-        if (!line.item_id) continue;
         const stock = await tx.stock.findUnique({
-          where: { item_id: line.item_id },
+          where: { item_id: line.Item.connect.id },
         });
         if (stock) {
           await tx.stock.update({
             where: { id: stock.id },
             data: {
-              quantity: stock.quantity - (line.quantity ?? 0), // Deduct the quantity
+              quantity: stock.quantity - line.quantity, // Deduct the quantity
             },
           });
         }
