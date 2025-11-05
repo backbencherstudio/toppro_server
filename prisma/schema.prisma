@@ -2523,6 +2523,16 @@ model ControllerSettings {
   super_id String?
   user_id  String?
 
+  logo_dark   String?
+  logo_light  String?
+  logo_favicon     String?
+
+  tilte_text       String?
+  footer_text      String?
+
+  customer_prefix String?
+  vendor_prefix   String?
+
   user      User[]
 
 
