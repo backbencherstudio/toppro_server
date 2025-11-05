@@ -19,13 +19,29 @@ export class LeadsController {
   ) { }
 
 
+  // @Post('create')
+  // async createLead(@Req() req, @Body() dto: CreateLeadDto) {
+  //   const ownerId = req.user.id || req.user.owner_id;
+  //   const workspaceId = req.user.workspace_id;
+
+  //   return this.leadsService.createLead(dto, ownerId, workspaceId);
+  // }
+
   @Post('create')
   async createLead(@Req() req, @Body() dto: CreateLeadDto) {
-    const ownerId = req.user.id || req.user.owner_id;
-    const workspaceId = req.user.workspace_id;
+    try {
+      const ownerId = req.user.id || req.user.owner_id;
+      const workspaceId = req.user.workspace_id;
 
-    return this.leadsService.createLead(dto, ownerId, workspaceId);
+      return await this.leadsService.createLead(dto, ownerId, workspaceId);
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message || 'Something went wrong',
+      };
+    }
   }
+
 
   @Get()
   async getAll(
