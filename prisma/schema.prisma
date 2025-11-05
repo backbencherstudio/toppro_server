@@ -121,6 +121,7 @@ model User {
   LogTime                  LogTime[]
   InvoiceItem              InvoiceItem[]
   stock                    Stock[]
+  controller_settings       ControllerSettings[]
 
   // Customer relation to HelpDeskTicket
   HelpDeskCategory       HelpDeskCategory[]
@@ -2489,6 +2490,8 @@ enum CurrencySymbolAndName {
   WITH_NAME // 10.000,0 USD
 }
 
+
+
 model CurrencySettings {
   id                       String                 @id @default(cuid())
   created_at               DateTime               @default(now())
@@ -2508,4 +2511,21 @@ model CurrencySettings {
   workspace                Workspace?             @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
 
   @@map("currency_settings")
+}
+
+model ControllerSettings {
+  id         String   @id @default(cuid())
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now())
+  deleted_at DateTime?
+
+  owner_id String?
+  super_id String?
+  user_id  String?
+
+  user      User[]
+
+
+
+  @@map("controller_settings")
 }

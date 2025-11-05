@@ -11,39 +11,97 @@ export class LeadsService {
   constructor(private prisma: PrismaService, private activityService: ActivityService) { }
 
 
-  async createLead(dto: CreateLeadDto, ownerId: string, workspaceId: string,) {
-    // Ensure the users field is always an array, even if it's missing or empty
-    const userIds = Array.from(new Set([ownerId, ...(dto.users || [])]));
-    if (userIds.length === 0) {
-      throw new BadRequestException('At least one user must be assigned to the lead');
-    }
+  // async createLead(dto: CreateLeadDto, ownerId: string, workspaceId: string,) {
+  //   // Ensure the users field is always an array, even if it's missing or empty
+  //   const userIds = Array.from(new Set([ownerId, ...(dto.users || [])]));
+  //   if (userIds.length === 0) {
+  //     throw new BadRequestException('At least one user must be assigned to the lead');
+  //   }
 
-    return this.prisma.lead.create({
-      data: {
-        subject: dto.subject,
-        name: dto.name,
-        email: dto.email,
-        phone: dto.phone,
-        followup_at: new Date(dto.followup_at),
+  //   return this.prisma.lead.create({
+  //     data: {
+  //       subject: dto.subject,
+  //       name: dto.name,
+  //       email: dto.email,
+  //       phone: dto.phone,
+  //       followup_at: new Date(dto.followup_at),
 
-        owner_id: ownerId,
-        workspace_id: workspaceId,
+  //       owner_id: ownerId,
+  //       workspace_id: workspaceId,
 
-        user_id: ownerId,
+  //       user_id: ownerId,
 
-        users: {
-          connect: userIds.map((id) => ({ id })),
-        },
-      },
-      include: {
-        users: true,
-      },
-    });
-  }
+  //       users: {
+  //         connect: userIds.map((id) => ({ id })),
+  //       },
+  //     },
+  //     include: {
+  //       users: true,
+  //     },
+  //   });
+  // }
 
 
 
   // ✅ Get all leads for a workspace
+
+  async createLead(
+    dto: CreateLeadDto,
+    ownerId: string,
+    workspaceId: string,
+  ) {
+    try {
+      // Ensure the users field is always an array, even if it's missing or empty
+      const userIds = Array.from(new Set([ownerId, ...(dto.users || [])]));
+
+      if (userIds.length === 0) {
+        throw new BadRequestException(
+          'At least one user must be assigned to the lead',
+        );
+      }
+
+      const lead = await this.prisma.lead.create({
+        data: {
+          subject: dto.subject,
+          name: dto.name,
+          email: dto.email,
+          phone: dto.phone,
+          followup_at: new Date(dto.followup_at),
+
+          owner_id: ownerId,
+          workspace_id: workspaceId,
+          user_id: ownerId,
+
+          users: {
+            connect: userIds.map((id) => ({ id })),
+          },
+        },
+        include: {
+          users: true,
+        },
+      });
+
+      return {
+        success: true,
+        message: 'Lead created successfully',
+        data: lead,
+      };
+    } catch (error) {
+      console.error('Error creating lead:', error);
+
+      if (error.code === 'P2002') {
+        // Prisma unique constraint error
+        throw new BadRequestException('Lead with this email already exists');
+      }
+
+      if (error instanceof BadRequestException) {
+        throw error; // rethrow known exceptions
+      }
+
+      throw new Error(`Failed to create lead: ${error.message}`);
+    }
+  }
+
   async getAllLeads(ownerId: string, workspaceId: string, page = 1, limit = 10) {
     const skip = (page - 1) * limit;
 
