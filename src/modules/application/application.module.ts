@@ -40,6 +40,7 @@ import { CreditNotesModule } from './accounting/income/credit-notes/credit-notes
 import { ChartOfAccountModule } from 'src/modules/application/accounting/chartofaccounts/chartofaccounts.module';
 import { TransferModule } from './accounting/transfer/transfer.module';
 import { ReceiptSummaryModule } from 'src/modules/application/receiptsummary/receiptsummary.module';
+import { ControlSettingsModule } from './settings/control-settings/control-settings.module';
 @Module({
   imports: [
     NotificationModule,
@@ -83,6 +84,7 @@ import { ReceiptSummaryModule } from 'src/modules/application/receiptsummary/rec
     CreditNotesModule,
     TransferModule,
     ReceiptSummaryModule,
+    ControlSettingsModule,
   ],
 })
 export class ApplicationModule { }
