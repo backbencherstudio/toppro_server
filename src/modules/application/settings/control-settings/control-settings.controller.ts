@@ -1,34 +1,31 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
-import { ControlSettingsService } from './control-settings.service';
-import { CreateControlSettingDto } from './dto/create-control-setting.dto';
+import {
+  Controller,
+  Get,
+  Patch,
+  Body,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
+
+import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
+import { ControllerSettingsService } from './control-settings.service';
 import { UpdateControllerSettingDto } from './dto/update-control-setting.dto';
 
-@Controller('control-settings')
-export class ControlSettingsController {
-  constructor(private readonly controlSettingsService: ControlSettingsService) {}
 
-  @Post()
-  create(@Body() createControlSettingDto: CreateControlSettingDto) {
-    return this.controlSettingsService.create(createControlSettingDto);
+@Controller('controller-settings')
+@UseGuards(JwtAuthGuard)
+export class ControllerSettingsController {
+  constructor(private readonly controllerSettingsService: ControllerSettingsService) { }
+
+  // ✅ Get current user's brand/system settings
+  @Get('me')
+  async getMySettings(@Request() req) {
+    return this.controllerSettingsService.getMySettings(req.user);
   }
 
-  @Get()
-  findAll() {
-    return this.controlSettingsService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.controlSettingsService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateControlSettingDto: UpdateControllerSettingDto) {
-    return this.controlSettingsService.update(+id, updateControlSettingDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.controlSettingsService.remove(+id);
+  // ✅ Update current user's settings
+  @Patch('me')
+  async updateMySettings(@Body() dto: UpdateControllerSettingDto, @Request() req) {
+    return this.controllerSettingsService.updateMySettings(dto, req.user);
   }
 }

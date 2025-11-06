@@ -1,17 +1,19 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ControlSettingsController } from './control-settings.controller';
-import { ControlSettingsService } from './control-settings.service';
+import { ControllerSettingsController } from './control-settings.controller';
+import { ControllerSettingsService } from './control-settings.service';
 
-describe('ControlSettingsController', () => {
-  let controller: ControlSettingsController;
+
+
+describe('ControllerSettingsController', () => {
+  let controller: ControllerSettingsService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      controllers: [ControlSettingsController],
-      providers: [ControlSettingsService],
+      controllers: [ControllerSettingsController],
+      providers: [ControllerSettingsService],
     }).compile();
 
-    controller = module.get<ControlSettingsController>(ControlSettingsController);
+    controller = module.get<ControllerSettingsService>(ControllerSettingsService);
   });
 
   it('should be defined', () => {
