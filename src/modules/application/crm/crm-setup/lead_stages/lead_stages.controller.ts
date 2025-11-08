@@ -13,15 +13,14 @@ export class LeadStageController {
     return this.leadStageService.create(dto);
   }
 
-  // LIST (GET with pipelineName in path)
-  // /lead-stages/workspaceid/:workspace_id/ownerid/:owner_id/:pipelineName
-  @Get('workspaceid/:workspace_id/ownerid/:owner_id/:pipelineName')
+
+  @Get('/:workspace_id/:owner_id/:pipelineId')
   findAll(
     @Param('workspace_id') workspace_id: string,
     @Param('owner_id') owner_id: string,
-    @Param('pipelineName') pipelineName: string,
+    @Param('pipelineId') pipelineId: string,
   ) {
-    return this.leadStageService.findAll(workspace_id, owner_id, pipelineName);
+    return this.leadStageService.findAll(workspace_id, owner_id, pipelineId);
   }
 
   // UPDATE by id only

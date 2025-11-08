@@ -5,7 +5,7 @@ export class CreateLeadStageDto {
   name: string;
 
   @IsString() @IsNotEmpty()
-  pipelineName: string;
+  pipelineId: string;
 
   @IsString() @IsNotEmpty()
   workspace_id: string;

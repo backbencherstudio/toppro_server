@@ -16,7 +16,7 @@ export class CreateControlSettingDto {
 
     @IsOptional() 
     @IsString() 
-    tilte_text?: string;
+    title_text?: string;
 
     @IsOptional() 
     @IsString() 
@@ -25,7 +25,7 @@ export class CreateControlSettingDto {
     @IsOptional() 
     @IsString() 
     customer_prefix?: string;
-    
+
     @IsOptional() 
     @IsString() 
     vendor_prefix?: string;

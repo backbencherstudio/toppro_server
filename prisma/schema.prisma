@@ -1920,37 +1920,37 @@ model Lead {
   created_at DateTime  @default(now())
   updated_at DateTime  @updatedAt
   deleted_at DateTime?
-
+ 
   workspace_id String
   owner_id     String
   workspace    Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
   owner        User      @relation("lead_owner", fields: [owner_id], references: [id], onDelete: Cascade)
-
+ 
   subject     String
   name        String
   email       String
   phone       String
   followup_at DateTime
-
+ 
   stage         LeadStageStatus @default(DRAFT)
   notes         String?         @db.Text
   pipeline_id   String?
   pipeline      Pipeline?       @relation(fields: [pipeline_id], references: [id], onDelete: SetNull)
   pipeline_name String?
-
+ 
   lead_stage_id String?
   lead_stage    LeadStage? @relation(fields: [lead_stage_id], references: [id], onDelete: SetNull)
-
+ 
   user_id      String?
   primary_user User?   @relation(fields: [user_id], references: [id], onDelete: SetNull)
   user_name    String?
-
+ 
   users User[] @relation("LeadUsers")
-
+ 
   products Items[]      @relation("LeadItems")
   sources  Source[]     @relation("LeadSources")
   files    Attachment[] @relation("LeadAttachments")
-
+ 
   discussions     Discussion[]
   tasks           Task[]
   calls           Call[]
@@ -1959,7 +1959,7 @@ model Lead {
   PurchaseItems   PurchaseItems? @relation(fields: [purchaseItemsId], references: [id])
   purchaseItemsId String?
   Attachment      Attachment[]
-
+ 
   @@index([workspace_id, owner_id])
   @@index([pipeline_id])
   @@index([lead_stage_id])

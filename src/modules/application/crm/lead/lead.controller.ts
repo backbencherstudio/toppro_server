@@ -19,13 +19,6 @@ export class LeadsController {
   ) { }
 
 
-  // @Post('create')
-  // async createLead(@Req() req, @Body() dto: CreateLeadDto) {
-  //   const ownerId = req.user.id || req.user.owner_id;
-  //   const workspaceId = req.user.workspace_id;
-
-  //   return this.leadsService.createLead(dto, ownerId, workspaceId);
-  // }
 
   @Post('create')
   async createLead(@Req() req, @Body() dto: CreateLeadDto) {
@@ -64,12 +57,35 @@ export class LeadsController {
   }
 
 
+  // @Put(':id')
+  // async updateLead(@Req() req, @Param('id') id: string, @Body() dto: UpdateLeadDto) {
+  //   const ownerId = req.user.id;
+  //   const workspaceId = req.user.workspace_id;
+  //   return this.leadsService.updateLead(id, ownerId, workspaceId, dto);
+  // }
+
   @Put(':id')
   async updateLead(@Req() req, @Param('id') id: string, @Body() dto: UpdateLeadDto) {
     const ownerId = req.user.id;
     const workspaceId = req.user.workspace_id;
-    return this.leadsService.updateLead(id, ownerId, workspaceId, dto);
+
+    try {
+      const updatedLead = await this.leadsService.updateLead(id, ownerId, workspaceId, dto);
+      return {
+        success: true,
+        message: 'Lead updated successfully',
+        data: updatedLead,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        field: error.response?.field || 'unknown',
+        message: error.response?.message || 'Failed to update lead',
+      };
+    }
   }
+
+
 
 
   @Delete(':id')

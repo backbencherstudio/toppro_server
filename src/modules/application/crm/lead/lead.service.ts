@@ -265,6 +265,48 @@ export class LeadsService {
     });
   }
 
+  // async updateLead(
+  //   id: string,
+  //   ownerId: string,
+  //   workspaceId: string,
+  //   dto: UpdateLeadDto,
+  // ) {
+  //   try {
+  //     const sourceConnect = dto.sources
+  //       ? { set: dto.sources.map((id) => ({ id })) }
+  //       : undefined;
+
+  //     const productConnect = dto.products
+  //       ? { set: dto.products.map((id) => ({ id })) }
+  //       : undefined;
+
+  //     return await this.prisma.lead.update({
+  //       where: { id, workspace_id: workspaceId, owner_id: ownerId },
+  //       data: {
+  //         subject: dto.subject,
+  //         name: dto.name,
+  //         email: dto.email,
+  //         phone: dto.phone,
+  //         followup_at: dto.followup_at ? new Date(dto.followup_at) : undefined,
+  //         pipeline_id: dto.pipeline_id,
+  //         stage: dto.stage as any, // ✅ updated field
+  //         notes: dto.notes,
+  //         ...(sourceConnect && { sources: sourceConnect }),
+  //         ...(productConnect && { products: productConnect }),
+  //       },
+  //       include: {
+  //         sources: true,
+  //         products: true,
+  //         lead_stage: { select: { id: true, name: true } }, // include stage
+  //         pipeline: { select: { id: true, name: true } },
+  //       },
+  //     });
+  //   } catch (error) {
+  //     throw new BadRequestException(error.message || 'Failed to update lead');
+  //   }
+  // }
+
+
   async deleteLead(id: string, ownerId: string, workspaceId: string) {
     // ✅ Validate lead existence
     const lead = await this.prisma.lead.findFirst({
