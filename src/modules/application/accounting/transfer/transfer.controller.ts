@@ -31,10 +31,20 @@ export class TransferController {
 
   // transfer.controller.ts
   @Get()
-  @ApiOperation({ summary: 'Get all transfers (with optional filters)' })
+  @ApiOperation({
+    summary: 'Get all transfers (with filters, search & pagination)',
+  })
   findAll(@Req() req, @Query() query) {
     const { owner_id, workspace_id, id: user_id } = req.user;
-    const { from_account, to_account, start_date, end_date } = query;
+    const {
+      from_account,
+      to_account,
+      start_date,
+      end_date,
+      search,
+      page = 1,
+      limit = 10,
+    } = query;
 
     return this.transferService.findAll(
       owner_id,
@@ -44,6 +54,9 @@ export class TransferController {
       to_account,
       start_date,
       end_date,
+      search,
+      Number(page),
+      Number(limit),
     );
   }
 

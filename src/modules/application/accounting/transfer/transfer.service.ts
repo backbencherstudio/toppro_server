@@ -80,6 +80,9 @@ async findAll(
   to_account?: string,
   start_date?: string,
   end_date?: string,
+  search?: string,
+  page: number = 1,
+  limit: number = 10,
 ) {
   const whereCondition: any = {
     owner_id: owner_id || user_id,
@@ -87,15 +90,11 @@ async findAll(
     user_id: user_id || owner_id,
   };
 
-  // 🔹 Optional Filters
-  if (from_account) {
-    whereCondition.from_account = from_account;
-  }
+  // 🔹 Filter by account
+  if (from_account) whereCondition.from_account = from_account;
+  if (to_account) whereCondition.to_account = to_account;
 
-  if (to_account) {
-    whereCondition.to_account = to_account;
-  }
-
+  // 🔹 Filter by date range
   if (start_date && end_date) {
     whereCondition.createdAt = {
       gte: new Date(start_date),
@@ -103,10 +102,28 @@ async findAll(
     };
   }
 
-  const transfers = await this.prisma.transfer.findMany({
-    where: whereCondition,
-    orderBy: { createdAt: 'desc' },
-  });
+  // 🔹 Search filter (in note, amount, or transaction_id)
+  if (search) {
+    whereCondition.OR = [
+      { note: { contains: search, mode: 'insensitive' } },
+      { amount: { equals: Number(search) || 0 } },
+      { transaction_id: { contains: search, mode: 'insensitive' } },
+    ];
+  }
+
+  // 🔹 Pagination setup
+  const skip = (page - 1) * limit;
+  const take = limit;
+
+  const [transfers, total] = await Promise.all([
+    this.prisma.transfer.findMany({
+      where: whereCondition,
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take,
+    }),
+    this.prisma.transfer.count({ where: whereCondition }),
+  ]);
 
   if (!transfers || transfers.length === 0) {
     throw new NotFoundException('No transfers found');
@@ -115,9 +132,16 @@ async findAll(
   return {
     success: true,
     message: 'Transfers retrieved successfully',
+    pagination: {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    },
     data: transfers,
   };
 }
+
 
 
   async findOne(id: string) {
