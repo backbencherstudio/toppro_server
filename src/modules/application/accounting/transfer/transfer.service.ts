@@ -71,26 +71,54 @@ async create(
 
 
 
-  async findAll(owner_id?: string, workspace_id?: string, user_id?: string) {
-    const transfers = await this.prisma.transfer.findMany({
-      where: {
-        owner_id: owner_id || user_id,
-        workspace_id,
-        user_id: user_id || owner_id,
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+// transfer.service.ts
+async findAll(
+  owner_id?: string,
+  workspace_id?: string,
+  user_id?: string,
+  from_account?: string,
+  to_account?: string,
+  start_date?: string,
+  end_date?: string,
+) {
+  const whereCondition: any = {
+    owner_id: owner_id || user_id,
+    workspace_id,
+    user_id: user_id || owner_id,
+  };
 
-    if (!transfers || transfers.length === 0) {
-      throw new NotFoundException('No transfers found');
-    }
+  // 🔹 Optional Filters
+  if (from_account) {
+    whereCondition.from_account = from_account;
+  }
 
-    return {
-      success: true,
-      message: 'Transfers retrieved successfully',
-      data: transfers,
+  if (to_account) {
+    whereCondition.to_account = to_account;
+  }
+
+  if (start_date && end_date) {
+    whereCondition.createdAt = {
+      gte: new Date(start_date),
+      lte: new Date(end_date),
     };
   }
+
+  const transfers = await this.prisma.transfer.findMany({
+    where: whereCondition,
+    orderBy: { createdAt: 'desc' },
+  });
+
+  if (!transfers || transfers.length === 0) {
+    throw new NotFoundException('No transfers found');
+  }
+
+  return {
+    success: true,
+    message: 'Transfers retrieved successfully',
+    data: transfers,
+  };
+}
+
 
   async findOne(id: string) {
     const transfer = await this.prisma.transfer.findUnique({
