@@ -364,14 +364,14 @@ export class RolesService {
 
   //  GET all roles (filtered by owner & workspace) with minimal fields
   async getAllRoles(ownerId: string, workspaceId: string) {
-    if (!ownerId || !workspaceId) {
-      throw new BadRequestException('ownerId and workspaceId are required.');
-    }
+    // if (!ownerId || !workspaceId) {
+    //   throw new BadRequestException('ownerId and workspaceId are required.');
+    // }
 
     const roles = await this.prisma.role.findMany({
       where: {
-        owner_id: ownerId,
-        workspace_id: workspaceId,
+        // owner_id: ownerId,
+        // workspace_id: workspaceId,
       },
       select: {
         id: true,

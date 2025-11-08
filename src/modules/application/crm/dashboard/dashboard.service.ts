@@ -110,47 +110,88 @@ export class DashboardService {
   }
 
   // Get total count of leads by stages (DRAFT, SENT)
+  // async getLeadsByStages(ownerId: string, workspaceId: string) {
+  //   // Get lead counts for each stage (DRAFT, SENT)
+  //   const stageLeadCounts = await Promise.all([
+  //     // Count DRAFT leads
+  //     this.prisma.lead.count({
+  //       where: {
+  //         workspace_id: workspaceId,
+  //         owner_id: ownerId,
+  //         deleted_at: null,
+  //         stage: 'DRAFT',
+  //       },
+  //     }),
+  //     // Count SENT leads
+  //     this.prisma.lead.count({
+  //       where: {
+  //         workspace_id: workspaceId,
+  //         owner_id: ownerId,
+  //         deleted_at: null,
+  //         stage: 'SENT',
+  //       },
+  //     }),
+  //   ]);
+
+  //   const results = [
+  //     {
+  //       stage_name: 'DRAFT',
+  //       lead_count: stageLeadCounts[0],
+  //     },
+  //     {
+  //       stage_name: 'SENT',
+  //       lead_count: stageLeadCounts[1],
+  //     },
+  //   ];
+
+  //   // Sort by lead count descending
+  //   results.sort((a, b) => b.lead_count - a.lead_count);
+
+  //   return {
+  //     leads_by_stages: results,
+  //   };
+  // }
+
   async getLeadsByStages(ownerId: string, workspaceId: string) {
-    // Get lead counts for each stage (DRAFT, SENT)
-    const stageLeadCounts = await Promise.all([
-      // Count DRAFT leads
-      this.prisma.lead.count({
-        where: {
-          workspace_id: workspaceId,
-          owner_id: ownerId,
-          deleted_at: null,
-          stage: 'DRAFT',
-        },
-      }),
-      // Count SENT leads
-      this.prisma.lead.count({
-        where: {
-          workspace_id: workspaceId,
-          owner_id: ownerId,
-          deleted_at: null,
-          stage: 'SENT',
-        },
-      }),
-    ]);
-
-    const results = [
-      {
-        stage_name: 'DRAFT',
-        lead_count: stageLeadCounts[0],
+    // প্রথমে workspace অনুযায়ী সব lead stage বের করো
+    const stages = await this.prisma.leadStage.findMany({
+      where: {
+        workspace_id: workspaceId,
+        owner_id: ownerId,
       },
-      {
-        stage_name: 'SENT',
-        lead_count: stageLeadCounts[1],
+      select: {
+        id: true,
+        name: true,
       },
-    ];
+    });
 
-    // Sort by lead count descending
-    results.sort((a, b) => b.lead_count - a.lead_count);
+    // প্রতিটি stage অনুযায়ী lead count বের করো
+    const stageLeadCounts = await Promise.all(
+      stages.map(async (stage) => {
+        const count = await this.prisma.lead.count({
+          where: {
+            workspace_id: workspaceId,
+            owner_id: ownerId,
+            deleted_at: null,
+            lead_stage_id: stage.id,
+          },
+        });
+        return {
+          stage_id: stage.id,
+          stage_name: stage.name,
+          lead_count: count,
+        };
+      }),
+    );
+
+    // lead_count অনুযায়ী descending order এ সাজাও
+    stageLeadCounts.sort((a, b) => b.lead_count - a.lead_count);
 
     return {
-      leads_by_stages: results,
+      leads_by_stages: stageLeadCounts,
     };
   }
+
 
   // Get 5 most recently edited leads
   async getRecentlyEditedLeads(ownerId: string, workspaceId: string) {

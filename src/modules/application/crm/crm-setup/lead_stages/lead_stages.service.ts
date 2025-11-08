@@ -5,44 +5,90 @@ import { UpdateLeadStageDto } from './dto/update-lead_stage.dto';
 
 @Injectable()
 export class LeadStageService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   // CREATE: body contains { name, pipelineName, workspace_id, owner_id }
+  // async create(dto: CreateLeadStageDto) {
+  //   // find pipeline in this tenant
+  //   const pipeline = await this.prisma.pipeline.findFirst({
+  //     where: {
+  //       name: dto.pipelineName,
+  //       workspace_id: dto.workspace_id,
+  //       owner_id: dto.owner_id,
+  //     },
+  //     select: { id: true },
+  //   });
+  //   if (!pipeline) throw new NotFoundException('Pipeline not found in this workspace');
+
+  //   // unique per pipeline
+  //   const dup = await this.prisma.leadStage.findFirst({
+  //     where: { pipelineId: pipeline.id, name: dto.name },
+  //     select: { id: true },
+  //   });
+  //   if (dup) throw new BadRequestException('Lead stage already exists in this pipeline');
+
+  //   const leadStage = await this.prisma.leadStage.create({
+  //     data: {
+  //       name: dto.name,
+  //       pipelineId: pipeline.id,
+  //       workspace_id: dto.workspace_id,
+  //       owner_id: dto.owner_id,
+  //     },
+  //   });
+
+  //   return { message: 'Lead stage created successfully', leadStage };
+  // }
+
   async create(dto: CreateLeadStageDto) {
-    // find pipeline in this tenant
+    // check if the given pipeline exists in this workspace and owner context
     const pipeline = await this.prisma.pipeline.findFirst({
       where: {
-        name: dto.pipelineName,
+        id: dto.pipelineId,
         workspace_id: dto.workspace_id,
         owner_id: dto.owner_id,
       },
       select: { id: true },
     });
-    if (!pipeline) throw new NotFoundException('Pipeline not found in this workspace');
 
-    // unique per pipeline
+    if (!pipeline) {
+      throw new NotFoundException('Pipeline not found in this workspace');
+    }
+
+    // check for duplicate stage name within this pipeline
     const dup = await this.prisma.leadStage.findFirst({
-      where: { pipelineId: pipeline.id, name: dto.name },
+      where: {
+        pipelineId: dto.pipelineId,
+        name: dto.name,
+      },
       select: { id: true },
     });
-    if (dup) throw new BadRequestException('Lead stage already exists in this pipeline');
 
+    if (dup) {
+      throw new BadRequestException('Lead stage already exists in this pipeline');
+    }
+
+    // create the new lead stage
     const leadStage = await this.prisma.leadStage.create({
       data: {
         name: dto.name,
-        pipelineId: pipeline.id,
+        pipelineId: dto.pipelineId,
         workspace_id: dto.workspace_id,
         owner_id: dto.owner_id,
       },
     });
 
-    return { message: 'Lead stage created successfully', leadStage };
+    return {
+      message: 'Lead stage created successfully',
+      leadStage,
+    };
   }
 
-  // LIST: GET by pipelineName (scoped by workspace & owner), include flat pipeline name
-  async findAll(workspace_id: string, owner_id: string, pipelineName: string) {
+
+
+  // LIST: GET by pipelineId (scoped by workspace & owner), include flat pipeline name
+  async findAll(workspace_id: string, owner_id: string, pipelineId: string) {
     const pipe = await this.prisma.pipeline.findFirst({
-      where: { name: pipelineName, workspace_id, owner_id },
+      where: { id: pipelineId, workspace_id, owner_id },
       select: { id: true, name: true },
     });
     if (!pipe) throw new NotFoundException('Pipeline not found for this scope');

@@ -223,7 +223,7 @@ export class HelpDeskTicketService {
   }
 
   async getTicketById(ticketId: string) {
-  // 1️⃣ Ticket খুঁজে বের করা
+ 
   const ticket = await this.prisma.helpDeskTicket.findUnique({
     where: { id: ticketId },
     include: {
@@ -246,7 +246,7 @@ export class HelpDeskTicketService {
 
   if (!ticket) throw new NotFoundException('Ticket not found');
 
-  // 2️⃣ Structure করা response
+ 
   return {
     id: ticket.id,
     ticketId: ticket.ticketId,
@@ -261,12 +261,12 @@ export class HelpDeskTicketService {
     createdBy: ticket.creator
       ? { id: ticket.creator.id, name: ticket.creator.name }
       : null,
-    created: dayjs(ticket.createdAt).fromNow(), // ✅ "2 hours ago" style
+    created: dayjs(ticket.createdAt).fromNow(), 
     notes: ticket.notes,
     descriptions: ticket.descriptions.map((d) => ({
       id: d.id,
       description: d.description,
-      createdAt: dayjs(d.createdAt).fromNow(), // ✅ relative time
+      createdAt: dayjs(d.createdAt).fromNow(), 
       creator: d.creator,
       attachments: d.attachments,
     })),

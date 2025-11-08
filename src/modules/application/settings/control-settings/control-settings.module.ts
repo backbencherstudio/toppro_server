@@ -1,9 +1,10 @@
 import { Module } from '@nestjs/common';
-import { ControlSettingsService } from './control-settings.service';
-import { ControlSettingsController } from './control-settings.controller';
+import { ControllerSettingsController } from './control-settings.controller';
+import { ControllerSettingsService } from './control-settings.service';
+import { UploadService } from './upload.service';
 
 @Module({
-  controllers: [ControlSettingsController],
-  providers: [ControlSettingsService],
+  controllers: [ControllerSettingsController],
+  providers: [ControllerSettingsService, UploadService],
 })
 export class ControlSettingsModule {}
