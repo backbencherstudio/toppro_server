@@ -33,15 +33,23 @@ export class PurchaseController {
     return this.purchaseService.create(dto, ownerId, workspaceId, userId);
   }
 
-  @Get('all')
-  async findAll(@Query() query, @Req() req: any) {
-    const {
-      owner_id: ownerId,
-      workspace_id: workspaceId,
-      id: userId,
-    } = req.user;
-    return this.purchaseService.findAll(ownerId, workspaceId, userId);
-  }
+@Get('all')
+async findAll(
+  @Query() query: { page?: string; limit?: string },
+  @Req() req: any,
+) {
+  const {
+    owner_id: ownerId,
+    workspace_id: workspaceId,
+    id: userId,
+  } = req.user;
+
+  const page = Number(query.page) || 1;
+  const limit = Number(query.limit) || 10;
+
+  return this.purchaseService.findAll(ownerId, workspaceId, userId, page, limit);
+}
+
 
   @Get(':id')
   @ApiOperation({

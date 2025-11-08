@@ -308,38 +308,71 @@ try{
 }
   }
   // ------- LIST -------
-  async findAll(ownerId: string, workspaceId: string, userId?: string) {
-    const rows = await this.prisma.purchase.findMany({
-      where: {
-        owner_id: ownerId || userId,
-        workspace_id: workspaceId,
-        deleted_at: null,
-      },
-      orderBy: { created_at: 'desc' },
-      select: {
-        id: true,
-        purchase_no: true,
-        purchase_date: true,
-        deleted_at: true,
-        status: true,
-        Vendor: { select: { name: true } }, // PascalCase
-        AccountType: { select: { name: true } }, // PascalCase
-        BillingType: { select: { name: true } }, // PascalCase
-        Category: { select: { name: true } }, // PascalCase
-      },
-    });
+async findAll(
+  ownerId: string,
+  workspaceId: string,
+  userId?: string,
+  page: number = 1,
+  limit: number = 10,
+) {
+  // ✅ Base filters
+  const filters = {
+    owner_id: ownerId || userId,
+    workspace_id: workspaceId,
+    deleted_at: null,
+  };
 
-    return rows.map((r) => ({
-      id: r.id,
-      purchase_no: r.purchase_no,
-      vendor_name: r.Vendor?.name ?? null,
-      account_type_name: r.AccountType?.name ?? null,
-      billing_type_name: r.BillingType?.name ?? null,
-      category_name: r.Category?.name ?? null,
-      purchase_date: r.purchase_date ?? null,
-      status: r.status,
-    }));
-  }
+  // ✅ Total records count for pagination
+  const totalRecords = await this.prisma.purchase.count({ where: filters });
+  const totalPages = Math.ceil(totalRecords / limit);
+  const skip = (page - 1) * limit;
+
+  // ✅ Fetch paginated purchases
+  const rows = await this.prisma.purchase.findMany({
+    where: filters,
+    orderBy: { created_at: 'desc' },
+    skip,
+    take: limit,
+    select: {
+      id: true,
+      purchase_no: true,
+      purchase_date: true,
+      deleted_at: true,
+      status: true,
+      Vendor: { select: { name: true } },
+      AccountType: { select: { name: true } },
+      BillingType: { select: { name: true } },
+      Category: { select: { name: true } },
+    },
+  });
+
+  const formatted = rows.map((r) => ({
+    id: r.id,
+    purchase_no: r.purchase_no,
+    vendor_name: r.Vendor?.name ?? null,
+    account_type_name: r.AccountType?.name ?? null,
+    billing_type_name: r.BillingType?.name ?? null,
+    category_name: r.Category?.name ?? null,
+    purchase_date: r.purchase_date ?? null,
+    status: r.status,
+  }));
+
+  // ✅ Return paginated response
+  return {
+    success: true,
+    message: 'Purchases fetched successfully',
+    data: formatted,
+    pagination: {
+      currentPage: page,
+      totalPages,
+      totalRecords,
+      perPage: limit,
+      hasNextPage: page < totalPages,
+      hasPrevPage: page > 1,
+    },
+  };
+}
+
 
   // ------- SINGLE -------
 async findOne(
