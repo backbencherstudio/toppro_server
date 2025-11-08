@@ -40,28 +40,33 @@ export class ItemsController {
     return this.itemsService.create(dto, userId, ownerId, workspaceId, file);
   }
 
-  @Get('all')
-  async getAll(
-    @Req() req: any,
-    @Query('itemType_id') itemTypeId: string,
-    @Query('itemCategory_id') itemCategoryId: string,
-    @Query('search') searchTerm: string,
-  ) {
-    const {
-      id: userId,
-      owner_id: ownerId,
-      workspace_id: workspaceId,
-    } = req.user;
+@Get('all')
+async getAll(
+  @Req() req: any,
+  @Query('itemType_id') itemTypeId: string,
+  @Query('itemCategory_id') itemCategoryId: string,
+  @Query('search') searchTerm: string,
+  @Query('page') page = '1',
+  @Query('limit') limit = '10',
+) {
+  const {
+    id: userId,
+    owner_id: ownerId,
+    workspace_id: workspaceId,
+  } = req.user;
 
-    return this.itemsService.findAll(
-      userId,
-      ownerId,
-      workspaceId,
-      itemTypeId,
-      itemCategoryId,
-      searchTerm,
-    );
-  }
+  return this.itemsService.findAll(
+    userId,
+    ownerId,
+    workspaceId,
+    itemTypeId,
+    itemCategoryId,
+    searchTerm,
+    Number(page),
+    Number(limit),
+  );
+}
+
 
 
   @Get('all/:itemType_id')

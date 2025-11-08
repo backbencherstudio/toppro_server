@@ -129,38 +129,43 @@ async create(
 }
 
 
+async findAll(
+  userId: string,
+  ownerId: string,
+  workspaceId: string,
+  itemTypeId: string | null,
+  itemCategoryId: string | null,
+  searchTerm: string | null,
+  page = 1,
+  limit = 10,
+) {
+  const whereCondition: any = {
+    workspace_id: workspaceId,
+    owner_id: ownerId || userId,
+  };
 
+  if (itemTypeId) {
+    whereCondition.itemType_id = itemTypeId;
+  }
 
-  async findAll(
-    userId: string,
-    ownerId: string,
-    workspaceId: string,
-    itemTypeId: string | null,
-    itemCategoryId: string | null,
-    searchTerm: string | null,
-  ) {
-    const whereCondition: any = {
-      workspace_id: workspaceId,
-      owner_id: ownerId || userId,
+  if (itemCategoryId) {
+    whereCondition.itemCategory_id = itemCategoryId;
+  }
+
+  if (searchTerm) {
+    whereCondition.name = {
+      contains: searchTerm,
+      mode: 'insensitive',
     };
+  }
 
-    if (itemTypeId) {
-      whereCondition.itemType_id = itemTypeId;
-    }
+  const skip = (page - 1) * limit;
 
-    if (itemCategoryId) {
-      whereCondition.itemCategory_id = itemCategoryId;
-    }
-
-    if (searchTerm) {
-      whereCondition.name = {
-        contains: searchTerm,
-        mode: 'insensitive',
-      };
-    }
-
-    const items = await this.prisma.items.findMany({
+  const [items, total] = await this.prisma.$transaction([
+    this.prisma.items.findMany({
       where: whereCondition,
+      skip,
+      take: limit,
       orderBy: { created_at: 'desc' },
       include: {
         tax: { select: { name: true } },
@@ -168,23 +173,36 @@ async create(
         itemType: { select: { name: true } },
         stock: { select: { quantity: true } },
       },
-    });
+    }),
+    this.prisma.items.count({ where: whereCondition }),
+  ]);
 
-    const formatted = items.map((item) => ({
-      id: item.id,
-      image: item.image,
-      name: item.name,
-      sku: item.sku,
-      sale_price: item.sale_price,
-      purchase_price: item.purchase_price,
-      tax_name: item.tax?.name || null,
-      unit_name: item.unit?.name || null,
-      quantity: item.stock.length > 0 ? item.stock[0].quantity : 0,
-      item_type: item.itemType?.name || null,
-    }));
+  const formatted = items.map((item) => ({
+    id: item.id,
+    image: item.image,
+    name: item.name,
+    sku: item.sku,
+    sale_price: item.sale_price,
+    purchase_price: item.purchase_price,
+    tax_name: item.tax?.name || null,
+    unit_name: item.unit?.name || null,
+    quantity: item.stock.length > 0 ? item.stock[0].quantity : 0,
+    item_type: item.itemType?.name || null,
+  }));
 
-    return { success: true, message: 'All Items found successfully!', data: formatted };
-  }
+  return {
+    success: true,
+    message: 'Items fetched successfully!',
+    data: formatted,
+    meta: {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
+}
+
   async findAllItemType(
     userId: string,
     ownerId: string,
