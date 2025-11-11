@@ -16,18 +16,21 @@ export class WorkspaceService {
     private readonly prisma: PrismaService,
   ) {}
 
-  async create(data: CreateWorkspaceDto, userId: string, ownerId: string) {
+async create(data: CreateWorkspaceDto, userId: string, ownerId: string) {
+  try {
     console.log('WorkspaceService', userId, ownerId);
     const ownerForWorkspace = ownerId || userId;
 
-    // Ensure workspace code is unique (schema enforces global uniqueness)
-    // const exists = await this.prisma.workspace.findUnique({
-    //   where: { id: data.id },
-    // });
-    // if (exists) {
-    //   throw new BadRequestException('Workspace code already exists');
-    // }
+    // 🔹 Step 1: Validate owner existence
+    const ownerExists = await this.prisma.user.findUnique({
+      where: { id: ownerForWorkspace },
+    });
 
+    if (!ownerExists) {
+      throw new BadRequestException(`Invalid owner_id: ${ownerForWorkspace}`);
+    }
+
+    // 🔹 Step 2: Create workspace and settings inside transaction
     const workspace = await this.prisma.$transaction(async (tx) => {
       const ws = await tx.workspace.create({
         data: {
@@ -53,6 +56,7 @@ export class WorkspaceService {
       return ws;
     });
 
+    // 🔹 Step 3: Success response
     return {
       success: true,
       message: 'Workspace created successfully',
@@ -63,7 +67,45 @@ export class WorkspaceService {
         updated_at: workspace.updated_at,
       },
     };
+  } catch (error) {
+    console.error('❌ Workspace Create Error:', error);
+
+    // ✅ Prisma Foreign Key Error
+    if (error.code === 'P2003') {
+      throw new BadRequestException({
+        success: false,
+        message: 'Foreign key constraint failed — owner or relation not found',
+        cause: error.meta?.field_name || null,
+      });
+    }
+
+    // ✅ Prisma Unique Constraint Error (duplicate workspace id/code)
+    if (error.code === 'P2002') {
+      throw new BadRequestException({
+        success: false,
+        message: 'Duplicate entry detected — workspace already exists',
+        target: error.meta?.target || null,
+      });
+    }
+
+    // ✅ Generic Prisma Error
+    if (error.code?.startsWith('P')) {
+      throw new BadRequestException({
+        success: false,
+        message: `Database error (${error.code})`,
+        detail: error.message,
+      });
+    }
+
+    // ✅ Fallback for unknown/unexpected errors
+    throw new BadRequestException({
+      success: false,
+      message: error.message || 'Something went wrong while creating workspace',
+    });
   }
+}
+
+
 
   async findAll(userId: string, ownerId: string) {
     const workspaces = await this.prisma.workspace.findMany({

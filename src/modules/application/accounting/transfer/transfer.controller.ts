@@ -11,10 +11,10 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
-import { TransferService } from './transfer.service';
+import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 import { CreateTransferDto } from './dto/create-transfer.dto';
 import { UpdateTransferDto } from './dto/update-transfer.dto';
-import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
+import { TransferService } from './transfer.service';
 
 @ApiTags('Transfers')
 @Controller('transfer')

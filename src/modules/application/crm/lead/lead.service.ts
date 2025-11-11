@@ -117,6 +117,8 @@ export class LeadsService {
         select: {
           id: true,
           name: true,
+          email: true,
+          phone: true,
           subject: true,
           stage: true,
           followup_at: true,

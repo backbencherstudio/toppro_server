@@ -30,9 +30,7 @@ export class AuthService {
   async me(email: string) {
     try {
       const user = await this.prisma.user.findFirst({
-        where: {
-          email: email,
-        },
+        where: { email },
         select: {
           id: true,
           name: true,
@@ -46,33 +44,48 @@ export class AuthService {
           created_at: true,
           owner_id: true,
           workspace_id: true,
+          role_users: {
+            select: {
+              role: {
+                select: {
+                  title: true,
+                  permissions: { select: { title: true } },
+                },
+              },
+            },
+          },
         },
       });
 
       if (!user) {
-        return {
-          success: false,
-          message: 'User not found',
-        };
+        return { success: false, message: 'User not found' };
       }
 
+      if (user.type === 'OWNER') {
+        user.owner_id = user.id;
+      }
+
+      // 🔹 Avatar URL
       if (user.avatar) {
         user['avatar_url'] = SojebStorage.url(
           appConfig().storageUrl.avatar + user.avatar,
         );
       }
 
-      if (user) {
-        return {
-          success: true,
-          data: user,
-        };
-      } else {
-        return {
-          success: false,
-          message: 'User not found',
-        };
+      // 🔹 Handle role & permission based on type
+      if (user.type === 'OWNER' || user.type === 'SUPERADMIN') {
+        delete user.role_users;
+      } else if (user.role_users?.length > 0) {
+        const role = user.role_users[0].role;
+        user['role'] = role.title;
+        user['permissions'] = role.permissions.map((p) => p.title);
+        delete user.role_users; // remove nested structure
       }
+
+      return {
+        success: true,
+        data: user,
+      };
     } catch (error) {
       return {
         success: false,
