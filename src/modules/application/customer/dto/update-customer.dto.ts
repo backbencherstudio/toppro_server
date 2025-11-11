@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsNotEmpty } from 'class-validator';
+import { IsOptional, IsString } from 'class-validator';
 
 export class UpdateCustomerDto {
   @IsOptional()
@@ -78,12 +78,4 @@ export class UpdateCustomerDto {
   @IsOptional()
   @IsString()
   shippingZip?: string;
-
-  @IsNotEmpty()
-  @IsString()
-  owner_id: string;
-
-  @IsNotEmpty()
-  @IsString()
-  workspace_id: string;
 }

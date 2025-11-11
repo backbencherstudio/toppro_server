@@ -142,6 +142,7 @@ async findAll(
   const whereCondition: any = {
     workspace_id: workspaceId,
     owner_id: ownerId || userId,
+    // userId: userId|| ownerId
   };
 
   if (itemTypeId) {

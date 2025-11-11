@@ -71,26 +71,78 @@ async create(
 
 
 
-  async findAll(owner_id?: string, workspace_id?: string, user_id?: string) {
-    const transfers = await this.prisma.transfer.findMany({
-      where: {
-        owner_id: owner_id || user_id,
-        workspace_id,
-        user_id: user_id || owner_id,
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+// transfer.service.ts
+async findAll(
+  owner_id?: string,
+  workspace_id?: string,
+  user_id?: string,
+  from_account?: string,
+  to_account?: string,
+  start_date?: string,
+  end_date?: string,
+  search?: string,
+  page: number = 1,
+  limit: number = 10,
+) {
+  const whereCondition: any = {
+    owner_id: owner_id || user_id,
+    workspace_id,
+    user_id: user_id || owner_id,
+  };
 
-    if (!transfers || transfers.length === 0) {
-      throw new NotFoundException('No transfers found');
-    }
+  // 🔹 Filter by account
+  if (from_account) whereCondition.from_account = from_account;
+  if (to_account) whereCondition.to_account = to_account;
 
-    return {
-      success: true,
-      message: 'Transfers retrieved successfully',
-      data: transfers,
+  // 🔹 Filter by date range
+  if (start_date && end_date) {
+    whereCondition.createdAt = {
+      gte: new Date(start_date),
+      lte: new Date(end_date),
     };
   }
+
+  // 🔹 Search filter (in note, amount, or transaction_id)
+  if (search) {
+    whereCondition.OR = [
+      { note: { contains: search, mode: 'insensitive' } },
+      { amount: { equals: Number(search) || 0 } },
+      { transaction_id: { contains: search, mode: 'insensitive' } },
+    ];
+  }
+
+  // 🔹 Pagination setup
+  const skip = (page - 1) * limit;
+  const take = limit;
+
+  const [transfers, total] = await Promise.all([
+    this.prisma.transfer.findMany({
+      where: whereCondition,
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take,
+    }),
+    this.prisma.transfer.count({ where: whereCondition }),
+  ]);
+
+  if (!transfers || transfers.length === 0) {
+    throw new NotFoundException('No transfers found');
+  }
+
+  return {
+    success: true,
+    message: 'Transfers retrieved successfully',
+    pagination: {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    },
+    data: transfers,
+  };
+}
+
+
 
   async findOne(id: string) {
     const transfer = await this.prisma.transfer.findUnique({
