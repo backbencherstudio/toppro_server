@@ -288,12 +288,14 @@ async findAll(
   limit: number = 10,
 ) {
   try {
+    // Initialize filters object
     const filters: any = {
-      owner_id: ownerId || userId,
-      workspace_id: workspaceId,
-      deleted_at: null,
+      owner_id: ownerId || userId,  // Use ownerId if available, otherwise userId
+      workspace_id: workspaceId,  // workspaceId is always required
+      user_id: userId || ownerId,  // Use userId if available, otherwise ownerId
     };
 
+    // Apply filters if provided
     if (issueDate) {
       const start = new Date(issueDate);
       const end = new Date(issueDate);
@@ -323,6 +325,7 @@ async findAll(
       take: limit,
     });
 
+    // Format the invoices
     const formatted = invoices.map((invoice) => ({
       id: invoice.id,
       invoice_number: invoice.invoice_number,
@@ -357,6 +360,7 @@ async findAll(
     return handlePrismaError(error);
   }
 }
+
 
   async findAllPaidInvoices(
     ownerId: string,

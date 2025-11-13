@@ -1,9 +1,20 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
-import { TransferService } from './transfer.service';
+import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 import { CreateTransferDto } from './dto/create-transfer.dto';
 import { UpdateTransferDto } from './dto/update-transfer.dto';
-import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
+import { TransferService } from './transfer.service';
 
 @ApiTags('Transfers')
 @Controller('transfer')
@@ -11,19 +22,42 @@ import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 export class TransferController {
   constructor(private readonly transferService: TransferService) {}
 
-@Post()
-@ApiOperation({ summary: 'Create a new transfer' })
-create(@Body() dto: CreateTransferDto, @Req() req) {
-  const { id: user_id, workspace_id, owner_id } = req.user;
-  return this.transferService.create(dto, user_id, workspace_id, owner_id);
-}
+  @Post()
+  @ApiOperation({ summary: 'Create a new transfer' })
+  create(@Body() dto: CreateTransferDto, @Req() req) {
+    const { id: user_id, workspace_id, owner_id } = req.user;
+    return this.transferService.create(dto, user_id, workspace_id, owner_id);
+  }
 
-
+  // transfer.controller.ts
   @Get()
-  @ApiOperation({ summary: 'Get all transfers (filtered by owner/workspace)' })
-  findAll(@Req() req) {
+  @ApiOperation({
+    summary: 'Get all transfers (with filters, search & pagination)',
+  })
+  findAll(@Req() req, @Query() query) {
     const { owner_id, workspace_id, id: user_id } = req.user;
-    return this.transferService.findAll(owner_id, workspace_id, user_id);
+    const {
+      from_account,
+      to_account,
+      start_date,
+      end_date,
+      search,
+      page = 1,
+      limit = 10,
+    } = query;
+
+    return this.transferService.findAll(
+      owner_id,
+      workspace_id,
+      user_id,
+      from_account,
+      to_account,
+      start_date,
+      end_date,
+      search,
+      Number(page),
+      Number(limit),
+    );
   }
 
   @Get(':id')
