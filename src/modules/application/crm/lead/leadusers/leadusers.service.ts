@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
@@ -19,12 +19,26 @@ export class LeadsUserService {
         owner_id: ownerId,
         deleted_at: null,
       },
-      select: { id: true },
+      select: {
+        id: true,
+        users: { select: { id: true } },
+      },
     });
 
     if (!lead) {
       throw new NotFoundException(
-        `Lead with id ${leadId} not found in this workspace/owner`,
+        `This Lead not found in this workspace/owner`,
+      );
+    }
+
+    // 2️⃣ Check if any users already exist in the lead
+    const existingUsers = lead.users.filter(user => userIds.includes(user.id));
+
+    if (existingUsers.length > 0) {
+      // Collect existing user IDs
+      const existingUserIds = existingUsers.map(user => user.id);
+      throw new ConflictException(
+        `Users are already added to the lead.`,
       );
     }
 
@@ -99,7 +113,7 @@ export class LeadsUserService {
 
     if (!lead) {
       throw new NotFoundException(
-        `Lead with id ${leadId} not found in this workspace/owner`,
+        `Lead not found in this workspace/owner`,
       );
     }
 
@@ -116,7 +130,7 @@ export class LeadsUserService {
     // ✅ return minimal response
     return {
       success: true,
-      message: `User ${userId} removed from lead successfully`,
+      message: `User removed from lead successfully`,
       lead_id: leadId,
       removed_user_id: userId,
     };
