@@ -122,6 +122,7 @@ export class LeadsService {
           subject: true,
           stage: true,
           followup_at: true,
+          notes: true,
           owner_id: true,
           owner: {
             select: { id: true, name: true },
@@ -150,6 +151,9 @@ export class LeadsService {
       data: leads.map((lead) => ({
         id: lead.id,
         name: lead.name,
+        email: lead.email,
+        phone: lead.phone,
+        notes: lead.notes,
         subject: lead.subject,
         stage: lead.stage,
         followup_at: lead.followup_at,
