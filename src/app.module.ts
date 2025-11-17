@@ -28,14 +28,16 @@ import { ApplicationModule } from './modules/application/application.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { UserModule } from './user/user.module';
-import { PaymentModule } from './modules/payment/stripe/payment.module';
+import { join } from 'path/win32';
+import stripeConfig from './config/stripe.config';
+// import { ServeStaticModule } from '@nestjs/serve-static';
 
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [appConfig],
+      load: [appConfig,stripeConfig],
     }),
     BullModule.forRoot({
       connection: {
@@ -44,6 +46,12 @@ import { PaymentModule } from './modules/payment/stripe/payment.module';
         port: +appConfig().redis.port,
       },
     }),
+   
+    // ServeStaticModule.forRoot({
+    //   rootPath: join(__dirname, '..', 'public'), // Path to the 'public' folder
+    //   serveRoot: '/public',                      // URL path to access static files
+    // }),
+
     PrismaModule,
     AuthModule,
     AbilityModule,
@@ -51,7 +59,6 @@ import { PaymentModule } from './modules/payment/stripe/payment.module';
     ApplicationModule,
     AdminModule,
     ChatModule,
-    PaymentModule,
     AiChatbotModule,
     ServiceManagementModule,
     FeatureModule,

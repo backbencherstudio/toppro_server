@@ -99,6 +99,23 @@ export class CallService {
     return call;
   }
 
+  //need all assinee users of based on Leads id
+  async getAssigneeUsersByLeadId(leadId: string) {
+    const lead = await this.prisma.lead.findUnique({
+      where: { id: leadId },
+      select: {
+        users: {
+          select: { id: true, name: true, email: true },
+        },
+      },
+    });
+
+    if (!lead) {
+      throw new Error('Lead not found');
+    }
+
+    return lead.users;
+  }
 
   async getAllCallsByLead(
     leadId: string,

@@ -41,6 +41,7 @@ import { ChartOfAccountModule } from 'src/modules/application/accounting/chartof
 import { TransferModule } from './accounting/transfer/transfer.module';
 import { ReceiptSummaryModule } from 'src/modules/application/receiptsummary/receiptsummary.module';
 import { ControlSettingsModule } from './settings/control-settings/control-settings.module';
+import { PaymentModule } from './payment/payment.module';
 @Module({
   imports: [
     NotificationModule,
@@ -85,6 +86,7 @@ import { ControlSettingsModule } from './settings/control-settings/control-setti
     TransferModule,
     ReceiptSummaryModule,
     ControlSettingsModule,
+    PaymentModule,
   ],
 })
 export class ApplicationModule { }

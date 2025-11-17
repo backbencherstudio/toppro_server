@@ -15,6 +15,17 @@ export class CallController {
     return this.callService.createCall(dto, ownerId, workspaceId);
   }
 
+  //need all assinee users based on Leads id
+  @Get('assignees/:leadId')
+  async getAssigneeUsers(
+    @Param('leadId') leadId: string
+  ) {
+    const assigneeUsers = await this.callService.getAssigneeUsersByLeadId(leadId);
+    return {
+      data: assigneeUsers,
+    };
+  }
+
   @UseGuards(JwtAuthGuard)
   @Get('lead/:leadId')
   async getAllCallsByLead(

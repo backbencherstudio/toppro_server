@@ -5,6 +5,7 @@ import { UpdateLeadDto } from './dto/update-lead.dto';
 import { UpdateNotesDto } from './dto/update-notes.dto';
 import { SojebStorage } from 'src/common/lib/Disk/SojebStorage';
 import { ActivityService } from '../activity/activity.service';
+import appConfig from 'src/config/app.config';
 
 @Injectable()
 export class LeadsService {
@@ -123,6 +124,7 @@ export class LeadsService {
           stage: true,
           followup_at: true,
           notes: true,
+          calls: true,
           owner_id: true,
           owner: {
             select: { id: true, name: true },
@@ -154,6 +156,7 @@ export class LeadsService {
         email: lead.email,
         phone: lead.phone,
         notes: lead.notes,
+        calls: lead.calls,
         subject: lead.subject,
         stage: lead.stage,
         followup_at: lead.followup_at,
@@ -172,6 +175,9 @@ export class LeadsService {
       },
     };
   }
+
+
+
 
 
   // ✅ Get specific lead by ID
@@ -227,6 +233,7 @@ export class LeadsService {
       email: lead.email,
       phone: lead.phone,
       pipeline: lead.pipeline ? lead.pipeline.name : null,
+      pipeline_id: lead.pipeline ? lead.pipeline.id : null,
       stage: lead.stage,
       created_at: lead.created_at,
       followup_at: lead.followup_at,
@@ -407,6 +414,59 @@ export class LeadsService {
 
   //Lead files upload....
 
+  // async uploadFile(leadId: string, ownerId: string, workspaceId: string, userId: string, file: Express.Multer.File) {
+  //   // Check if the lead exists
+  //   const lead = await this.prisma.lead.findUnique({
+  //     where: { id: leadId },
+  //   });
+
+  //   if (!lead) {
+  //     throw new NotFoundException('Lead not found');
+  //   }
+
+  //   // Generate a file name (this example uses a random string + timestamp to avoid collisions)
+  //   const fileName = `${userId}-${Date.now()}-${file.originalname}`;
+
+
+  //   // Upload the file using your storage service
+  //   await SojebStorage.put(`leads/${fileName}`, file.buffer);
+
+  //   const fileUrl = appConfig().storageUrl.leads+ '/' +`fileName`;
+
+
+  //   // Create an attachment record in the database
+  //   const attachment = await this.prisma.attachment.create({
+  //     data: {
+  //       lead_id: leadId,
+  //       file_name: fileName,
+  //       file_url: fileUrl,  // Assuming you serve files under this path
+  //       // C:\Users\barsh\Desktop\toppro_server\public\storage\leads\cmgkajbb60001vswgg45h3kpg-1763027446894-654b8e16333d0d5c3130b3e8-lige-mens-watches-waterproof-stainless.jpg
+  //       file_size: file.size,
+  //     },
+  //   });
+
+  //   const owner = await this.prisma.user.findUnique({
+  //     where: { id: ownerId },
+  //     select: { name: true },
+  //   });
+
+
+  //   // 3️⃣ Create activity via ActivityService
+  //   await this.activityService.createActivity(
+  //     workspaceId,
+  //     ownerId,
+  //     leadId,
+  //     'File upload',
+  //     `${owner?.name || 'Someone'} uploaded new file ${file.originalname}`,
+  //   );
+
+  //   return {
+  //     success: true,
+  //     message: 'File uploaded successfully',
+  //     data: attachment,  // Return the attachment info, including file name and URL
+  //   };
+  // }
+
   async uploadFile(leadId: string, ownerId: string, workspaceId: string, userId: string, file: Express.Multer.File) {
     // Check if the lead exists
     const lead = await this.prisma.lead.findUnique({
@@ -423,12 +483,15 @@ export class LeadsService {
     // Upload the file using your storage service
     await SojebStorage.put(`leads/${fileName}`, file.buffer);
 
+    // Corrected file URL construction
+    const fileUrl = `${appConfig().storageUrl.rootUrlPublic}/leads/${fileName}`;
+
     // Create an attachment record in the database
     const attachment = await this.prisma.attachment.create({
       data: {
         lead_id: leadId,
         file_name: fileName,
-        file_url: `leads/${fileName}`,  // Assuming you serve files under this path
+        file_url: fileUrl,  // Corrected file URL
         file_size: file.size,
       },
     });
@@ -437,7 +500,6 @@ export class LeadsService {
       where: { id: ownerId },
       select: { name: true },
     });
-
 
     // 3️⃣ Create activity via ActivityService
     await this.activityService.createActivity(
@@ -454,6 +516,7 @@ export class LeadsService {
       data: attachment,  // Return the attachment info, including file name and URL
     };
   }
+
 
   // Inside LeadsService
   async getFilesForLead(leadId: string) {

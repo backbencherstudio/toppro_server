@@ -47,6 +47,9 @@ export class LeadsController {
     return this.leadsService.getAllLeads(ownerId, workspaceId, Number(page), Number(limit));
   }
 
+
+
+
   // ✅ Get one lead by ID
 
   @Get('general/:id')
@@ -118,10 +121,10 @@ export class LeadsController {
   }
 
 
-  @Post(':id/upload')
+  @Post(':leadId/upload')
   @UseInterceptors(FileInterceptor('file'))
   async uploadFile(
-    @Param('id') leadId: string,  // Extract leadId from URL params
+    @Param('leadId') leadId: string,  // Extract leadId from URL params
     @UploadedFile() file: Express.Multer.File,  // Extract file from form-data
     @Req() req: any  // Access request object to get userId from JWT
   ) {
