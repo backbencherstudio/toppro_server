@@ -167,7 +167,7 @@ export class PaymentService {
 
   /**
    * ---------------------------------------------------
-   *  BASIC PLAN PRICE CALCULATION
+   *  BASIC PLAN PRICE CALCULATION...................................
    * ---------------------------------------------------
    */
   async calculateBasicPlan(
@@ -188,7 +188,7 @@ export class PaymentService {
 
   /**
    * ---------------------------------------------------
-   *  COMBO PLAN PRICE CALCULATION
+   *  COMBO PLAN PRICE CALCULATION...........................................
    * ---------------------------------------------------
    */
   async calculateComboPlan(

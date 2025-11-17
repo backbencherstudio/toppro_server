@@ -18,7 +18,7 @@ import { VendorService } from './vendor.service';
 
 @Controller('vendors')
 export class VendorController {
-  constructor(private readonly vendorService: VendorService) {}
+  constructor(private readonly vendorService: VendorService) { }
 
   @Post()
   @UseGuards(JwtAuthGuard, RolePermissionGuard)
@@ -108,8 +108,8 @@ export class VendorController {
   // @PermissionsGuard(Permissions.vendor_view)
   // @PermissionsGuard(Permissions.vendor_manage)
   findOne(@Param('id') id: string, @Req() req) {
-    const { owner_id: ownerId, workspace_id: workspaceId } = req.user;
-    return this.vendorService.findOne(id, ownerId, workspaceId);
+    const { owner_id: user_id, workspace_id: workspaceId } = req.user;
+    return this.vendorService.findOne(id, user_id, workspaceId, req.user.id);
   }
 
   @Put(':id')
@@ -126,10 +126,10 @@ export class VendorController {
     return this.vendorService.update(id, updateVendorDto, ownerId, workspaceId, userId);
   }
 
-@Delete('delete/:id')
-@UseGuards(JwtAuthGuard)
-remove(@Param('id') id: string, @Req() req) {
-  const { owner_id: ownerId, workspace_id: workspaceId, id: userId } = req.user;
-  return this.vendorService.remove(id, ownerId, workspaceId, userId);
-}
+  @Delete('delete/:id')
+  @UseGuards(JwtAuthGuard)
+  remove(@Param('id') id: string, @Req() req) {
+    const { owner_id: ownerId, workspace_id: workspaceId, id: userId } = req.user;
+    return this.vendorService.remove(id, ownerId, workspaceId, userId);
+  }
 }
