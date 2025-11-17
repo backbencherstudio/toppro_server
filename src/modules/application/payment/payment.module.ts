@@ -7,11 +7,12 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { BasicPlanService } from '../subscription plan/basic-plan/basic-plan.service';
 import { ComboPlanService } from '../subscription plan/combo-plan/combo-plan.service';
 import { StripeController } from './stripe.controller';
+import { SubscriptionExpiryCron } from './subscription-expiry.cron';
 
 
 @Module({
   controllers: [PaymentController, WebhookController,StripeController],
   providers: [PaymentService, StripeService, PrismaService,BasicPlanService,
-    ComboPlanService,],
+    ComboPlanService,SubscriptionExpiryCron],
 })
 export class PaymentModule {}

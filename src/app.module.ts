@@ -30,7 +30,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { UserModule } from './user/user.module';
 import { join } from 'path/win32';
 import stripeConfig from './config/stripe.config';
-// import { ServeStaticModule } from '@nestjs/serve-static';
+import { ScheduleModule } from '@nestjs/schedule';
 
 
 @Module({
@@ -46,6 +46,8 @@ import stripeConfig from './config/stripe.config';
         port: +appConfig().redis.port,
       },
     }),
+
+    ScheduleModule.forRoot(),
    
     // ServeStaticModule.forRoot({
     //   rootPath: join(__dirname, '..', 'public'), // Path to the 'public' folder
