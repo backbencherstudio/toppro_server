@@ -158,12 +158,25 @@ export class PaymentService {
   /**
    * Generate Expiration Date
    */
+  // getExpirationDate(period: 'monthly' | 'yearly') {
+  //   const d = new Date();
+  //   if (period === 'monthly') d.setDate(d.getDate() + 30);
+  //   else d.setFullYear(d.getFullYear() + 1);
+  //   return d;
+  // }
+
   getExpirationDate(period: 'monthly' | 'yearly') {
-    const d = new Date();
-    if (period === 'monthly') d.setDate(d.getDate() + 30);
-    else d.setFullYear(d.getFullYear() + 1);
-    return d;
+    const now = new Date();
+
+    if (period === 'monthly') {
+      now.setUTCDate(now.getUTCDate() + 30);
+    } else {
+      now.setUTCFullYear(now.getUTCFullYear() + 1);
+    }
+
+    return new Date(now.toISOString());  // always UTC
   }
+
 
   /**
    * ---------------------------------------------------

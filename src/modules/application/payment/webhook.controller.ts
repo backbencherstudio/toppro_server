@@ -79,6 +79,7 @@ export class WebhookController {
         where: { id: userId },
         data: {
           package_status: newStatus,
+          subscription_status: 'active',
           current_period_start: new Date(),
           current_period_end: payment.expirationDate,
         },
