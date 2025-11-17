@@ -2176,6 +2176,7 @@ model BasicPackage {
   yearlyPricePerUser       Int // 20 USD
   yearlyPricePerWorkspace  Int // 30 USD
   createdAt                DateTime  @default(now())
+  type                     String    @default("basic")
   updatedAt                DateTime  @updatedAt
   coupons                  Coupon[]
   payments                 Payment[]
@@ -2189,6 +2190,7 @@ enum PlanType {
 model ComboPlan {
   id                 String        @id @default(cuid())
   name               String
+  type               String @default("combo")
   planType           PlanType
   numberOfUsers      Int
   numberOfWorkspaces Int

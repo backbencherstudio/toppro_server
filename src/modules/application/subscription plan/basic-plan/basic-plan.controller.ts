@@ -29,7 +29,7 @@ export class BasicPlanController {
     @Query('users') users: string,
     @Query('workspaces') workspaces: string,
     @Query('billingPeriod') billingPeriod: 'monthly' | 'yearly',
-    @Query('modules') modules: string, // comma-separated module IDs
+    @Query('modules') modules: string,
     @Query('coupon') couponCode?: string
   ) {
     const moduleIds = modules ? modules.split(',') : [];
