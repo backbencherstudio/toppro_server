@@ -203,9 +203,9 @@ export class VendorService {
   }
 
   // Get a vendor by ID
-  async findOne(id: string, ownerId: string, workspaceId: string) {
+  async findOne(id: string, ownerId: string, workspaceId: string, userId: string) {
     return this.prisma.vendor.findUnique({
-      where: { id, owner_id: ownerId, workspace_id: workspaceId },
+      where: { id, owner_id: ownerId|| userId, workspace_id: workspaceId },
     });
   }
 

@@ -2210,57 +2210,36 @@ model ComboPlan {
 
 model Payment {
   id String @id @default(cuid())
-
-  // User information
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   email  String
-
-  // Plan selections (one must be selected)
   monthly Boolean @default(false)
   yearly  Boolean @default(false)
-
-  // Financials
-  amount   Decimal @db.Decimal(10, 2) // Using Decimal for precise monetary values
+  amount   Decimal @db.Decimal(10, 2) 
   currency String  @default("USD")
-
-  // Discount/Coupon
   discountAmount Decimal? @db.Decimal(10, 2)
   couponCode     String?
-  finalAmount    Decimal  @db.Decimal(10, 2) // Amount after discount
-
-  // Stripe payment details
+  finalAmount    Decimal  @db.Decimal(10, 2)
   stripePaymentIntentId String? @unique
   stripeCustomerId      String?
   stripeSubscriptionId  String?
   stripeInvoiceId       String?
   stripeChargeId        String?
-
-  // Payment tracking
-  paymentStatus String  @default("pending") // pending, succeeded, failed, refunded, canceled
-  paymentMethod String? // card, bank_transfer, etc.
-  last4         String? // Last 4 digits of card
-  cardBrand     String? // visa, mastercard, amex, etc.
-
-  // Refund information
+  paymentStatus String  @default("pending") 
+  paymentMethod String? 
+  last4         String? 
+  cardBrand     String? 
   refundAmount Decimal?  @db.Decimal(10, 2)
   refundReason String?
   refundedAt   DateTime?
-
-  // Timing
   paymentDate    DateTime @default(now())
   expirationDate DateTime
-
-  // Relations to plans (at least one must be set)
   basicPackageId String?
   basicPackage   BasicPackage? @relation(fields: [basicPackageId], references: [id])
-
   comboPlanId String?
   comboPlan   ComboPlan? @relation(fields: [comboPlanId], references: [id])
-
-  // Additional metadata
   description String?
-  metadata    Json? // Store additional Stripe metadata
+  metadata    Json? 
 
   // Timestamps
   createdAt DateTime @default(now())
@@ -2279,41 +2258,28 @@ model UserSubscription {
   id      String @id @default(cuid())
   user_id String
   user    User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
-
-  // Plan details
   plan_type String // "basic" or "combo"
   plan_id   String? // basic_package_id or combo_plan_id
-
-  // Dynamic pricing components
   base_price       Int // Base plan price in cents
   user_count       Int      @default(1)
   workspace_count  Int      @default(1)
   selected_modules String[] // Array of module IDs
   coupon_code      String?
-
-  // Stripe details
   stripe_subscription_id String  @unique
   stripe_price_id        String? // For fixed pricing
   stripe_customer_id     String
-
-  // Status and timing
   status               String   @default("active") // active, past_due, canceled, incomplete, etc.
   billing_cycle        String // "monthly" or "yearly"
   current_period_start DateTime
   current_period_end   DateTime
   next_billing_date    DateTime
-
-  // Pricing details
   subtotal        Decimal  @db.Decimal(10, 2)
   discount_amount Decimal? @db.Decimal(10, 2)
   total_amount    Decimal  @db.Decimal(10, 2)
-
-  // Metadata
   metadata Json? // Store dynamic pricing details
-
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
-
+  
   @@index([user_id])
   @@index([stripe_subscription_id])
   @@index([status])
