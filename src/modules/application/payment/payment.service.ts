@@ -70,7 +70,7 @@ export class PaymentService {
       }
     });
 
-    // 💳 Create Payment Intent
+    // Create Payment Intent
     const intent = await this.stripe.createPaymentIntent(amount, {
       paymentId: payment.id,
       userId,
@@ -83,7 +83,7 @@ export class PaymentService {
       data: { stripePaymentIntentId: intent.id }
     });
 
-    // OPTIONAL: Checkout URL
+    // Checkout URL
     const session = await this.stripe.stripe.checkout.sessions.create({
       mode: 'payment',
       line_items: [
@@ -102,8 +102,6 @@ export class PaymentService {
         planType,
         billingPeriod,
       },
-      // success_url: 'https://lenses-anderson-weeks-surfing.trycloudflare.com/api/payment-success?session_id={CHECKOUT_SESSION_ID}',
-      // cancel_url: 'https://lenses-anderson-weeks-surfing.trycloudflare.com/api/payment-cancelled',
       success_url: 'http://localhost:5173/payment-success?session_id={CHECKOUT_SESSION_ID}',
       cancel_url: 'http://localhost:5173/payment-cancel',
     });
@@ -141,9 +139,7 @@ export class PaymentService {
     throw new NotFoundException('Invalid planId — no plan found.');
   }
 
-  /**
-   * Fetch User Email
-   */
+
   async getUserEmail(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -154,16 +150,6 @@ export class PaymentService {
 
     return user.email;
   }
-
-  /**
-   * Generate Expiration Date
-   */
-  // getExpirationDate(period: 'monthly' | 'yearly') {
-  //   const d = new Date();
-  //   if (period === 'monthly') d.setDate(d.getDate() + 30);
-  //   else d.setFullYear(d.getFullYear() + 1);
-  //   return d;
-  // }
 
   getExpirationDate(period: 'monthly' | 'yearly') {
     const now = new Date();
@@ -178,11 +164,9 @@ export class PaymentService {
   }
 
 
-  /**
-   * ---------------------------------------------------
-   *  BASIC PLAN PRICE CALCULATION...................................
-   * ---------------------------------------------------
-   */
+ 
+   //  BASIC PLAN PRICE CALCULATION...................................
+ 
   async calculateBasicPlan(
     users: number,
     workspaces: number,
@@ -199,11 +183,9 @@ export class PaymentService {
     );
   }
 
-  /**
-   * ---------------------------------------------------
-   *  COMBO PLAN PRICE CALCULATION...........................................
-   * ---------------------------------------------------
-   */
+
+   // COMBO PLAN PRICE CALCULATION...........................................
+   
   async calculateComboPlan(
     planId: string,
     billingPeriod: 'monthly' | 'yearly',
