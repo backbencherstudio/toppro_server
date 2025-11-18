@@ -188,6 +188,7 @@ export class BasicPlanService {
     const total = subtotal - discount;
 
     return {
+      planId: plan.id,
       calculation: {
         base: {
           price: basePrice,
@@ -219,6 +220,7 @@ export class BasicPlanService {
         } : null
       },
       summary: {
+        planId: plan.id,
         billingPeriod,
         'Basic Package': basePrice,
         'Users': `${userPrice}$ (Per User ${isYearly ? plan.yearlyPricePerUser : plan.monthlyPricePerUser}$)`,
