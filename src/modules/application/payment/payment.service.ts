@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { StripeService } from './stripe.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { BasicPlanService } from '../subscription plan/basic-plan/basic-plan.service';
 import { ComboPlanService } from '../subscription plan/combo-plan/combo-plan.service';
+import { StripeService } from './stripe.service';
 
 @Injectable()
 export class PaymentService {
@@ -102,8 +102,8 @@ export class PaymentService {
         planType,
         billingPeriod,
       },
-      success_url: 'http://localhost:5173/payment-success?session_id={CHECKOUT_SESSION_ID}',
-      cancel_url: 'http://localhost:5173/payment-cancel',
+      success_url: 'http://localhost:3000/payment-success?session_id={CHECKOUT_SESSION_ID}',
+      cancel_url: 'http://localhost:3000/payment-cancel',
     });
 
     return {
