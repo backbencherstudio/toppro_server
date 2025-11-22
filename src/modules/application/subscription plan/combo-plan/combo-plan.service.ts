@@ -257,6 +257,7 @@ export class ComboPlanService {
           description: 'Combo Plan Price'
         },
         modules: plan.modules.map(m => ({
+          id: m.id,
           name: m.name,
           logo: m.logo
         })),
