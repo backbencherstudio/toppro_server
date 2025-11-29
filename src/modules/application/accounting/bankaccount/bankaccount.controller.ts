@@ -50,8 +50,10 @@ export class BankAccountController {
 
   // Get a list of all bank accounts
   @Get()
-  async findAll() {
-    return this.bankAccountService.findAll();
+  async findAll(@Req() req) {
+    const { owner_id: ownerId, workspace_id: workspaceId, id: userId } = req.user;
+
+    return this.bankAccountService.findAll(ownerId, workspaceId, userId);
   }
 
   // Delete a bank account by ID

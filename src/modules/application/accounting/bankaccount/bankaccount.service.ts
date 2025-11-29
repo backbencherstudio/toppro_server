@@ -120,8 +120,14 @@ export class BankAccountService {
   }
 
   // Get a list of all bank accounts
-  async findAll() {
-    const bankAccounts = await this.prisma.bankAccount.findMany();
+  async findAll(ownerId: string, workspaceId: string, userId: string) {
+    const bankAccounts = await this.prisma.bankAccount.findMany({
+      where: {
+        owner_id: ownerId || userId,
+        workspace_id: workspaceId,
+        user_id: userId || ownerId,
+        deleted_at: null,},
+    });
     return {
       success: true,
       message: 'All bank accounts found successfully',
