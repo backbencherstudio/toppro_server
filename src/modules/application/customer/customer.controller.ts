@@ -10,8 +10,6 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { Permissions } from 'src/ability/permissions.enum';
-import { PermissionsGuard } from 'src/common/guard/permission/permissions.decorator';
 import { RolePermissionGuard } from 'src/common/guard/permission/role-permission.guard';
 import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 import { CustomerService } from './customer.service';
@@ -68,9 +66,9 @@ export class CustomerController {
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard, RolePermissionGuard)
-  @PermissionsGuard(Permissions.customer_delete)
-  @PermissionsGuard(Permissions.customer_manage)
+  @UseGuards(JwtAuthGuard)
+  // @PermissionsGuard(Permissions.customer_delete)
+  // @PermissionsGuard(Permissions.customer_manage)
   remove(@Param('id') id: string, @Req() req) {
     const { owner_id: ownerId, workspace_id: workspaceId, id: userId } = req.user;
     return this.customerService.remove(id, ownerId, workspaceId, userId);

@@ -5,5 +5,8 @@
     "scrollbar.shadow": "#00000000"
   },
   "codium.codeCompletion.enable": true,
-  "cSpell.words": ["chartofaccount"]
+  "cSpell.words": [
+    "chartofaccount"
+  ],
+  "prisma.pinToPrisma6": true
 }
