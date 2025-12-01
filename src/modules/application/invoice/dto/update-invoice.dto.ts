@@ -12,6 +12,9 @@ import {
 import { UpdateInvoiceItemDto } from './update-invoice-item.dto';
 
 export class UpdateInvoiceDto {
+  @IsOptional()
+  @IsString()
+  invoice_number?: string | null;
   @IsOptional() @IsString() account_type_id?: string | null;
   @IsOptional() @IsString() customer_id?: string | null;
   @IsOptional() @IsString() billing_type_id?: string | null;

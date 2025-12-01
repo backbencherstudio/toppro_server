@@ -2,6 +2,7 @@
 
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -13,7 +14,7 @@ import { CreateInvoiceDto } from './dto/create-invoice.dto';
 
 @Injectable()
 export class InvoiceService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   // ======= Helper to compute invoice totals and prepare InvoiceItem create data =======
 
@@ -221,7 +222,7 @@ export class InvoiceService {
             Invoice_category: dto.invoice_category_id
               ? { connect: { id: dto.invoice_category_id } }
               : undefined,
-            owner_id: ownerId,
+            owner_id: ownerId || userId,
             Workspace: { connect: { id: workspaceId } },
             User: userId ? { connect: { id: userId } } : undefined,
             totalPrice: grandTotal,
@@ -276,90 +277,90 @@ export class InvoiceService {
     }
   }
 
-async findAll(
-  ownerId: string,
-  workspaceId: string,
-  userId: string,
-  issueDate?: string,
-  customer?: string,
-  status?: string,
-  accountType?: string,
-  page: number = 1,
-  limit: number = 10,
-) {
-  try {
-    // Initialize filters object
-    const filters: any = {
-      owner_id: ownerId || userId,  // Use ownerId if available, otherwise userId
-      workspace_id: workspaceId,  // workspaceId is always required
-      user_id: userId || ownerId,  // Use userId if available, otherwise ownerId
-    };
+  async findAll(
+    ownerId: string,
+    workspaceId: string,
+    userId: string,
+    issueDate?: string,
+    customer?: string,
+    status?: string,
+    accountType?: string,
+    page: number = 1,
+    limit: number = 10,
+  ) {
+    try {
+      // Initialize filters object
+      const filters: any = {
+        owner_id: ownerId || userId,  // Use ownerId if available, otherwise userId
+        workspace_id: workspaceId,  // workspaceId is always required
+        user_id: userId || ownerId,  // Use userId if available, otherwise ownerId
+      };
 
-    // Apply filters if provided
-    if (issueDate) {
-      const start = new Date(issueDate);
-      const end = new Date(issueDate);
-      end.setHours(23, 59, 59, 999);
-      filters.issueAt = { gte: start, lte: end };
+      // Apply filters if provided
+      if (issueDate) {
+        const start = new Date(issueDate);
+        const end = new Date(issueDate);
+        end.setHours(23, 59, 59, 999);
+        filters.issueAt = { gte: start, lte: end };
+      }
+
+      if (customer) filters.customer_id = customer;
+      if (status) filters.status = status;
+      if (accountType) filters.account_type_id = accountType;
+
+      // ✅ Count total records first
+      const totalRecords = await this.prisma.invoice.count({ where: filters });
+
+      // ✅ Calculate pagination
+      const totalPages = Math.ceil(totalRecords / limit);
+      const skip = (page - 1) * limit;
+
+      // ✅ Fetch paginated invoices
+      const invoices = await this.prisma.invoice.findMany({
+        where: filters,
+        include: {
+          Account_type: { select: { name: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      });
+
+      // Format the invoices
+      const formatted = invoices.map((invoice) => ({
+        id: invoice.id,
+        invoice_number: invoice.invoice_number,
+        customer_id: invoice.customer_id,
+        item_category_id: invoice.item_category_id,
+        issueAt: invoice.issueAt,
+        dueAt: invoice.dueAt,
+        account_type: invoice.Account_type?.name,
+        account_type_id: invoice.account_type_id,
+        billing_type_id: invoice.billing_type_id,
+        invoice_category_id: invoice.invoice_category_id,
+        totalPrice: invoice.totalPrice,
+        paid: invoice.paid,
+        due: invoice.due,
+        status: invoice.status,
+      }));
+
+      return {
+        success: true,
+        message: 'Invoices fetched successfully',
+        data: formatted,
+        pagination: {
+          currentPage: page,
+          totalPages,
+          totalRecords,
+          perPage: limit,
+          hasNextPage: page < totalPages,
+          hasPrevPage: page > 1,
+        },
+      };
+    } catch (error) {
+      return handlePrismaError(error);
     }
-
-    if (customer) filters.customer_id = customer;
-    if (status) filters.status = status;
-    if (accountType) filters.account_type_id = accountType;
-
-    // ✅ Count total records first
-    const totalRecords = await this.prisma.invoice.count({ where: filters });
-
-    // ✅ Calculate pagination
-    const totalPages = Math.ceil(totalRecords / limit);
-    const skip = (page - 1) * limit;
-
-    // ✅ Fetch paginated invoices
-    const invoices = await this.prisma.invoice.findMany({
-      where: filters,
-      include: {
-        Account_type: { select: { name: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-      skip,
-      take: limit,
-    });
-
-    // Format the invoices
-    const formatted = invoices.map((invoice) => ({
-      id: invoice.id,
-      invoice_number: invoice.invoice_number,
-      customer_id: invoice.customer_id,
-      item_category_id: invoice.item_category_id,
-      issueAt: invoice.issueAt,
-      dueAt: invoice.dueAt,
-      account_type: invoice.Account_type?.name,
-      account_type_id: invoice.account_type_id,
-      billing_type_id: invoice.billing_type_id,
-      invoice_category_id: invoice.invoice_category_id,
-      totalPrice: invoice.totalPrice,
-      paid: invoice.paid,
-      due: invoice.due,
-      status: invoice.status,
-    }));
-
-    return {
-      success: true,
-      message: 'Invoices fetched successfully',
-      data: formatted,
-      pagination: {
-        currentPage: page,
-        totalPages,
-        totalRecords,
-        perPage: limit,
-        hasNextPage: page < totalPages,
-        hasPrevPage: page > 1,
-      },
-    };
-  } catch (error) {
-    return handlePrismaError(error);
   }
-}
 
 
   async findAllPaidInvoices(
@@ -455,13 +456,7 @@ async findAll(
         deleted_at: null,
       },
       include: {
-        InvoiceItem: {
-          include: {
-            // Account_type: { select: { id: true, name: true } },
-            Tax: { select: { name: true, rate: true } },
-            ItemType: { select: { name: true } },
-          },
-        },
+        InvoiceItem: { where: { deleted_at: null }, include: { Tax: { select: { name: true, rate: true } }, ItemType: { select: { name: true } } } },
         Account_type: { select: { name: true } },
         Customer: {
           select: {
@@ -619,7 +614,6 @@ async findAll(
         ['billing_type_id', 'Billing_category'],
         ['invoice_category_id', 'Invoice_category'],
         ['item_category_id', 'Item_category'],
-        ['status', 'InvoiceStatus'],
       ];
 
       for (const [field, relation] of rel) {
@@ -630,6 +624,15 @@ async findAll(
 
       if (dto.issueAt !== undefined) {
         headerData.issueAt = dto.issueAt ? new Date(dto.issueAt) : null;
+      }
+
+      if (dto.invoice_number !== undefined) {
+        headerData.invoice_number = dto.invoice_number;
+      }
+
+      // Handle status (enum) as a scalar field, not a relation
+      if (dto.status !== undefined) {
+        headerData.status = dto.status as any; // Status enum value
       }
 
       if (dto.dueAt !== undefined) {
@@ -679,41 +682,147 @@ async findAll(
           }
         }
 
-        // Mark invoice items as deleted
+        // Mark invoice items as deleted (restrict to invoice, owner and workspace for safety)
         await tx.invoiceItem.updateMany({
-          where: { id: { in: dto.delete_line_ids } },
+          where: { id: { in: dto.delete_line_ids }, invoice_id: id, owner_id: ownerId || userId, workspace_id: workspaceId },
           data: { deleted_at: new Date() },
         });
+
+        // Recalculate totals if items are not being edited
+        if (dto.items === undefined) {
+          const remainingLines = await tx.invoiceItem.findMany({ where: { invoice_id: id, deleted_at: null }, include: { Tax: true } });
+          let newSubTotal = 0;
+          let newTotalDiscount = 0;
+          let newTotalTax = 0;
+          let newGrandTotal = 0;
+          for (const item of remainingLines) {
+            const quantity = item.quantity ?? 0;
+            const rate = item.price ?? 0;
+            const discount = item.discount ?? 0;
+            const subtotal = quantity * rate;
+            const afterDiscount = subtotal - discount;
+            const taxPct = item.Tax?.rate ?? 0;
+            const taxAmount = afterDiscount * (taxPct / 100);
+            const total = afterDiscount + taxAmount;
+            newSubTotal += subtotal;
+            newTotalDiscount += discount;
+            newTotalTax += taxAmount;
+            newGrandTotal += total;
+          }
+          await tx.invoice.update({ where: { id }, data: { totalPrice: newGrandTotal, subTotal: newSubTotal, totalDiscount: newTotalDiscount, totalTax: newTotalTax, due: newGrandTotal - (existing.paid ?? 0) } });
+        }
       }
 
-      // 4️⃣ Create or update invoiceItems using resolveLinesAndCompute
-      const { lineCreates, grandTotal } = await this.resolveLinesAndCompute(
-        tx,
-        dto.items ?? [],
-        ownerId,
-        workspaceId,
-        userId,
-        dto.customer_id,
-      );
-
-      // 5️⃣ Permanently delete previously soft-deleted invoiceItems
-      await tx.invoiceItem.deleteMany({
-        where: { invoice_id: id, deleted_at: { not: null } },
-      });
-
-      // 6️⃣ Update stock for new or updated invoice items
-      for (const line of lineCreates) {
-        const stock = await tx.stock.findUnique({
-          where: { item_id: line.Item.connect.id },
-        });
-        if (stock) {
-          await tx.stock.update({
-            where: { id: stock.id },
-            data: {
-              quantity: stock.quantity - line.quantity, // Deduct the quantity
-            },
-          });
+      // Prevent a line being both deleted and updated/created in same payload
+      if (dto.items && dto.delete_line_ids?.length) {
+        const conflictLineIds = new Set(dto.items.filter((i) => i.line_id).map((i) => i.line_id));
+        const invalidIntersect = dto.delete_line_ids.filter((lid) => conflictLineIds.has(lid));
+        if (invalidIntersect.length) {
+          throw new BadRequestException(
+            `Some line_ids are included in both delete_line_ids and items (update) payload: ${invalidIntersect.join(', ')}`,
+          );
         }
+      }
+
+      // 4️⃣ Process invoice items edits (if any)
+      // If items were provided, this may include existing lines (with line_id) and new lines (no line_id)
+      if (dto.items !== undefined) {
+        // Use helper to validate data and update existing invoice items, and to prepare creations
+        const { lineCreates } = await this.resolveLinesAndCompute(
+          tx,
+          dto.items,
+          ownerId,
+          workspaceId,
+          userId,
+          dto.customer_id,
+        );
+
+        // ------------------------------------------------------------------
+        // Update stock for existing lines based on delta from previous (existing) quantities
+        // ------------------------------------------------------------------
+        for (const raw of dto.items.filter((it) => it.line_id)) {
+          const existingLine = existing.InvoiceItem.find((i) => i.id === raw.line_id);
+          if (!existingLine) {
+            // The helper would have validated or updated the DB; if line not found in invoice, reject
+            throw new BadRequestException(`Invoice line ${raw.line_id} not found in this invoice`);
+          }
+
+          const oldQty = existingLine.quantity ?? 0;
+          const newQty = Number(raw.quantity ?? oldQty);
+
+          // If item_id is to be changed, we need to revert old stock and deduct from new stock
+          const newItemId = raw.item_id ?? existingLine.item_id;
+          const oldItemId = existingLine.item_id;
+
+          if (oldItemId && newItemId && oldItemId !== newItemId) {
+            // revert old stock
+            const oldStock = await tx.stock.findUnique({ where: { item_id: oldItemId } });
+            if (oldStock) {
+              await tx.stock.update({ where: { id: oldStock.id }, data: { quantity: oldStock.quantity + oldQty } });
+            }
+            // deduct new stock
+            const newStock = await tx.stock.findUnique({ where: { item_id: newItemId } });
+            if (newStock) {
+              await tx.stock.update({ where: { id: newStock.id }, data: { quantity: newStock.quantity - newQty } });
+              // also set stock_id on invoice item to newStock.id
+              await tx.invoiceItem.update({ where: { id: raw.line_id }, data: { stock_id: newStock.id, item_id: newItemId } });
+            } else {
+              // Update the invoice item item_id even if no stock found (some setups don't require stock)
+              await tx.invoiceItem.update({ where: { id: raw.line_id }, data: { item_id: newItemId } });
+            }
+          } else if (oldItemId) {
+            // Same item: adjust stock by delta
+            const delta = newQty - oldQty; // positive => deduct more; negative => add back
+            if (delta !== 0) {
+              const stock = await tx.stock.findUnique({ where: { item_id: oldItemId } });
+              if (stock) {
+                await tx.stock.update({ where: { id: stock.id }, data: { quantity: stock.quantity - delta } });
+              }
+            }
+          }
+        }
+
+        // 5️⃣ Permanently delete previously soft-deleted invoiceItems
+        await tx.invoiceItem.deleteMany({ where: { invoice_id: id, deleted_at: { not: null } } });
+
+        // ------------------------------------------------------------------
+        // Create the new invoice items returned by helper
+        // ------------------------------------------------------------------
+        for (const c of lineCreates) {
+          // Use the relation connect pattern instead of scalar invoice_id which Prisma client does not accept here
+          const created = await tx.invoiceItem.create({ data: { ...c, Invoice: { connect: { id } } } });
+          // Adjust stock if stock entry exists
+          const itemId = created.item_id;
+          const stock = await tx.stock.findUnique({ where: { item_id: itemId } });
+          if (stock) {
+            await tx.stock.update({ where: { id: stock.id }, data: { quantity: stock.quantity - (created.quantity ?? 0) } });
+            await tx.invoiceItem.update({ where: { id: created.id }, data: { stock_id: stock.id } });
+          }
+        }
+
+        // ------------------------------------------------------------------
+        // After all item updates/creates/deletes, recalculate totals for the invoice
+        // ------------------------------------------------------------------
+        const remainingLines = await tx.invoiceItem.findMany({ where: { invoice_id: id, deleted_at: null }, include: { Tax: true } });
+        let newSubTotal = 0;
+        let newTotalDiscount = 0;
+        let newTotalTax = 0;
+        let newGrandTotal = 0;
+        for (const item of remainingLines) {
+          const quantity = item.quantity ?? 0;
+          const rate = item.price ?? 0;
+          const discount = item.discount ?? 0;
+          const subtotal = quantity * rate;
+          const afterDiscount = subtotal - discount;
+          const taxPct = item.Tax?.rate ?? 0;
+          const taxAmount = afterDiscount * (taxPct / 100);
+          const total = afterDiscount + taxAmount;
+          newSubTotal += subtotal;
+          newTotalDiscount += discount;
+          newTotalTax += taxAmount;
+          newGrandTotal += total;
+        }
+        await tx.invoice.update({ where: { id }, data: { totalPrice: newGrandTotal, subTotal: newSubTotal, totalDiscount: newTotalDiscount, totalTax: newTotalTax, due: newGrandTotal - (existing.paid ?? 0) } });
       }
 
       // 7️⃣ Return success message
@@ -723,6 +832,9 @@ async findAll(
       };
     });
   }
+
+
+
 
   // Helper method to resolve lines and compute total
 

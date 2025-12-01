@@ -14,14 +14,14 @@ import {
 } from '@nestjs/common';
 import { Status } from '@prisma/client';
 import { InvoiceService } from 'src/modules/application/invoice/invoice.service';
-import { UpdatePurchaseDto } from 'src/modules/application/purchase/dto/update-purchase.dto';
 import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 import { CreateInvoiceDto } from './dto/create-invoice.dto';
+import { UpdateInvoiceDto } from './dto/update-invoice.dto';
 
 @Controller('invoice')
 @UseGuards(JwtAuthGuard)
 export class InvoiceController {
-  constructor(private readonly invoiceService: InvoiceService) {}
+  constructor(private readonly invoiceService: InvoiceService) { }
 
   @Post('create')
   async create(@Body() dto: CreateInvoiceDto, @Req() req: any) {
@@ -34,42 +34,42 @@ export class InvoiceController {
   }
 
   // get all invoices
-@Get('all')
-async findAll(
-  @Req() req: any,
-  @Query()
-  query: {
-    issueDate?: string;
-    customer?: string;
-    status?: string;
-    accountType?: string;
-    page?: string;
-    limit?: string;
-  },
-) {
-  const { owner_id: ownerId, workspace_id: workspaceId, id: userId } = req.user;
+  @Get('all')
+  async findAll(
+    @Req() req: any,
+    @Query()
+    query: {
+      issueDate?: string;
+      customer?: string;
+      status?: string;
+      accountType?: string;
+      page?: string;
+      limit?: string;
+    },
+  ) {
+    const { owner_id: ownerId, workspace_id: workspaceId, id: userId } = req.user;
 
-  const {
-    issueDate,
-    customer,
-    status,
-    accountType,
-    page = '1',
-    limit = '10',
-  } = query;
+    const {
+      issueDate,
+      customer,
+      status,
+      accountType,
+      page = '1',
+      limit = '10',
+    } = query;
 
-  return this.invoiceService.findAll(
-    ownerId,
-    workspaceId,
-    userId,
-    issueDate,
-    customer,
-    status,
-    accountType,
-    Number(page),
-    Number(limit),
-  );
-}
+    return this.invoiceService.findAll(
+      ownerId,
+      workspaceId,
+      userId,
+      issueDate,
+      customer,
+      status,
+      accountType,
+      Number(page),
+      Number(limit),
+    );
+  }
 
 
   // get all invoices
@@ -93,7 +93,7 @@ async findAll(
   @Get('customer-invoices/:customer_id')
   async findAllcustomerInvoices(
     @Req() req: any,
-    @Param("customer_id") customer_id:string
+    @Param("customer_id") customer_id: string
   ) {
     const {
       owner_id: ownerId,
@@ -126,7 +126,7 @@ async findAll(
   @Patch(':id')
   async update(
     @Param('id') id: string,
-    @Body() dto: UpdatePurchaseDto,
+    @Body() dto: UpdateInvoiceDto,
     @Req() req: any,
   ) {
     const {
@@ -136,6 +136,10 @@ async findAll(
     } = req.user;
     return this.invoiceService.update(id, dto, ownerId, workspaceId, userId);
   }
+
+
+
+
 
   // puchase send
   @Patch(':id/invoice-send')
