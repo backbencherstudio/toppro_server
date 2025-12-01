@@ -16,7 +16,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class CategoryService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   // -------- ITEM CATEGORY --------
   async createItemCategory(
@@ -47,9 +47,8 @@ export class CategoryService {
         // Unique constraint violation (duplicate name, etc.)
         return {
           success: false,
-          message: `Duplicate value for field: ${
-            error.meta?.target?.join(', ') || 'unknown'
-          }.`,
+          message: `Duplicate value for field: ${error.meta?.target?.join(', ') || 'unknown'
+            }.`,
         };
       }
 
@@ -165,25 +164,48 @@ export class CategoryService {
     return { success: true, data };
   }
 
+  // async findAllInvoiceCategories(
+  //   ownerId: string,
+  //   workspaceId: string,
+  //   userId: string,
+  // ) {
+  //   const data = await this.prisma.invoiceCategory.findMany({
+  //     where: { owner_id: ownerId || userId, workspace_id: workspaceId },
+  //   });
+
+  //   if (!data || data.length === 0) {
+  //     throw new NotFoundException('No invoice categories found');
+  //   }
+
+  //   return {
+  //     success: true,
+  //     message: 'Invoice categories retrieved successfully',
+  //     data: data,
+  //   };
+  // }
+
   async findAllInvoiceCategories(
     ownerId: string,
     workspaceId: string,
     userId: string,
   ) {
     const data = await this.prisma.invoiceCategory.findMany({
-      where: { owner_id: ownerId || userId, workspace_id: workspaceId },
+      where: {
+        owner_id: ownerId || userId,
+        workspace_id: workspaceId,
+      },
     });
-
-    if (!data || data.length === 0) {
-      throw new NotFoundException('No invoice categories found');
-    }
 
     return {
       success: true,
-      message: 'Invoice categories retrieved successfully',
+      message:
+        data.length > 0
+          ? 'Invoice categories retrieved successfully'
+          : 'No invoice categories found',
       data: data,
     };
   }
+
 
   async updateInvoiceCategory(
     id: string,
@@ -254,7 +276,7 @@ export class CategoryService {
         data: created,
       };
     } catch (error: any) {
-      handlePrismaError(error); 
+      handlePrismaError(error);
     }
   }
 
@@ -279,7 +301,7 @@ export class CategoryService {
     });
 
     if (!data || data.length === 0) {
-      throw new NotFoundException('No bill categories found');
+      return { success: true, message: 'No bill categories found', data: [] };
     }
 
     return { success: true, data };
@@ -332,9 +354,8 @@ export class CategoryService {
         // Unique constraint (e.g., same tax name exists)
         return {
           success: false,
-          message: `Duplicate value for field: ${
-            error.meta?.target?.join(', ') || 'unknown'
-          }.`,
+          message: `Duplicate value for field: ${error.meta?.target?.join(', ') || 'unknown'
+            }.`,
         };
       }
 
@@ -487,7 +508,7 @@ export class CategoryService {
 
       throw new InternalServerErrorException(
         error.message ||
-          'An unexpected error occurred while creating the unit.',
+        'An unexpected error occurred while creating the unit.',
       );
     }
   }
@@ -610,7 +631,7 @@ export class CategoryService {
 
       throw new InternalServerErrorException(
         error.message ||
-          'An unexpected error occurred while creating item type.',
+        'An unexpected error occurred while creating item type.',
       );
     }
   }
@@ -637,7 +658,12 @@ export class CategoryService {
       });
 
       if (!data || data.length === 0) {
-        throw new NotFoundException('No item types found');
+        // throw new NotFoundException('No item types found');
+        return {
+          success: true,
+          message: 'No item types found',
+          data: [],
+        }
       }
 
       return {
