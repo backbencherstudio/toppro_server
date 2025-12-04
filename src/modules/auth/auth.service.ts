@@ -25,7 +25,7 @@ export class AuthService {
     private jwtService: JwtService,
     private prisma: PrismaService,
     private mailService: MailService,
-  ) {}
+  ) { }
 
   async me(email: string) {
     try {
@@ -44,6 +44,8 @@ export class AuthService {
           created_at: true,
           owner_id: true,
           workspace_id: true,
+          current_period_start: true,
+          current_period_end: true,
           role_users: {
             select: {
               role: {
@@ -52,6 +54,18 @@ export class AuthService {
                   permissions: { select: { title: true } },
                 },
               },
+            },
+          },
+          // include latest user subscription (most recent by current_period_end)
+          user_subscriptions: {
+            orderBy: { current_period_end: 'desc' },
+            take: 1,
+            select: {
+              user_count: true,
+              workspace_count: true,
+              Crm_for_addons: true,
+              Accounting_for_addons: true,
+              status: true,
             },
           },
         },
@@ -82,9 +96,27 @@ export class AuthService {
         delete user.role_users; // remove nested structure
       }
 
+      // 🔹 Expose subscription fields (provide defaults when none exists)
+      const sub = user.user_subscriptions && user.user_subscriptions.length > 0
+        ? user.user_subscriptions[0]
+        : null;
+
+      user['subscription'] = {
+        user_count: sub?.user_count ?? 1,
+        workspace_count: sub?.workspace_count ?? 1,
+        Crm: sub?.Crm_for_addons ?? false,
+        Accounting: sub?.Accounting_for_addons ?? false,
+        subscription_status: sub?.status ?? null,
+      };
+
+      // remove raw relation to avoid leaking DB shape
+      delete user.user_subscriptions;
+
       return {
         success: true,
-        data: user,
+        data: {
+          user,
+        }
       };
     } catch (error) {
       return {
@@ -755,6 +787,38 @@ export class AuthService {
           success: false,
           message: 'Invalid workspace_id: Workspace not found',
         };
+      }
+
+      // 🔹 Enforce owner user limit from subscription
+      // Fetch owner's active subscription (most recent)
+      const ownerSub = await this.prisma.userSubscription.findFirst({
+        where: { user_id: owner_id, status: 'active' },
+        orderBy: { current_period_end: 'desc' },
+        select: { user_count: true },
+      });
+
+      if (!ownerSub) {
+        return {
+          success: false,
+          message:
+            'Owner has no active subscription. Please purchase a plan before creating users.',
+        };
+      }
+
+      const allowedUsers = ownerSub.user_count;
+
+      // treat -1 as unlimited
+      if (allowedUsers !== -1) {
+        const existingUsersCount = await this.prisma.user.count({
+          where: { owner_id: owner_id },
+        });
+
+        if (existingUsersCount >= allowedUsers) {
+          return {
+            success: false,
+            message: `User limit reached for owner. Allowed: ${allowedUsers}, Current: ${existingUsersCount}`,
+          };
+        }
       }
 
       // Check email duplication
