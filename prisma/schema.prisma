@@ -2364,19 +2364,19 @@ model Payment {
 
 // Dynamic Stripe Subscription Management
 model UserSubscription {
-  id                     String   @id @default(cuid())
-  user_id                String
-  user                   User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  plan_type              String // "basic" or "combo"
-  plan_id                String? // basic_package_id or combo_plan_id
-  base_price             Int // Base plan price in cents
-  user_count             Int      @default(1)
-  workspace_count        Int      @default(1)
-  Accounting_for_addons  Boolean  @default(false)
-  Crm_for_addons         Boolean  @default(false)
-  selected_modules       String[] // Array of module IDs
-  coupon_code            String?
-  stripe_subscription_id String   @unique
+  id      String @id @default(cuid())
+  user_id String
+  user    User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  plan_type String // "basic" or "combo"
+  plan_id   String? // basic_package_id or combo_plan_id
+  base_price       Int // Base plan price in cents
+  user_count       Int      @default(0)
+  workspace_count  Int      @default(0)
+  Accounting_for_addons Boolean @default(false)
+  Crm_for_addons        Boolean @default(false)
+  selected_modules String[] // Array of module IDs
+  coupon_code      String?
+  stripe_subscription_id String  @unique
   stripe_price_id        String? // For fixed pricing
   stripe_customer_id     String
   status                 String   @default("active")
