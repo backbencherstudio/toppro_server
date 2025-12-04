@@ -30,6 +30,8 @@ async create(data: CreateWorkspaceDto, userId: string, ownerId: string) {
       throw new BadRequestException(`Invalid owner_id: ${ownerForWorkspace}`);
     }
 
+
+
     // 🔹 Step 2: Create workspace and settings inside transaction
     const workspace = await this.prisma.$transaction(async (tx) => {
       const ws = await tx.workspace.create({
