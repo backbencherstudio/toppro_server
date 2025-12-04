@@ -2261,8 +2261,8 @@ model UserSubscription {
   plan_type String // "basic" or "combo"
   plan_id   String? // basic_package_id or combo_plan_id
   base_price       Int // Base plan price in cents
-  user_count       Int      @default(1)
-  workspace_count  Int      @default(1)
+  user_count       Int      @default(0)
+  workspace_count  Int      @default(0)
   Accounting_for_addons Boolean @default(false)
   Crm_for_addons        Boolean @default(false)
   selected_modules String[] // Array of module IDs

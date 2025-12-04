@@ -14,98 +14,129 @@ export class WorkspaceService {
   constructor(
     private jwtService: JwtService,
     private readonly prisma: PrismaService,
-  ) {}
+  ) { }
 
-async create(data: CreateWorkspaceDto, userId: string, ownerId: string) {
-  try {
-    console.log('WorkspaceService', userId, ownerId);
-    const ownerForWorkspace = ownerId || userId;
+  async create(data: CreateWorkspaceDto, userId: string, ownerId: string) {
+    try {
+      console.log('WorkspaceService', userId, ownerId);
+      const ownerForWorkspace = ownerId || userId;
 
-    // 🔹 Step 1: Validate owner existence
-    const ownerExists = await this.prisma.user.findUnique({
-      where: { id: ownerForWorkspace },
-    });
-
-    if (!ownerExists) {
-      throw new BadRequestException(`Invalid owner_id: ${ownerForWorkspace}`);
-    }
-
-
-
-    // 🔹 Step 2: Create workspace and settings inside transaction
-    const workspace = await this.prisma.$transaction(async (tx) => {
-      const ws = await tx.workspace.create({
-        data: {
-          ...data,
-          owner_id: ownerForWorkspace,
-        },
+      // 🔹 Step 1: Validate owner existence
+      const ownerExists = await this.prisma.user.findUnique({
+        where: { id: ownerForWorkspace },
       });
 
-      await tx.companySettings.create({
-        data: {
-          owner_id: ownerForWorkspace,
-          workspace_id: ws.id,
-        },
+      if (!ownerExists) {
+        throw new BadRequestException(`Invalid owner_id: ${ownerForWorkspace}`);
+      }
+
+      // 🔹 Step 1.5: Enforce workspace limit from user's subscription
+      // Fetch active subscription for the owner (most recent)
+      const activeSub = await this.prisma.userSubscription.findFirst({
+        where: { user_id: ownerForWorkspace, status: 'active' },
+        orderBy: { current_period_end: 'desc' },
+        select: { workspace_count: true },
       });
 
-      await tx.currencySettings.create({
-        data: {
-          owner_id: ownerForWorkspace,
-          workspace_id: ws.id,
-        },
+      if (!activeSub) {
+        // No active subscription — block workspace creation
+        throw new BadRequestException(
+          'No active subscription found. Please purchase a plan before creating a workspace.',
+        );
+      }
+
+      const allowedWorkspaces = activeSub.workspace_count;
+
+      // If workspace_count is -1 treat as unlimited
+      if (allowedWorkspaces !== -1) {
+        const existingCount = await this.prisma.workspace.count({
+          where: { owner_id: ownerForWorkspace },
+        });
+
+        if (existingCount >= allowedWorkspaces) {
+          throw new BadRequestException({
+            success: false,
+            message: `Workspace limit reached. Allowed: ${allowedWorkspaces}, Current: ${existingCount}`,
+          });
+        }
+      }
+
+
+
+      // 🔹 Step 2: Create workspace and settings inside transaction
+      const workspace = await this.prisma.$transaction(async (tx) => {
+        const ws = await tx.workspace.create({
+          data: {
+            ...data,
+            owner_id: ownerForWorkspace,
+          },
+        });
+
+        await tx.companySettings.create({
+          data: {
+            owner_id: ownerForWorkspace,
+            workspace_id: ws.id,
+          },
+        });
+
+        await tx.currencySettings.create({
+          data: {
+            owner_id: ownerForWorkspace,
+            workspace_id: ws.id,
+          },
+        });
+
+        return ws;
       });
 
-      return ws;
-    });
+      // 🔹 Step 3: Success response
+      return {
+        success: true,
+        message: 'Workspace created successfully',
+        data: {
+          name: workspace.name,
+          id: workspace.id,
+          created_at: workspace.created_at,
+          updated_at: workspace.updated_at,
+        },
+      };
+    } catch (error) {
+      console.error('❌ Workspace Create Error:', error);
 
-    // 🔹 Step 3: Success response
-    return {
-      success: true,
-      message: 'Workspace created successfully',
-      data: {
-        name: workspace.name,
-        id: workspace.id,
-        created_at: workspace.created_at,
-        updated_at: workspace.updated_at,
-      },
-    };
-  } catch (error) {
-    console.error('❌ Workspace Create Error:', error);
+      // ✅ Prisma Foreign Key Error
+      if (error.code === 'P2003') {
+        throw new BadRequestException({
+          success: false,
+          message: 'Foreign key constraint failed — owner or relation not found',
+          cause: error.meta?.field_name || null,
+        });
+      }
 
-    // ✅ Prisma Foreign Key Error
-    if (error.code === 'P2003') {
+      // ✅ Prisma Unique Constraint Error (duplicate workspace id/code)
+      if (error.code === 'P2002') {
+        throw new BadRequestException({
+          success: false,
+          message: 'Duplicate entry detected — workspace already exists',
+          target: error.meta?.target || null,
+        });
+      }
+
+      // ✅ Generic Prisma Error
+      if (error.code?.startsWith('P')) {
+        throw new BadRequestException({
+          success: false,
+          message: `Database error (${error.code})`,
+          detail: error.message,
+        });
+      }
+
+      // ✅ Fallback for unknown/unexpected errors
       throw new BadRequestException({
         success: false,
-        message: 'Foreign key constraint failed — owner or relation not found',
-        cause: error.meta?.field_name || null,
+        message: error.message || 'Something went wrong while creating workspace',
       });
     }
-
-    // ✅ Prisma Unique Constraint Error (duplicate workspace id/code)
-    if (error.code === 'P2002') {
-      throw new BadRequestException({
-        success: false,
-        message: 'Duplicate entry detected — workspace already exists',
-        target: error.meta?.target || null,
-      });
-    }
-
-    // ✅ Generic Prisma Error
-    if (error.code?.startsWith('P')) {
-      throw new BadRequestException({
-        success: false,
-        message: `Database error (${error.code})`,
-        detail: error.message,
-      });
-    }
-
-    // ✅ Fallback for unknown/unexpected errors
-    throw new BadRequestException({
-      success: false,
-      message: error.message || 'Something went wrong while creating workspace',
-    });
   }
-}
 
 
 
@@ -181,7 +212,7 @@ async create(data: CreateWorkspaceDto, userId: string, ownerId: string) {
     userId: string,
   ) {
     const workspace = await this.prisma.workspace.update({
-      where: { id},
+      where: { id },
       data,
     });
     return {
