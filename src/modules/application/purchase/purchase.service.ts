@@ -52,7 +52,7 @@ export class PurchaseService {
     const baseItems = await tx.items.findMany({
       where: {
         id: { in: requestedIds },
-        owner_id: ownerId,
+        owner_id: ownerId || userId,
         workspace: { id: workspaceId },
         deleted_at: null,
       },
@@ -450,8 +450,8 @@ async findOne(
         where: {
           id,
           deleted_at: null,
-          owner_id: ownerId,
-          workspace: { id: workspaceId },
+          owner_id: ownerId || userId,
+          workspace_id: workspaceId,
         },
         include: {
           purchaseItems: { where: { deleted_at: null } }, // Only show active items

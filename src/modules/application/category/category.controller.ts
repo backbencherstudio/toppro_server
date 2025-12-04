@@ -242,11 +242,12 @@ export class CategoryController {
 
   @Get('taxes/:id')
   async findTaxCategoryOne(@Req() req, @Param('id') id: string) {
-    const { owner_id: ownerId, workspace_id: workspaceId } = req.user;
+    const { owner_id: ownerId, workspace_id: workspaceId, id: userId } = req.user;
     return await this.categoryService.findTaxCategoryOne(
       id,
       ownerId,
       workspaceId,
+      userId,
     );
   }
 

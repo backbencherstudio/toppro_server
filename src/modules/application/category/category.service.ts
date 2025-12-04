@@ -384,9 +384,9 @@ export class CategoryService {
     }
   }
 
-  async findTaxCategoryOne(id: string, ownerId: string, workspaceId: string) {
+  async findTaxCategoryOne(id: string, ownerId: string, workspaceId: string, userId: string) {
     const data = await this.prisma.tax.findFirst({
-      where: { id, owner_id: ownerId, workspace_id: workspaceId },
+      where: { id, owner_id: ownerId || userId, workspace_id: workspaceId },
     });
     return { success: true, data };
   }
