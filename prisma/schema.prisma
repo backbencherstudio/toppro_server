@@ -2263,12 +2263,14 @@ model UserSubscription {
   base_price       Int // Base plan price in cents
   user_count       Int      @default(1)
   workspace_count  Int      @default(1)
+  Accounting_for_addons Boolean @default(false)
+  Crm_for_addons        Boolean @default(false)
   selected_modules String[] // Array of module IDs
   coupon_code      String?
   stripe_subscription_id String  @unique
   stripe_price_id        String? // For fixed pricing
   stripe_customer_id     String
-  status               String   @default("active") // active, past_due, canceled, incomplete, etc.
+  status               String   @default("active") 
   billing_cycle        String // "monthly" or "yearly"
   current_period_start DateTime
   current_period_end   DateTime

@@ -49,7 +49,7 @@ export class PaymentService {
       throw new Error('Price calculation failed');
     }
 
-    
+
     //  Correct subtotal + total handling
     let subtotal: number;
 
@@ -69,6 +69,32 @@ export class PaymentService {
 
     const email = await this.getUserEmail(userId);
 
+    // For combo plans, fetch plan details to get user/workspace counts and modules
+    let metadataPayload: any = {};
+
+    if (planType === 'combo') {
+      const comboPlan = await this.prisma.comboPlan.findUnique({
+        where: { id: planId },
+        include: { modules: true }
+      });
+
+      if (comboPlan) {
+        const moduleIds = comboPlan.modules.map(m => m.id);
+        metadataPayload = {
+          user_count: comboPlan.numberOfUsers,
+          workspace_count: comboPlan.numberOfWorkspaces,
+          selected_modules: moduleIds,
+        };
+      }
+    } else {
+      // For basic plans, use the provided parameters
+      metadataPayload = {
+        user_count: users ?? 1,
+        workspace_count: workspaces ?? 1,
+        selected_modules: moduleIds ?? [],
+      };
+    }
+
     // CREATE PAYMENT IN DATABASE
     const payment = await this.prisma.payment.create({
       data: {
@@ -87,13 +113,15 @@ export class PaymentService {
         expirationDate: this.getExpirationDate(billingPeriod),
         paymentStatus: 'pending',
         couponCode: couponCode ?? null,
+        // store selected counts + modules in metadata so webhook can create subscriptions
+        metadata: metadataPayload,
       },
     });
 
-   
+
     // CREATE STRIPE PAYMENT INTENT
     // Using FINAL amount (after coupon)
- 
+
     const intent = await this.stripe.createPaymentIntent(total, {
       paymentId: payment.id,
       userId,
@@ -149,7 +177,7 @@ export class PaymentService {
 
     const search = query.search?.trim() || '';
 
-    
+
     const searchIsNumber = !isNaN(Number(search));
     const where: any = search
       ? {

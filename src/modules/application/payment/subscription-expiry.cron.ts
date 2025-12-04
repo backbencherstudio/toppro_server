@@ -56,7 +56,16 @@ export class SubscriptionExpiryCron {
                 },
             });
 
-            this.logger.log(`✔ User ${user.id} → package_status set to FREE`);
+            // Reset addon flags in user subscription when it expires
+            await this.prisma.userSubscription.updateMany({
+                where: { user_id: user.id },
+                data: {
+                    Crm_for_addons: false,
+                    Accounting_for_addons: false,
+                },
+            });
+
+            this.logger.log(`✔ User ${user.id} → package_status set to FREE, addon flags reset`);
         }
 
         this.logger.log('🎉 Finished processing expired subscriptions.');

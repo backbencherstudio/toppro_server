@@ -218,9 +218,28 @@ export class WebhookController {
       });
 
       // -------------------------------------------------------
-      // Create User Subscription Record
+      // Create User Subscription Record (use counts from payment.metadata)
       // -------------------------------------------------------
       const uniqueSubId = `one-time-${paymentId}`; // prevents unique error
+
+      // Read counts/modules from payment.metadata (stored at payment creation)
+      const meta: any = (payment.metadata as any) ?? {};
+      const userCount = Number(meta.user_count ?? 1);
+      const workspaceCount = Number(meta.workspace_count ?? 1);
+      const selectedModuleIds = Array.isArray(meta.selected_modules) ? meta.selected_modules : [];
+
+      // Fetch module details to check names
+      const moduleDetails = selectedModuleIds.length > 0
+        ? await this.prisma.modulePrice.findMany({
+          where: { id: { in: selectedModuleIds } },
+          select: { id: true, name: true },
+        })
+        : [];
+
+      // Check if CRM or Accounting modules are included
+      const moduleNames = moduleDetails.map(m => m.name.toLowerCase());
+      const hasCrmModule = moduleNames.some(name => name.includes('crm'));
+      const hasAccountingModule = moduleNames.some(name => name.includes('accounting'));
 
       await this.prisma.userSubscription.create({
         data: {
@@ -236,9 +255,13 @@ export class WebhookController {
           subtotal: Number(payment.amount),
           total_amount: Number(payment.finalAmount),
 
-          user_count: 1,
-          workspace_count: 1,
-          selected_modules: [],
+          user_count: userCount,
+          workspace_count: workspaceCount,
+          selected_modules: selectedModuleIds,
+
+          // Set addon flags based on included modules
+          Crm_for_addons: hasCrmModule,
+          Accounting_for_addons: hasAccountingModule,
 
           coupon_code: payment.couponCode ?? null,
 
@@ -251,7 +274,7 @@ export class WebhookController {
         },
       });
 
-      console.log('🎉 Subscription created for user:', userId);
+      console.log('🎉 Subscription created for user:', userId, 'users:', userCount, 'workspaces:', workspaceCount);
     }
 
     return { success: true };
