@@ -43,6 +43,8 @@ import { ReceiptSummaryModule } from 'src/modules/application/receiptsummary/rec
 import { ControlSettingsModule } from './settings/control-settings/control-settings.module';
 import { PaymentModule } from './payment/payment.module';
 import { BillModule } from './accounting/bill/bill.module';
+import { ExpensepaymentModule } from './accounting/expensepayment/expensepayment.module';
+import { DebitnotesModule } from './accounting/debitnotes/debitnotes.module';
 @Module({
   imports: [
     NotificationModule,
@@ -89,6 +91,8 @@ import { BillModule } from './accounting/bill/bill.module';
     ControlSettingsModule,
     PaymentModule,
     BillModule,
+    ExpensepaymentModule,
+    DebitnotesModule,
   ],
 })
 export class ApplicationModule { }
