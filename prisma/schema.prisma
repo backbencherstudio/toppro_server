@@ -625,27 +625,62 @@ model Stock {
   @@map("stock")
 }
 
+model Bill {
+  id             String    @id @default(cuid())
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @default(now()) @updatedAt
+  deleted_at     DateTime?
+  issued_at      DateTime?
+  due_at         DateTime?
+  category_id    String?
+  bill_no        String?
+  subTotal       Float     @default(0)
+  tax_id         String?
+  total          Float     @default(0)
+  paid           Float     @default(0)
+  due            Float     @default(0)
+  status         Status    @default(DRAFT) // Use enum for status
+  owner_id       String?
+  workspace_id   String?
+  user_id        String?
+  accountType_id String?
+  vendor_id      String?
+
+  category    BillCategory? @relation(fields: [category_id], references: [id])
+  user        User?         @relation(fields: [user_id], references: [id])
+  vendor      Vendor?       @relation(fields: [vendor_id], references: [id])
+  tax         Tax?          @relation(fields: [tax_id], references: [id])
+  workspace   Workspace?    @relation(fields: [workspace_id], references: [id])
+  AccountType AccountType?  @relation(fields: [accountType_id], references: [id])
+
+  billItems       BillItem[]
+  expensePayments ExpensePayment[]
+  debitNotes      DebitNote[]
+  purchase        Purchase?        @relation(fields: [purchaseId], references: [id])
+  purchaseId      String?
+
+  @@map("bills")
+}
+
 model BillItem {
   id          String  @id @default(cuid())
   item_id     String
   quantity    Float
   price       Float
   discount    Float   @default(0)
-  tax_id      String?
   total_price Float
   description String?
+  tax_id      String?
 
-  // Relations
   bill_id String
   bill    Bill   @relation(fields: [bill_id], references: [id])
 
-  // Common fields
   owner_id     String?
   user_id      String?
   workspace_id String?
 
   tax       Tax?       @relation(fields: [tax_id], references: [id])
-  item      Items      @relation(fields: [item_id], references: [id])
+  item      Items      @relation(fields: [item_id], references: [id]) // Ensure the correct reference to Item
   user      User?      @relation(fields: [user_id], references: [id])
   workspace Workspace? @relation(fields: [workspace_id], references: [id])
 
@@ -666,13 +701,11 @@ model ExpensePayment {
   category_id     String?
   reference       String?
 
-  // Relations
   bill_id String?
   bill    Bill?   @relation(fields: [bill_id], references: [id])
 
   debit_notes DebitNote[]
 
-  // Common fields
   owner_id     String?
   user_id      String?
   workspace_id String?
@@ -697,11 +730,10 @@ model DebitNote {
   date        DateTime
   amount      Float
   description String?
+  category_id String?
 
-  // Relations  
   payment_id String?
 
-  // Common fields
   owner_id     String?
   user_id      String?
   workspace_id String?
@@ -711,6 +743,7 @@ model DebitNote {
   workspace      Workspace?      @relation(fields: [workspace_id], references: [id])
   Bill           Bill?           @relation(fields: [bill_id], references: [id])
   ExpensePayment ExpensePayment? @relation(fields: [payment_id], references: [id])
+  category       ItemCategory?   @relation(fields: [category_id], references: [id])
 
   created_at DateTime  @default(now())
   updated_at DateTime  @updatedAt
@@ -921,49 +954,6 @@ model CreditNote {
   @@map("credit_notes")
 }
 
-// ###############################################################################################################################
-//    ############################# Credit Note ##End## ###########################################################################
-// ###############################################################################################################################
-
-model Bill {
-  id             String    @id @default(cuid())
-  created_at     DateTime  @default(now())
-  updated_at     DateTime  @default(now())
-  deleted_at     DateTime?
-  issued_at      DateTime?
-  due_at         DateTime?
-  category_id    String?
-  bill_no        String?
-  subTotal       Float?    @default(0)
-  tax_id         String?
-  total          Float?    @default(0)
-  paid           Float?    @default(0)
-  due            Float?    @default(0)
-  status         String?   @default("draft") // draft, sent, paid, overdue, cancelled
-  owner_id       String?
-  workspace_id   String?
-  user_id        String?
-  accountType_id String?
-
-  vendor_id String?
-  category  BillCategory? @relation(fields: [category_id], references: [id])
-  user      User?         @relation(fields: [user_id], references: [id])
-  vendor    Vendor?       @relation(fields: [vendor_id], references: [id])
-  tax       Tax?          @relation(fields: [tax_id], references: [id])
-  workspace Workspace?    @relation(fields: [workspace_id], references: [id])
-
-  amount   Float?
-  currency String?
-
-  purchases       Purchase[]
-  AccountType     AccountType?     @relation(fields: [accountType_id], references: [id])
-  billItems       BillItem[]
-  expensePayments ExpensePayment[]
-  debitNotes      DebitNote[]
-
-  @@map("bills")
-}
-
 enum Status {
   DRAFT
   SENT
@@ -976,10 +966,6 @@ enum Status {
   ACTIVE
   INACTIVE
 }
-
-// ###############################################################################################################################
-//############################# Account Setup ##End## #########################################################################
-// ###############################################################################################################################
 
 // ###############################################################################################################################
 //############################# Caterogy Setup ##Start## #########################################################################
@@ -1002,6 +988,7 @@ model ItemCategory {
   PurchaseItems PurchaseItems[]
   Invoice       Invoice[]
   InvoiceItem   InvoiceItem[]
+  debitNotes    DebitNote[]
 }
 
 model InvoiceCategory {
@@ -2364,19 +2351,19 @@ model Payment {
 
 // Dynamic Stripe Subscription Management
 model UserSubscription {
-  id      String @id @default(cuid())
-  user_id String
-  user    User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  plan_type String // "basic" or "combo"
-  plan_id   String? // basic_package_id or combo_plan_id
-  base_price       Int // Base plan price in cents
-  user_count       Int      @default(0)
-  workspace_count  Int      @default(0)
-  Accounting_for_addons Boolean @default(false)
-  Crm_for_addons        Boolean @default(false)
-  selected_modules String[] // Array of module IDs
-  coupon_code      String?
-  stripe_subscription_id String  @unique
+  id                     String   @id @default(cuid())
+  user_id                String
+  user                   User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  plan_type              String // "basic" or "combo"
+  plan_id                String? // basic_package_id or combo_plan_id
+  base_price             Int // Base plan price in cents
+  user_count             Int      @default(0)
+  workspace_count        Int      @default(0)
+  Accounting_for_addons  Boolean  @default(false)
+  Crm_for_addons         Boolean  @default(false)
+  selected_modules       String[] // Array of module IDs
+  coupon_code            String?
+  stripe_subscription_id String   @unique
   stripe_price_id        String? // For fixed pricing
   stripe_customer_id     String
   status                 String   @default("active")

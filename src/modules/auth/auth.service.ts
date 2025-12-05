@@ -25,7 +25,7 @@ export class AuthService {
     private jwtService: JwtService,
     private prisma: PrismaService,
     private mailService: MailService,
-  ) { }
+  ) {}
 
   async me(email: string) {
     try {
@@ -97,9 +97,10 @@ export class AuthService {
       }
 
       // 🔹 Expose subscription fields (provide defaults when none exists)
-      const sub = user.user_subscriptions && user.user_subscriptions.length > 0
-        ? user.user_subscriptions[0]
-        : null;
+      const sub =
+        user.user_subscriptions && user.user_subscriptions.length > 0
+          ? user.user_subscriptions[0]
+          : null;
 
       user['subscription'] = {
         user_count: sub?.user_count ?? 1,
@@ -114,9 +115,7 @@ export class AuthService {
 
       return {
         success: true,
-        data: {
-          user,
-        }
+        data: user,
       };
     } catch (error) {
       return {

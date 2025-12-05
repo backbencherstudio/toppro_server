@@ -100,8 +100,8 @@ export class RolesController {
   // Endpoint to get all roles (name and ID)
   @Get('all/list')
   getAllRoles(@Req() req) {
-    const { owner_id: ownerId, workspace_id: workspaceId } = req.user;
-    return this.rolesService.getAllRoles(ownerId, workspaceId);
+    const { owner_id: ownerId, workspace_id: workspaceId, id: userId } = req.user;
+    return this.rolesService.getAllRoles(ownerId, workspaceId, userId);
   }
 
   // Endpoint to get a single role by ID
