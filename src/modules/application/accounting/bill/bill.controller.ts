@@ -8,6 +8,7 @@ import {
   Param,
   Req,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { BillService } from './bill.service';
 import { CreateBillDto } from './dto/create-bill.dto';
@@ -32,11 +33,30 @@ export class BillController {
     );
   }
 
-  @Get()
-  findAll(@Req() req) {
-    const { id: user_id, workspace_id, owner_id } = req.user;
-    return this.billService.findAll(owner_id, workspace_id, user_id);
-  }
+@Get()
+findAll(
+  @Req() req,
+  @Query('page') page = 1,
+  @Query('limit') limit = 10,
+  @Query('startDate') startDate?: string,
+  @Query('endDate') endDate?: string,
+  @Query('vendor_id') vendorId?: string,
+) {
+  const { id: user_id, workspace_id, owner_id } = req.user;
+
+  return this.billService.findAll(
+    owner_id,
+    workspace_id,
+    user_id,
+    Number(page),
+    Number(limit),
+    startDate,
+    endDate,
+    vendorId,
+  );
+}
+
+
 
   @Get(':id')
   findOne(@Param('id') id: string) {

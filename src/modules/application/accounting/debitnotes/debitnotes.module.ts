@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
-import { DebitnotesService } from './debitnotes.service';
-import { DebitnotesController } from './debitnotes.controller';
+import { DebitNoteController } from './debitnotes.controller';
+import { DebitNoteService } from './debitnotes.service';
 
 @Module({
-  controllers: [DebitnotesController],
-  providers: [DebitnotesService],
+  controllers: [DebitNoteController],
+  providers: [DebitNoteService],
 })
 export class DebitnotesModule {}

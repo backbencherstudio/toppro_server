@@ -730,6 +730,7 @@ model DebitNote {
   date        DateTime
   amount      Float
   description String?
+  category_id String?
 
   payment_id String?
 
@@ -742,6 +743,7 @@ model DebitNote {
   workspace      Workspace?      @relation(fields: [workspace_id], references: [id])
   Bill           Bill?           @relation(fields: [bill_id], references: [id])
   ExpensePayment ExpensePayment? @relation(fields: [payment_id], references: [id])
+  category       ItemCategory?   @relation(fields: [category_id], references: [id])
 
   created_at DateTime  @default(now())
   updated_at DateTime  @updatedAt
@@ -986,6 +988,7 @@ model ItemCategory {
   PurchaseItems PurchaseItems[]
   Invoice       Invoice[]
   InvoiceItem   InvoiceItem[]
+  debitNotes    DebitNote[]
 }
 
 model InvoiceCategory {

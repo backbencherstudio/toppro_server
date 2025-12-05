@@ -313,56 +313,117 @@ export class BillService {
   }
 
   // Get all bills
-  async findAll(ownerId: string, workspaceId: string, userId: string) {
-    try {
-      const bills = await this.prisma.bill.findMany({
-        where: {
-          OR: [
-            { owner_id: ownerId },
-            { owner_id: userId },
-            { user_id: userId },
-            { user_id: ownerId },
-          ],
-          workspace_id: workspaceId,
-        },
-        include: {
-          billItems: true, // Include associated BillItems
-        },
-      });
+async findAll(
+  ownerId: string,
+  workspaceId: string,
+  userId: string,
+  page: number = 1,
+  limit: number = 10,
+  startDate?: string,
+  endDate?: string,
+  vendorId?: string,
+) {
+  try {
+    const skip = (page - 1) * limit;
 
-      if (bills.length === 0) {
-        return {
-          success: false,
-          message: 'No bills found',
-          data: [],
-        };
+    // Base where condition
+    const where: any = {
+      OR: [
+        { owner_id: ownerId },
+        { owner_id: userId },
+        { user_id: userId },
+        { user_id: ownerId },
+      ],
+      workspace_id: workspaceId,
+    };
+
+    // 👉 Date filter (issued_at between startDate & endDate)
+    if (startDate || endDate) {
+      where.created_at = {};
+      if (startDate) {
+        where.created_at.gte = new Date(startDate);
       }
-
-      // Return only specific fields from each bill (optional)
-      const filteredBills = bills.map((bill) => ({
-        id: bill.id,
-        created_at: bill.created_at,
-        updated_at: bill.updated_at,
-        deleted_at: bill.deleted_at,
-        issued_at: bill.issued_at,
-        due_at: bill.due_at,
-        bill_no: bill.bill_no,
-        subTotal: bill.subTotal,
-        total: bill.total,
-        paid: bill.paid,
-        due: bill.due,
-        status: bill.status,
-      }));
-
-      return {
-        success: true,
-        message: 'Bills retrieved successfully',
-        data: filteredBills,
-      };
-    } catch (error) {
-      throw new BadRequestException('Failed to retrieve bills');
+      if (endDate) {
+        // endDate ke din er shesh obdi dhorbo chaile just Date use kora jabe
+        where.created_at.lte = new Date(endDate);
+      }
     }
+
+
+    if (vendorId) {
+      where.vendor_id = vendorId;
+    }
+
+    // Count total bills with filters
+    const totalCount = await this.prisma.bill.count({
+      where,
+    });
+
+    // Fetch bills with pagination + filters
+    const bills = await this.prisma.bill.findMany({
+      where,
+      include: {
+        billItems: true,
+        vendor: true,
+      },
+      skip,
+      take: limit,
+      orderBy: { created_at: 'desc' },
+    });
+
+    if (!bills.length) {
+      return {
+        success: false,
+        message: 'No bills found',
+        pagination: {
+          totalCount,
+          totalPages: 0,
+          currentPage: page,
+          limit,
+          hasNextPage: false,
+          hasPrevPage: page > 1,
+        },
+        data: [],
+      };
+    }
+
+    const filteredBills = bills.map((bill) => ({
+      id: bill.id,
+      created_at: bill.created_at,
+      updated_at: bill.updated_at,
+      deleted_at: bill.deleted_at,
+      issued_at: bill.issued_at,
+      due_at: bill.due_at,
+      bill_no: bill.bill_no,
+      subTotal: bill.subTotal,
+      total: bill.total,
+      paid: bill.paid,
+      due: bill.due,
+      vendor_id: bill.vendor_id,
+      vendor_name: bill.vendor?.name ?? null,
+      status: bill.status,
+    }));
+
+    return {
+      success: true,
+      message: 'Bills retrieved successfully',
+      pagination: {
+        totalCount,
+        totalPages: Math.ceil(totalCount / limit),
+        currentPage: page,
+        limit,
+        hasNextPage: page * limit < totalCount,
+        hasPrevPage: page > 1,
+      },
+      data: filteredBills,
+    };
+  } catch (error) {
+    console.log(error);
+    throw new BadRequestException('Failed to retrieve bills');
   }
+}
+
+
 
   // Get a single bill by ID
   async findOne(id: string) {
