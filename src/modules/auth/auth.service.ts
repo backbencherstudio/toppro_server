@@ -26,45 +26,68 @@ export class AuthService {
     private prisma: PrismaService,
     private mailService: MailService,
   ) {}
-
   async me(email: string) {
     try {
       const user = await this.prisma.user.findFirst({
         where: { email },
+
         select: {
           id: true,
+
           name: true,
+
           email: true,
+
           avatar: true,
+
           address: true,
+
           phone_number: true,
+
           type: true,
+
           gender: true,
+
           date_of_birth: true,
+
           created_at: true,
+
           owner_id: true,
+
           workspace_id: true,
+
           current_period_start: true,
+
           current_period_end: true,
+
           role_users: {
             select: {
               role: {
                 select: {
                   title: true,
+
                   permissions: { select: { title: true } },
                 },
               },
             },
           },
+
           // include latest user subscription (most recent by current_period_end)
+
           user_subscriptions: {
             orderBy: { current_period_end: 'desc' },
+
             take: 1,
+
             select: {
               user_count: true,
+
               workspace_count: true,
+
               Crm_for_addons: true,
+
               Accounting_for_addons: true,
+
               status: true,
             },
           },
@@ -80,6 +103,7 @@ export class AuthService {
       }
 
       // 🔹 Avatar URL
+
       if (user.avatar) {
         user['avatar_url'] = SojebStorage.url(
           appConfig().storageUrl.avatar + user.avatar,
@@ -87,16 +111,21 @@ export class AuthService {
       }
 
       // 🔹 Handle role & permission based on type
+
       if (user.type === 'OWNER' || user.type === 'SUPERADMIN') {
         delete user.role_users;
       } else if (user.role_users?.length > 0) {
         const role = user.role_users[0].role;
+
         user['role'] = role.title;
+
         user['permissions'] = role.permissions.map((p) => p.title);
+
         delete user.role_users; // remove nested structure
       }
 
       // 🔹 Expose subscription fields (provide defaults when none exists)
+
       const sub =
         user.user_subscriptions && user.user_subscriptions.length > 0
           ? user.user_subscriptions[0]
@@ -104,26 +133,133 @@ export class AuthService {
 
       user['subscription'] = {
         user_count: sub?.user_count ?? 1,
+
         workspace_count: sub?.workspace_count ?? 1,
+
         Crm: sub?.Crm_for_addons ?? false,
+
         Accounting: sub?.Accounting_for_addons ?? false,
+
         subscription_status: sub?.status ?? null,
       };
 
       // remove raw relation to avoid leaking DB shape
+
       delete user.user_subscriptions;
 
       return {
         success: true,
-        data: user,
+
+        data: {
+          user,
+        },
       };
     } catch (error) {
       return {
         success: false,
+
         message: error.message,
       };
     }
   }
+
+  // async me(email: string) {
+  //   try {
+  //     const user = await this.prisma.user.findFirst({
+  //       where: { email },
+  //       select: {
+  //         id: true,
+  //         name: true,
+  //         email: true,
+  //         avatar: true,
+  //         address: true,
+  //         phone_number: true,
+  //         type: true,
+  //         gender: true,
+  //         date_of_birth: true,
+  //         created_at: true,
+  //         owner_id: true,
+  //         workspace_id: true,
+  //         current_period_start: true,
+  //         current_period_end: true,
+  //         role_users: {
+  //           select: {
+  //             role: {
+  //               select: {
+  //                 title: true,
+  //                 permissions: { select: { title: true } },
+  //               },
+  //             },
+  //           },
+  //         },
+  //         // include latest user subscription (most recent by current_period_end)
+  //         user_subscriptions: {
+  //           orderBy: { current_period_end: 'desc' },
+  //           take: 1,
+  //           select: {
+  //             user_count: true,
+  //             workspace_count: true,
+  //             Crm_for_addons: true,
+  //             Accounting_for_addons: true,
+  //             status: true,
+  //           },
+  //         },
+  //       },
+  //     });
+
+  //     if (!user) {
+  //       return { success: false, message: 'User not found' };
+  //     }
+
+  //     if (user.type === 'OWNER') {
+  //       user.owner_id = user.id;
+  //     }
+
+  //     // 🔹 Avatar URL
+  //     if (user.avatar) {
+  //       user['avatar_url'] = SojebStorage.url(
+  //         appConfig().storageUrl.avatar + user.avatar,
+  //       );
+  //     }
+
+  //     // 🔹 Handle role & permission based on type
+  //     if (user.type === 'OWNER' || user.type === 'SUPERADMIN') {
+  //       delete user.role_users;
+  //     } else if (user.role_users?.length > 0) {
+  //       const role = user.role_users[0].role;
+  //       user['role'] = role.title;
+  //       user['permissions'] = role.permissions.map((p) => p.title);
+  //       delete user.role_users; // remove nested structure
+  //     }
+
+  //     // 🔹 Expose subscription fields (provide defaults when none exists)
+  //     const sub =
+  //       user.user_subscriptions && user.user_subscriptions.length > 0
+  //         ? user.user_subscriptions[0]
+  //         : null;
+
+  //     user['subscription'] = {
+  //       user_count: sub?.user_count ?? 1,
+  //       workspace_count: sub?.workspace_count ?? 1,
+  //       Crm: sub?.Crm_for_addons ?? false,
+  //       Accounting: sub?.Accounting_for_addons ?? false,
+  //       subscription_status: sub?.status ?? null,
+  //     };
+
+  //     // remove raw relation to avoid leaking DB shape
+  //     delete user.user_subscriptions;
+
+  //     return {
+  //       success: true,
+  //       data: user,
+  //     };
+  //   } catch (error) {
+  //     return {
+  //       success: false,
+  //       message: error.message,
+  //     };
+  //   }
+  // }
 
   // update user workspace_id
   async updateUserWorkspace(userId: string, workspace_id: string) {

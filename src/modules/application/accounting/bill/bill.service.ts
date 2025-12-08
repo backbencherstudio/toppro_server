@@ -337,29 +337,29 @@ async findAll(
       workspace_id: workspaceId,
     };
 
-    // 👉 Date filter (issued_at between startDate & endDate)
+    // Date filter
     if (startDate || endDate) {
       where.created_at = {};
+
       if (startDate) {
         where.created_at.gte = new Date(startDate);
       }
       if (endDate) {
-        // endDate ke din er shesh obdi dhorbo chaile just Date use kora jabe
         where.created_at.lte = new Date(endDate);
       }
     }
 
-
-    if (vendorId) {
+    // Vendor filter (all_vendor হলে vendor filter লাগবে না)
+    if (vendorId && vendorId !== 'all_vendor') {
       where.vendor_id = vendorId;
     }
 
-    // Count total bills with filters
+    // Count total
     const totalCount = await this.prisma.bill.count({
       where,
     });
 
-    // Fetch bills with pagination + filters
+    // Fetch bills
     const bills = await this.prisma.bill.findMany({
       where,
       include: {
@@ -371,6 +371,7 @@ async findAll(
       orderBy: { created_at: 'desc' },
     });
 
+    // No bills found
     if (!bills.length) {
       return {
         success: false,
@@ -387,6 +388,7 @@ async findAll(
       };
     }
 
+    // Filtered response formatting
     const filteredBills = bills.map((bill) => ({
       id: bill.id,
       created_at: bill.created_at,
@@ -422,6 +424,7 @@ async findAll(
     throw new BadRequestException('Failed to retrieve bills');
   }
 }
+
 
 
 
