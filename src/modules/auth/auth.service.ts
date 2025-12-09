@@ -150,9 +150,7 @@ export class AuthService {
       return {
         success: true,
 
-        data: {
-          user,
-        },
+        data: user,
       };
     } catch (error) {
       return {
