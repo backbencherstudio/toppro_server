@@ -89,7 +89,7 @@ export class RolesController {
   // Endpoint to create a new role and assign permissions to that role
   @Post('create')
   async createRole(@Body() createRoleDto: CreateRoleDto, @Req() req) {
-    const { owner_id: ownerId, workspace_id: workspaceId } = req.user;
+    const { owner_id: ownerId, workspace_id: workspaceId, id: userId } = req.user;
     return this.rolesService.createRoleWithPermissions(
       createRoleDto,
       ownerId,

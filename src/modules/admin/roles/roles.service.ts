@@ -149,13 +149,14 @@ export class RolesService {
     createRoleDto: CreateRoleDto,
     ownerId: string,
     workspaceId: string,
+    userId: string,
   ) {
     // Step 1: Create the role
     const role = await this.prisma.role.create({
       data: {
         title: createRoleDto.title,
         description: createRoleDto.description,
-        owner_id: ownerId,
+        owner_id: ownerId || userId,
         workspace_id: workspaceId,
       },
     });
