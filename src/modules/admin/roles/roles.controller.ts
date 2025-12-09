@@ -94,6 +94,7 @@ export class RolesController {
       createRoleDto,
       ownerId,
       workspaceId,
+      userId,
     ); // Create a role and assign permissions
   }
 
